@@ -8,4 +8,6 @@ RUN ln -s /usr/bin/python3 /usr/bin/python && ln -s /usr/bin/pip3 /usr/bin/pip
 
 RUN pip install numpy pillow
 
+COPY benchmarking.sh benchmarking_images_generation.py file_upload.py /
+
 CMD ["sleep","1000000"]
