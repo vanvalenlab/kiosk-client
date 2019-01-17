@@ -42,21 +42,16 @@ function preliminary_benchmarking_output() {
 }
 
 function file_upload() {
-  kubens deepcell
   ## new upload method
   wget https://github.com/mozilla/geckodriver/releases/download/v0.23.0/geckodriver-v0.23.0-linux64.tar.gz
   tar xvfz geckodriver-v0.23.0-linux64.tar.gz
   mv ./geckodriver /usr/local/bin
-  echo http://nl.alpinelinux.org/alpine/edge/testing >> /etc/apk/repositories
-  echo http://dl-3.alpinelinux.org/alpine/edge/main >> /etc/apk/repositories
-  #apk add icu-libs
-  apk add firefox
-  pip install selenium
   python ./file_upload.py
   echo "$(date): data upload completed" >> benchmarks.txt
 }
 
 function wait_for_gpu() {
+  kubens deepcell
   # wait for GPU creation
   echo "$(date): GPU requisition begins" >> benchmarks.txt
   kubens deepcell
