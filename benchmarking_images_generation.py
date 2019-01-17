@@ -96,13 +96,13 @@ def image_data_format():
     return _IMAGE_DATA_FORMAT
 
 def _image_generation(file_num):
-    file_path = "data/image_" + str(file_num) + ".png"
+    file_path = "/conf/data/image_" + str(file_num) + ".png"
     _write_image(file_path,1280,1080)
 
 
 if __name__=='__main__':
-    if not os.path.isdir("data"):
-        os.mkdir("data")
+    if not os.path.isdir("/conf/data"):
+        os.makedirs("/conf/data")
     # the two images I've been using for the HeLa_S3_Deepcell model have been 1280x1080
     print("Beginning image generation.")
     print(time.time())
