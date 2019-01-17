@@ -20,14 +20,12 @@ def selenium_stuff():
     browser.find_element_by_css_selector('.jss100').click() # submit
 
 def main():
-    with open("./cluster_address","r") as cluster_file:
-        line = cluster_file.readline()
-    cluster_address = re.search(r'\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}', line)
-    if cluster_address:
-        os.environ['CLUSTER_ADDRESS'] = str(cluster_address)
+    cluster_address = os.environ['CLUSTER_ADDRESS']
+    if cluster_address!="NA":
         selenium_stuff()
     else:
-        raise NameError("There doesn't appear to be an IP address in ./cluster_address.")
+        raise ValueError("There doesn't appear to be an IP address in the " \
+                "CLUSTER_ADDRESS environmental variable.")
 
 if __name__=='__main__':
     main()
