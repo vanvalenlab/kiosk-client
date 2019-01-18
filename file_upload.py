@@ -3,6 +3,7 @@ from selenium.webdriver.chrome.options import Options
 import os
 import subprocess
 import re
+import time
 
 def selenium_stuff():
     opts = Options()
@@ -14,16 +15,34 @@ def selenium_stuff():
     browser.get('http://' + str(os.environ['CLUSTER_ADDRESS']) + '/predict')
     submission_field = browser.find_element_by_css_selector('div.dropzoneCSS')
     submission_field.click()
-    file_upload_box = browser.find_element_by_css_selector('input[type=\"file\"]')
+    file_upload_box = browser.find_element_by_css_selector( \
+            'input[type=\"file\"]')
     file_upload_box.send_keys('/zip_files.zip')
     file_upload_box.submit() # unnecessary?
-    model_selector = browser.find_element_by_css_selector('#model-placeholder')
-    browser.execute_script('arguments[0].setAttributes("value","watershed_nuclear_nofgbg_41_f16");', model_selector) # set model name
-    model_version_selector = browser.find_element_by_css_selector('#version-placeholder')
-    browser.execute_script('arguments[0].setAttributes("value","0");', model_version_selector) # set model version
-    postprocess_selector = browser.find_element_by_css_selector('#postprocess-placeholder')
-    browser.execute_script('arguments[0].setAttributes("value","watershed");', postprocess_selector) # set post-processing protocol
-    browser.find_element_by_css_selector('#submitButton').click() # submit
+    time.sleep(20)
+    # set model name
+    model_selector = browser.find_element_by_css_selector( \
+            '#model-placeholder')
+    browser.execute_script( \
+            'arguments[0].setAttribute("value"' + \
+            ',"watershed_nuclear_nofgbg_41_f16");', \
+            model_selector)
+    # set model version
+    model_version_selector = browser.find_element_by_css_selector( \
+            '#version-placeholder')
+    browser.execute_script( \
+            'arguments[0].setAttribute("value","0");', \
+            model_version_selector)
+    # set post-processing protocol
+    postprocess_selector = browser.find_element_by_css_selector( \
+            '#postprocess-placeholder')
+    browser.execute_script( \
+            'arguments[0].setAttribute("value","watershed");', \
+            postprocess_selector)
+    # submit
+    browser.find_element_by_css_selector('#submitButton' \
+            ).send_keys('\n')
+    # due to an eccentricity with chromedriver, it's necessary to use "send_keys()" above, instead of "click()"
 
 def main():
     cluster_address = os.environ['CLUSTER_ADDRESS']
