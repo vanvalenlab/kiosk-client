@@ -43,9 +43,6 @@ function preliminary_benchmarking_output() {
 
 function file_upload() {
   ## new upload method
-  wget https://github.com/mozilla/geckodriver/releases/download/v0.23.0/geckodriver-v0.23.0-linux64.tar.gz
-  tar xvfz geckodriver-v0.23.0-linux64.tar.gz
-  mv ./geckodriver /usr/local/bin
   python ./file_upload.py
   echo "$(date): data upload completed" >> benchmarks.txt
 }

@@ -1,19 +1,21 @@
-from selenium.webdriver import Firefox
-from selenium.webdriver.firefox.options import Options
+from selenium.webdriver import Chrome
+from selenium.webdriver.chrome.options import Options
 import os
 import subprocess
 import re
 
 def selenium_stuff():
     opts = Options()
+    opts.binary_location = '/usr/lib/chromium-browser/chromium-browser'
+    opts.add_argument("--no-sandbox")
     opts.set_headless()
     assert opts.headless # Operating in headless mode
-    browser = Firefox(options=opts)
+    browser = Chrome("/usr/lib/chromium-browser/chromedriver", options=opts)
     browser.get('http://' + str(os.environ['CLUSTER_ADDRESS']) + '/predict')
     submission_field = browser.find_element_by_css_selector('div.dropzoneCSS')
     submission_field.click()
     file_upload_box = browser.find_element_by_css_selector('input[type=\"file\"]')
-    file_upload_box.send_keys('/conf/zip_files.zip')
+    file_upload_box.send_keys('/zip_files.zip')
     file_upload_box.submit() # unnecessary?
     browser.find_element_by_css_selector('.jss273 .jss252').click() # open up model menu
     browser.find_element_by_css_selector('.jss79:nth-child(7)').click() # select model
