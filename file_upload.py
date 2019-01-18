@@ -17,9 +17,13 @@ def selenium_stuff():
     file_upload_box = browser.find_element_by_css_selector('input[type=\"file\"]')
     file_upload_box.send_keys('/zip_files.zip')
     file_upload_box.submit() # unnecessary?
-    browser.find_element_by_css_selector('.jss273 .jss252').click() # open up model menu
-    browser.find_element_by_css_selector('.jss79:nth-child(7)').click() # select model
-    browser.find_element_by_css_selector('.jss100').click() # submit
+    model_selector = browser.find_element_by_css_selector('#model-placeholder')
+    browser.execute_script('arguments[0].setAttributes("value","watershed_nuclear_nofgbg_41_f16");', model_selector) # set model name
+    model_version_selector = browser.find_element_by_css_selector('#version-placeholder')
+    browser.execute_script('arguments[0].setAttributes("value","0");', model_version_selector) # set model version
+    postprocess_selector = browser.find_element_by_css_selector('#postprocess-placeholder')
+    browser.execute_script('arguments[0].setAttributes("value","watershed");', postprocess_selector) # set post-processing protocol
+    browser.find_element_by_css_selector('#submitButton').click() # submit
 
 def main():
     cluster_address = os.environ['CLUSTER_ADDRESS']
