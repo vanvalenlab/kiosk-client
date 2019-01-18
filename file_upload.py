@@ -19,7 +19,16 @@ def selenium_stuff():
             'input[type=\"file\"]')
     file_upload_box.send_keys('/zip_files.zip')
     file_upload_box.submit() # unnecessary?
-    time.sleep(20)
+    # wait for image to upload
+    wait_seconds = 300
+    for i in range(wait_seconds):
+        try:
+            browser.find_element_by_css_selector('.uploadedImage')
+            break
+        except:
+            if i % 5 == 0:
+                print("Waited for " + str(i) + " seconds so far."
+            time.sleep(1)
     # set model name
     model_selector = browser.find_element_by_css_selector( \
             '#model-placeholder')
