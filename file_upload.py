@@ -1,5 +1,7 @@
 from selenium.webdriver import Chrome
 from selenium.webdriver.chrome.options import Options
+from selenium.common.exceptions import NoSuchElementException
+from selenium.webdriver.common.keys import Keys
 import os
 import subprocess
 import re
@@ -13,45 +15,35 @@ def selenium_stuff():
     assert opts.headless # Operating in headless mode
     browser = Chrome("/usr/lib/chromium-browser/chromedriver", options=opts)
     browser.get('http://' + str(os.environ['CLUSTER_ADDRESS']) + '/predict')
-    submission_field = browser.find_element_by_css_selector('div.dropzoneCSS')
-    submission_field.click()
+    # upload zip file
     file_upload_box = browser.find_element_by_css_selector( \
-            'input[type=\"file\"]')
+            'input[name=imageUploadInput]')
     file_upload_box.send_keys('/zip_files.zip')
-    file_upload_box.submit() # unnecessary?
-    # wait for image to upload
-    wait_seconds = 300
-    for i in range(wait_seconds):
+    # wait for image to finish uploading
+    max_wait_seconds = 300
+    for i in range(max_wait_seconds):
         try:
             browser.find_element_by_css_selector('.uploadedImage')
+            print("Image uploaded!")
             break
-        except:
-            if i % 5 == 0:
-                print("Waited for " + str(i) + " seconds so far."
+        except NoSuchElementException:
+            if i%5==0:
+                print("Waited for " + str(i) + " seconds so far.")
             time.sleep(1)
-    # set model name
-    model_selector = browser.find_element_by_css_selector( \
-            '#model-placeholder')
-    browser.execute_script( \
-            'arguments[0].setAttribute("value"' + \
-            ',"watershed_nuclear_nofgbg_41_f16");', \
-            model_selector)
-    # set model version
-    model_version_selector = browser.find_element_by_css_selector( \
-            '#version-placeholder')
-    browser.execute_script( \
-            'arguments[0].setAttribute("value","0");', \
-            model_version_selector)
-    # set post-processing protocol
-    postprocess_selector = browser.find_element_by_css_selector( \
-            '#postprocess-placeholder')
-    browser.execute_script( \
-            'arguments[0].setAttribute("value","watershed");', \
-            postprocess_selector)
-    # submit
-    browser.find_element_by_css_selector('#submitButton' \
-            ).send_keys('\n')
-    # due to an eccentricity with chromedriver, it's necessary to use "send_keys()" above, instead of "click()"
+    # set model name, which will automatically set model version and
+    # post-processing protocol
+    model_selector_wrapper = browser.find_element_by_css_selector( \
+            'div[aria-pressed="false"][role="button"][aria-haspopup="true"]')
+    model_selector_wrapper.click()
+    time.sleep(1)
+    model_popup_element = browser.find_element_by_css_selector( \
+            'li[role="option"][data-value="watershed_nuclear_nofgbg_41_f16"]')
+    model_popup_element.click()
+    time.sleep(1)
+    # Click submit button
+    browser.find_element_by_css_selector('#submitButtonWrapper' \
+            ).click()
+    time.sleep(1)
 
 def main():
     cluster_address = os.environ['CLUSTER_ADDRESS']
