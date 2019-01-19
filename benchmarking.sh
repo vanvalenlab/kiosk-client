@@ -87,8 +87,8 @@ function main() {
   image_generation
   preliminary_benchmarking_output
   file_upload
-  wait_for_gpu
-  wait_for_jobs_to_process
+  #wait_for_gpu
+  #wait_for_jobs_to_process
 }
 
 main
