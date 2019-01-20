@@ -99,16 +99,56 @@ def _image_generation(file_num):
     file_path = "/conf/data/image_" + str(file_num) + ".png"
     _write_image(file_path,1280,1080)
 
+def zip_files( img_num ):
+    """Package all images into a series of zip files,
+    each containing no more than 1000 images.
+
+    """
+    remaining_images = img_num
+    last_image_zipped = 0
+
+    while remaining_images > 1000:
+        last_image_zipped = last_image_zipped + 1000
+        _make_zip_archive(last_image_zipped)
+    #zip any remaining files
+    last_image_zipped = last_image_zipped + 1000
+    _make_zip_archive(last_image_zipped)
+
+
+def _make_zip_archive( last_image_zipped ):
+        image_numbers_to_zip = range(last_image_zipped-1000, last_image_zipped)
+        for image_number in image_numbers_to_zip:
+            try:
+                image_name = "image_" + str(image_number) + ".png"
+                shutil.move("/conf/data/"+image_name, \
+                        "/conf/data/current_images/"+image_name)
+            except Exception as e:
+                print(e)
+        shutil.make_archive( "zip_files", "zip", "/conf/data/current_images/")
+        for image_number in image_numbers_to_zip:
+            try:
+                image_name = "image_" + str(image_number) + ".png"
+                shutil.move("/conf/data/current_images/"+image_name, \
+                        "/conf/data/"+image_name)
+            except Exception as e:
+                print(e)
+
+
 
 if __name__=='__main__':
-    if not os.path.isdir("/conf/data"):
-        os.makedirs("/conf/data")
+    # parse command line args
+    img_num = int(sys.argv[1])
+
+    if not os.path.isdir("/conf/data/zips"):
+        os.makedirs("/conf/data/zips")
+    if not os.path.isdir("/conf/data/current_images"):
+        os.makedirs("/conf/data/current_images")
     # the two images I've been using for the HeLa_S3_Deepcell model have been 1280x1080
     print("Beginning image generation.")
     print(time.time())
     worker_pool = Pool(processes=16) # optimized for 16 CPU setting
-    inputs = range( int(sys.argv[1]) )
+    inputs = range( img_num )
     worker_pool.map( _image_generation, inputs )
-    shutil.make_archive( "zip_files", "zip", "/conf/data/")
+    zip_files(img_num)
     print(time.time())
     print("Finished image generation.")
