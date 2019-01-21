@@ -16,4 +16,4 @@ RUN pip install \
 
 COPY benchmarking.sh benchmarking_images_generation.py file_upload.py /
 
-CMD ["sleep","1000000"]
+CMD /benchmarking.sh
