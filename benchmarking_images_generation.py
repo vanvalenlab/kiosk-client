@@ -99,7 +99,7 @@ def _image_generation(file_num):
     file_path = "/conf/data/image_" + str(file_num) + ".png"
     _write_image(file_path,1280,1080)
 
-def zip_files( img_num ):
+def make_zip_files( img_num ):
     """Package all images into a series of zip files,
     each containing no more than 1000 images.
 
@@ -154,6 +154,6 @@ if __name__=='__main__':
     worker_pool = Pool(processes=16) # optimized for 16 CPU setting
     inputs = range( img_num )
     worker_pool.map( _image_generation, inputs )
-    zip_files(img_num)
+    make_zip_files(img_num)
     print(time.time())
     print("Finished image generation.")
