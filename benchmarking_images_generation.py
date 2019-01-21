@@ -125,8 +125,10 @@ def _make_zip_archive( last_image_zipped, zip_file_counter ):
                 image_name = "image_" + str(image_number) + ".png"
                 shutil.move("/conf/data/"+image_name, \
                         "/conf/data/current_images/"+image_name)
-            except Exception as e:
-                print(e)
+            except FileNotFoundError:
+                print("Only " + str(image_number-1) + \
+                        " images found in last batch.")
+                break
         shutil.make_archive( "/conf/data/zips/zip_files" + \
                 str(zip_file_counter), "zip", \
                 "/conf/data/current_images/")
@@ -135,8 +137,10 @@ def _make_zip_archive( last_image_zipped, zip_file_counter ):
                 image_name = "image_" + str(image_number) + ".png"
                 shutil.move("/conf/data/current_images/"+image_name, \
                         "/conf/data/"+image_name)
-            except Exception as e:
-                print(e)
+            except FileNotFoundError:
+                print("Only " + str(image_number-1) + \
+                        " images found in last batch.")
+                break
 
 
 
