@@ -110,6 +110,7 @@ def zip_files( img_num ):
     while remaining_images > 1000:
         last_image_zipped = last_image_zipped + 1000
         _make_zip_archive(last_image_zipped)
+        remaining_images = remaining_images - 1000
     #zip any remaining files
     last_image_zipped = last_image_zipped + 1000
     _make_zip_archive(last_image_zipped)
