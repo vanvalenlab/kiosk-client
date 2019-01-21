@@ -106,17 +106,19 @@ def zip_files( img_num ):
     """
     remaining_images = img_num
     last_image_zipped = 0
+    zip_file_counter = 0
 
     while remaining_images > 1000:
         last_image_zipped = last_image_zipped + 1000
-        _make_zip_archive(last_image_zipped)
+        _make_zip_archive(last_image_zipped, zip_file_counter)
         remaining_images = remaining_images - 1000
+        zip_file_counter = zip_file_counter + 1
     #zip any remaining files
     last_image_zipped = last_image_zipped + 1000
-    _make_zip_archive(last_image_zipped)
+    _make_zip_archive(last_image_zipped, zip_file_counter)
 
 
-def _make_zip_archive( last_image_zipped ):
+def _make_zip_archive( last_image_zipped, zip_file_counter ):
         image_numbers_to_zip = range(last_image_zipped-1000, last_image_zipped)
         for image_number in image_numbers_to_zip:
             try:
@@ -125,7 +127,9 @@ def _make_zip_archive( last_image_zipped ):
                         "/conf/data/current_images/"+image_name)
             except Exception as e:
                 print(e)
-        shutil.make_archive( "zip_files", "zip", "/conf/data/current_images/")
+        shutil.make_archive( "/conf/data/zips/zip_files" + \
+                str(zip_file_counter), "zip", \
+                "/conf/data/current_images/")
         for image_number in image_numbers_to_zip:
             try:
                 image_name = "image_" + str(image_number) + ".png"
