@@ -7,7 +7,7 @@ import subprocess
 import re
 import time
 
-def selenium_stuff():
+def selenium_stuff( zip_file_path ):
     opts = Options()
     opts.binary_location = '/usr/lib/chromium-browser/chromium-browser'
     opts.add_argument("--no-sandbox")
@@ -18,7 +18,7 @@ def selenium_stuff():
     # upload zip file
     file_upload_box = browser.find_element_by_css_selector( \
             'input[name=imageUploadInput]')
-    file_upload_box.send_keys('/zip_files.zip')
+    file_upload_box.send_keys( zip_file_path )
     # wait for image to finish uploading
     max_wait_seconds = 300
     for i in range(max_wait_seconds):
@@ -48,7 +48,9 @@ def selenium_stuff():
 def main():
     cluster_address = os.environ['CLUSTER_ADDRESS']
     if cluster_address!="NA":
-        selenium_stuff()
+        list_of_zip_files = glob.glob("/conf/data/zips/*.zip")
+        for zip_file in list_of_zip_files:
+            selenium_stuff( zip_file )
     else:
         raise ValueError("There doesn't appear to be an IP address in the " \
                 "CLUSTER_ADDRESS environmental variable.")
