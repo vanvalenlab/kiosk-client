@@ -99,7 +99,7 @@ def _image_generation(file_num):
     file_path = "/conf/data/image_" + str(file_num) + ".png"
     _write_image(file_path,1280,1080)
 
-def make_zip_files( img_num ):
+def make_zip_files( img_num, images_per_zip ):
     """Package all images into a series of zip files,
     each containing no more than 1000 images.
 
@@ -108,18 +108,19 @@ def make_zip_files( img_num ):
     last_image_zipped = 0
     zip_file_counter = 0
 
-    while remaining_images > 1000:
-        last_image_zipped = last_image_zipped + 1000
-        _make_zip_archive(last_image_zipped, zip_file_counter)
-        remaining_images = remaining_images - 1000
+    while remaining_images > images_per_zip:
+        last_image_zipped = last_image_zipped + images_per_zip
+        _make_zip_archive(last_image_zipped, zip_file_counter, images_per_zip)
+        remaining_images = remaining_images - images_per_zip
         zip_file_counter = zip_file_counter + 1
     #zip any remaining files
-    last_image_zipped = last_image_zipped + 1000
-    _make_zip_archive(last_image_zipped, zip_file_counter)
+    last_image_zipped = last_image_zipped + images_per_zip
+    _make_zip_archive(last_image_zipped, zip_file_counter, images_per_zip)
 
 
-def _make_zip_archive( last_image_zipped, zip_file_counter ):
-        image_numbers_to_zip = range(last_image_zipped-1000, last_image_zipped)
+def _make_zip_archive( last_image_zipped, zip_file_counter, images_per_zip ):
+        image_numbers_to_zip = range(last_image_zipped-images_per_zip, \
+                last_image_zipped)
         for image_number in image_numbers_to_zip:
             try:
                 image_name = "image_" + str(image_number) + ".png"
@@ -147,6 +148,7 @@ def _make_zip_archive( last_image_zipped, zip_file_counter ):
 if __name__=='__main__':
     # parse command line args
     img_num = int(sys.argv[1])
+    images_per_zip = 100
 
     if not os.path.isdir("/conf/data/zips"):
         os.makedirs("/conf/data/zips")
@@ -158,6 +160,6 @@ if __name__=='__main__':
     worker_pool = Pool(processes=16) # optimized for 16 CPU setting
     inputs = range( img_num )
     worker_pool.map( _image_generation, inputs )
-    make_zip_files(img_num)
+    make_zip_files(img_num, images_per_zip)
     print(time.time())
     print("Finished image generation.")
