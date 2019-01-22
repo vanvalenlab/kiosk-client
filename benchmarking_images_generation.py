@@ -171,6 +171,10 @@ def generate_images_and_zips( number_of_images, images_per_zip ):
         remaining_images = remaining_images - images_in_this_zip
         last_image_zipped = last_image_to_zip
         zip_file_counter = zip_file_counter + 1
+        print("")
+        print(str(remaining_images) + " images left to generate.")
+        print(str(zip_file_counter) + " zip files created.")
+        print("")
 
 if __name__=='__main__':
     # parse command line args
