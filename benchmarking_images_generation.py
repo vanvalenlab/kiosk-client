@@ -127,9 +127,13 @@ def _make_zip_archive( last_image_zipped, zip_file_counter, images_per_zip ):
                 shutil.move("/conf/data/"+image_name, \
                         "/conf/data/current_images/"+image_name)
             except FileNotFoundError:
-                print("Only " + str(image_number) + \
+                images_in_batch = image_number-last_image_zipped+images_per_zip
+                print("Only " + str(images_in_batch) + \
                         " images found in last batch.")
-                break
+                if images_in_batch == 0:
+                    return 1
+                else:
+                    break
         shutil.make_archive( "/conf/data/zips/zip_files" + \
                 str(zip_file_counter), "zip", \
                 "/conf/data/current_images/")
@@ -139,9 +143,14 @@ def _make_zip_archive( last_image_zipped, zip_file_counter, images_per_zip ):
                 shutil.move("/conf/data/current_images/"+image_name, \
                         "/conf/data/"+image_name)
             except FileNotFoundError:
-                print("Only " + str(image_number) + \
+                images_in_batch = image_number-last_image_zipped+images_per_zip
+                print("Only " + str(images_in_batch) + \
                         " images found in last batch.")
-                break
+                if images_in_batch == 0:
+                    return 1
+                else:
+                    break
+        return 0
 
 
 
