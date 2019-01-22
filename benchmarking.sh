@@ -1,6 +1,6 @@
 function image_generation() {
-# image generation
-python ./benchmarking_images_generation.py $IMG_NUM
+  # image generation
+  python ./benchmarking_images_generation.py $IMG_NUM
 }
 
 function preliminary_benchmarking_output() {
