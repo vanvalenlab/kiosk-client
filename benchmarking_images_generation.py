@@ -159,6 +159,12 @@ if __name__=='__main__':
     img_num = int(sys.argv[1])
     images_per_zip = 100
 
+    # This is a trap for pods that are initialized without a number of images.
+    # Just sit here and wait for the deployment to be destroyed and restarted.
+    if img_num==0:
+        while true:
+            time.sleep(10000)
+
     if not os.path.isdir("/conf/data/zips"):
         os.makedirs("/conf/data/zips")
     if not os.path.isdir("/conf/data/current_images"):
