@@ -2,7 +2,9 @@
 
 function image_generation() {
   # image generation
-  python ./benchmarking_images_generation.py $IMG_NUM
+  # arguments are (number of images to generate)
+  # and (number of images per zip file)
+  python ./benchmarking_images_generation.py $IMG_NUM 500
 }
 
 function preliminary_benchmarking_output() {
