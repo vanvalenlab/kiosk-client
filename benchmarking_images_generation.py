@@ -100,10 +100,6 @@ def _image_generation(file_num):
     _write_image(file_path,1280,1080)
 
 def make_zip_files( img_num, images_per_zip ):
-    """Package all images into a series of zip files,
-    each containing no more than 1000 images.
-
-    """
     remaining_images = img_num
     last_image_zipped = 0
     zip_file_counter = 0
@@ -118,46 +114,68 @@ def make_zip_files( img_num, images_per_zip ):
     _make_zip_archive(last_image_zipped, zip_file_counter, images_per_zip)
 
 
-def _make_zip_archive( last_image_zipped, zip_file_counter, images_per_zip ):
-        image_numbers_to_zip = range(last_image_zipped-images_per_zip, \
-                last_image_zipped)
-        for image_number in image_numbers_to_zip:
-            try:
-                image_name = "image_" + str(image_number) + ".png"
-                shutil.move("/conf/data/"+image_name, \
-                        "/conf/data/current_images/"+image_name)
-            except FileNotFoundError:
-                images_in_batch = image_number-last_image_zipped+images_per_zip
-                print("Only " + str(images_in_batch) + \
-                        " images found in last batch.")
-                if images_in_batch == 0:
-                    return 1
-                else:
-                    break
-        shutil.make_archive( "/conf/data/zips/zip_files" + \
-                str(zip_file_counter), "zip", \
-                "/conf/data/current_images/")
-        for image_number in image_numbers_to_zip:
-            try:
-                image_name = "image_" + str(image_number) + ".png"
-                shutil.move("/conf/data/current_images/"+image_name, \
-                        "/conf/data/"+image_name)
-            except FileNotFoundError:
-                images_in_batch = image_number-last_image_zipped+images_per_zip
-                print("Only " + str(images_in_batch) + \
-                        " images found in last batch.")
-                if images_in_batch == 0:
-                    return 1
-                else:
-                    break
-        return 0
+def _make_zip_archive( last_image_to_zip, zip_file_counter, \
+        images_in_this_zip ):
+    image_numbers_to_zip = range(last_image_to_zip-images_in_this_zip, \
+            last_image_to_zip)
+    for image_number in image_numbers_to_zip:
+        try:
+            image_name = "image_" + str(image_number) + ".png"
+            shutil.move("/conf/data/"+image_name, \
+                    "/conf/data/current_images/"+image_name)
+        except FileNotFoundError:
+            images_in_batch = image_number-last_image_to_zip+images_in_this_zip
+            print("Only " + str(images_in_batch) + \
+                    " images found in last batch.")
+            if images_in_batch == 0:
+                return 1
+            else:
+                break
+    shutil.make_archive( "/conf/data/zips/zip_files" + \
+            str(zip_file_counter), "zip", \
+            "/conf/data/current_images/")
+    for image_number in image_numbers_to_zip:
+        try:
+            image_name = "image_" + str(image_number) + ".png"
+            shutil.move("/conf/data/current_images/"+image_name, \
+                    "/conf/data/"+image_name)
+        except FileNotFoundError:
+            images_in_batch = image_number-last_image_to_zip+images_in_this_zip
+            print("Only " + str(images_in_batch) + \
+                    " images found in last batch.")
+            if images_in_batch == 0:
+                return 1
+            else:
+                break
+    return 0
 
+def generate_images_and_zips( number_of_images, images_per_zip ):
+    """Generate (number_of_images) images and package them into a series of zip
+    files, each containing no more than (images_per_zip) images.
+    """
+    # create worker pool for image generation
+    worker_pool = Pool(processes=16) # optimized for 16 CPU setting
 
+    # initialize image generation parameters
+    remaining_images = number_of_images
+    last_image_zipped = 0
+    zip_file_counter = 0
+
+    # Create images (images_per_zip) at a time and zip them as they're created.
+    while remaining_images > 0:
+        images_in_this_zip = min(remaining_images, images_per_zip)
+        last_image_to_zip = last_image_zipped + images_in_this_zip
+        image_number_range = range(last_image_zipped, last_image_to_zip)
+        worker_pool.map( _image_generation, image_number_range)
+        _make_zip_archive(last_image_to_zip, zip_file_counter, images_in_this_zip)
+        remaining_images = remaining_images - images_in_this_zip
+        last_image_zipped = last_image_to_zip
+        zip_file_counter = zip_file_counter + 1
 
 if __name__=='__main__':
     # parse command line args
-    img_num = int(sys.argv[1])
-    images_per_zip = 100
+    number_of_images = int(sys.argv[1])
+    images_per_zip = int(sys.argv[2])
 
     # This is a trap for pods that are initialized without a number of images.
     # Just sit here and wait for the deployment to be destroyed and restarted.
@@ -165,16 +183,16 @@ if __name__=='__main__':
         while True:
             time.sleep(10000)
 
+    # Make necessary directories
     if not os.path.isdir("/conf/data/zips"):
         os.makedirs("/conf/data/zips")
     if not os.path.isdir("/conf/data/current_images"):
         os.makedirs("/conf/data/current_images")
-    # the two images I've been using for the HeLa_S3_Deepcell model have been 1280x1080
+
+    # All current deepcell models to date use inputs of size 1080x1280,
+    # so we're going to be using those dimensions.
     print("Beginning image generation.")
     print(time.time())
-    worker_pool = Pool(processes=16) # optimized for 16 CPU setting
-    inputs = range( img_num )
-    worker_pool.map( _image_generation, inputs )
-    make_zip_files(img_num, images_per_zip)
+    generate_images_and_zips( number_of_images, images_per_zip )
     print(time.time())
     print("Finished image generation.")
