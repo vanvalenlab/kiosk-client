@@ -1,3 +1,5 @@
+#!/bin/bash
+
 function image_generation() {
   # image generation
   python ./benchmarking_images_generation.py $IMG_NUM
