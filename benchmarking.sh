@@ -41,11 +41,15 @@ function preliminary_benchmarking_output() {
 }
 
 function file_upload() {
-  # We're going to run the image generation and file upload scripts in the 
-  # background (hence the ampersands).
-  # arguments are (number of images to generate)
-  # and (number of images per zip file)
+  # We're going to run the image generation script in the background (hence the
+  # ampersand), and the file upload script in the foregoround. The expectation 
+  # is that the file upload script should not terminate before the image
+  # generation script, since it's waiting for the image generator to produce 
+  # a set number of zip files.
+  # Arguments to benchmarking_images_generation.py are 
+  # (number of images to generate) and (number of images per zip file).
   python ./benchmarking_images_generation.py $IMG_NUM $IMAGES_PER_ZIP &
+  # Argument to file_uplaod.py is (total number of zip files to upload).
   python ./file_upload.py $ZIPS
   echo "$(date): data generation and upload completed" >> benchmarks.txt
 }
