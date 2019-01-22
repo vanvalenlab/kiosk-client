@@ -46,12 +46,27 @@ def selenium_stuff( zip_file_path ):
             ).click()
     time.sleep(1)
 
+def get_list_of_zip_files():
+    list_of_zip_files = glob.glob("/conf/data/zips/*.zip")
+    return list_of_zip_files
+
+
 def main():
     cluster_address = os.environ['CLUSTER_ADDRESS']
     if cluster_address!="NA":
-        list_of_zip_files = glob.glob("/conf/data/zips/*.zip")
-        for zip_file in list_of_zip_files:
-            selenium_stuff( zip_file )
+        list_of_previously_uploaded_zip_files = []
+        while True:
+            list_of_zip_files = get_list_of_zip_files()
+            if len(list_of_zip_files) > 0:
+                for zip_file in list_of_zip_files:
+                    if zip_file in list_of_previously_uploaded_zip_files:
+                        pass
+                    else:
+                        selenium_stuff( zip_file )
+                        list_of_previously_uploaded_zip_files.append(zip_file)
+            else:
+                sleep(10)
+
     else:
         raise ValueError("There doesn't appear to be an IP address in the " \
                 "CLUSTER_ADDRESS environmental variable.")
