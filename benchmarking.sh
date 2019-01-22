@@ -1,12 +1,5 @@
 #!/bin/bash
 
-function image_generation() {
-  # image generation
-  # arguments are (number of images to generate)
-  # and (number of images per zip file)
-  python ./benchmarking_images_generation.py $IMG_NUM 500
-}
-
 function preliminary_benchmarking_output() {
   # benchmarking variable examination
   echo "$BENCHMARK_TYPE"
@@ -37,7 +30,9 @@ function preliminary_benchmarking_output() {
   else
       echo "CPU type unknown." >> benchmarks.txt
   fi
-  echo "Number of images: $img_num" >> benchmarks.txt
+  echo "Number of images: $IMG_NUM" >> benchmarks.txt
+  echo "Images per zip file: $IMAGES_PER_ZIP" >> benchmarks.txt
+  echo "Number of zip files: $ZIPS" >> benchmarks.txt
   echo "Deepcell model: $BENCHMARK_MODEL" >> benchmarks.txt
   echo "Deepcell Model Version: $BENCHMARK_MODEL_VERSION" >> benchmarks.txt
   echo "Deepcell postprocessing: $BENCHMARK_POSTPROCESSING" >> benchmarks.txt
@@ -46,9 +41,13 @@ function preliminary_benchmarking_output() {
 }
 
 function file_upload() {
-  ## new upload method
-  python ./file_upload.py
-  echo "$(date): data upload completed" >> benchmarks.txt
+  # We're going to run the image generation and file upload scripts in the 
+  # background (hence the ampersands).
+  # arguments are (number of images to generate)
+  # and (number of images per zip file)
+  python ./benchmarking_images_generation.py $IMG_NUM $IMAGES_PER_ZIP &
+  python ./file_upload.py $ZIPS
+  echo "$(date): data generation and upload completed" >> benchmarks.txt
 }
 
 function wait_for_gpu() {
@@ -88,9 +87,14 @@ function wait_for_jobs_to_process() {
 }
 
 function main() {
-  image_generation
+  # define variables
+  IMAGES_PER_ZIP=500
+  # the following expression is constructed to ensure rounding up of remainder
+  ZIPS=(($IMG_NUM+$IMAGES_PER_ZIP-1)/$IMAGES_PER_ZIP) 
+
+  # execute functions
   preliminary_benchmarking_output
-  file_upload
+  image_generation_and_file_upload
   #wait_for_gpu
   #wait_for_jobs_to_process
 }
