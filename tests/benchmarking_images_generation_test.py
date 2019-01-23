@@ -22,15 +22,15 @@ def test_generate_images_and_zips():
 
     # Execute relevant function
     big.generate_images_and_zips(images_to_create, images_per_zip,
-            home_directory)
+                home_directory)
 
     # Check for existence of files
     list_of_images = glob.glob(home_directory + "/image_*.png")
     assert len(list_of_images) == images_to_create
     for img_num in range(images_to_create):
-        image_name = home_directory + "/image_" + int(img_num) + ".png"
+        image_name = home_directory + "/image_" + str(img_num) + ".png"
         assert image_name in list_of_images
     list_of_zips = glob.glob("/conf/zips/zip_files*.zip")
     for zip_number in range(number_of_zips):
-        zip_name = home_directory + "/zip_files" + int(zip_number) + ".zip"
+        zip_name = home_directory + "/zip_files" + str(zip_number) + ".zip"
         assert zip_name in list_of_zips
