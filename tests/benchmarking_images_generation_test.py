@@ -5,15 +5,18 @@ import benchmarking_images_generation as big
 import os
 import glob
 import math
-
+import getpass
 
 def test__make_zip_archive():
+    #whoami?
+    print getpass.getuser()
+
     # Set parameters
     images_to_create = 10
     images_per_zip = 10
     number_of_zips = math.ceil(images_to_create / images_per_zip)
     home_directory = "/home/ubuntu"
-    
+ 
     # Make necessary directories
     if not os.path.isdir(home_directory + "/uncooked_zips"):
         os.makedirs(home_directory + "/uncooked_zips")
