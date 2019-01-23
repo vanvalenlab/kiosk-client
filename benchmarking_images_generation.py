@@ -5,6 +5,7 @@ import numpy as np
 from multiprocessing import Pool
 from PIL import Image as pil_image
 import shutil
+from functools import partial
 
 # this function is originally from
 # https://github.com/vanvalenlab/deepcell-tf/blob/master/tests/deepcell/utils/io_utils_test.py
@@ -95,34 +96,36 @@ def image_data_format():
     """
     return _IMAGE_DATA_FORMAT
 
-def _image_generation(file_num):
-    file_path = "/conf/data/image_" + str(file_num) + ".png"
+def _image_generation(home_directory, file_num):
+    file_path = home_directory + "/image_" + str(file_num) + ".png"
     _write_image(file_path,1280,1080)
 
-def make_zip_files( img_num, images_per_zip ):
+def make_zip_files( img_num, images_per_zip, home_directory ):
     remaining_images = img_num
     last_image_zipped = 0
     zip_file_counter = 0
 
     while remaining_images > images_per_zip:
         last_image_zipped = last_image_zipped + images_per_zip
-        _make_zip_archive(last_image_zipped, zip_file_counter, images_per_zip)
+        _make_zip_archive(last_image_zipped, zip_file_counter, \
+                images_per_zip, home_directory)
         remaining_images = remaining_images - images_per_zip
         zip_file_counter = zip_file_counter + 1
     #zip any remaining files
     last_image_zipped = last_image_zipped + images_per_zip
-    _make_zip_archive(last_image_zipped, zip_file_counter, images_per_zip)
+    _make_zip_archive(last_image_zipped, zip_file_counter, \
+            images_per_zip, home_directory)
 
 
 def _make_zip_archive( last_image_to_zip, zip_file_counter, \
-        images_in_this_zip ):
+        images_in_this_zip, home_directory ):
     image_numbers_to_zip = range(last_image_to_zip-images_in_this_zip, \
             last_image_to_zip)
     for image_number in image_numbers_to_zip:
         try:
             image_name = "image_" + str(image_number) + ".png"
-            shutil.move("/conf/data/"+image_name, \
-                    "/conf/data/current_images/"+image_name)
+            shutil.move(home_directory + "/"+image_name, \
+                    home_directory + "/current_images/"+image_name)
         except FileNotFoundError:
             images_in_batch = image_number-last_image_to_zip+images_in_this_zip
             print("Only " + str(images_in_batch) + \
@@ -131,19 +134,19 @@ def _make_zip_archive( last_image_to_zip, zip_file_counter, \
                 return 1
             else:
                 break
-    shutil.make_archive( "/conf/data/uncooked_zips/zip_files" + \
+    shutil.make_archive(home_directory + "/uncooked_zips/zip_files" + \
             str(zip_file_counter), "zip", \
-            "/conf/data/current_images/")
-    initial_location = "/conf/data/uncooked_zips/zip_files" + \
+            home_directory + "/current_images/")
+    initial_location = home_directory + "/uncooked_zips/zip_files" + \
             str(zip_file_counter) + ".zip"
-    final_location = "/conf/data/zips/zip_files" + \
+    final_location = home_directory + "/zips/zip_files" + \
             str(zip_file_counter) + ".zip"
     shutil.move( initial_location, final_location)
     for image_number in image_numbers_to_zip:
         try:
             image_name = "image_" + str(image_number) + ".png"
-            shutil.move("/conf/data/current_images/"+image_name, \
-                    "/conf/data/"+image_name)
+            shutil.move(home_directory + "/current_images/" + image_name, \
+                    home_directory + "/" + image_name)
         except FileNotFoundError:
             images_in_batch = image_number-last_image_to_zip+images_in_this_zip
             print("Only " + str(images_in_batch) + \
@@ -154,7 +157,7 @@ def _make_zip_archive( last_image_to_zip, zip_file_counter, \
                 break
     return 0
 
-def generate_images_and_zips( number_of_images, images_per_zip ):
+def generate_images_and_zips(number_of_images, images_per_zip, home_directory):
     """Generate (number_of_images) images and package them into a series of zip
     files, each containing no more than (images_per_zip) images.
     """
@@ -166,13 +169,17 @@ def generate_images_and_zips( number_of_images, images_per_zip ):
     last_image_zipped = 0
     zip_file_counter = 0
 
+    # create partial function for divvying up jobs between worker_pool workers
+    _image_generation_partial = partial(_image_generation, home_directory)
+
     # Create images (images_per_zip) at a time and zip them as they're created.
     while remaining_images > 0:
         images_in_this_zip = min(remaining_images, images_per_zip)
         last_image_to_zip = last_image_zipped + images_in_this_zip
         image_number_range = range(last_image_zipped, last_image_to_zip)
-        worker_pool.map( _image_generation, image_number_range)
-        _make_zip_archive(last_image_to_zip, zip_file_counter, images_in_this_zip)
+        worker_pool.map(_image_generation_partial, image_number_range)
+        _make_zip_archive(last_image_to_zip, zip_file_counter, \
+                images_in_this_zip, home_directory)
         remaining_images = remaining_images - images_in_this_zip
         last_image_zipped = last_image_to_zip
         zip_file_counter = zip_file_counter + 1
@@ -185,6 +192,9 @@ if __name__=='__main__':
     # parse command line args
     number_of_images = int(sys.argv[1])
     images_per_zip = int(sys.argv[2])
+    home_directory = str(sys.argv[3])
+    if home_directory.endswith('/'):
+        home_directory = home_directory[:-1]
 
     # This is a trap for pods that are initialized without a number of images.
     # Just sit here and wait for the deployment to be destroyed and restarted.
@@ -193,17 +203,17 @@ if __name__=='__main__':
             time.sleep(10000)
 
     # Make necessary directories
-    if not os.path.isdir("/conf/data/uncooked_zips"):
-        os.makedirs("/conf/data/uncooked_zips")
-    if not os.path.isdir("/conf/data/zips"):
-        os.makedirs("/conf/data/zips")
-    if not os.path.isdir("/conf/data/current_images"):
-        os.makedirs("/conf/data/current_images")
+    if not os.path.isdir(home_directory + "/uncooked_zips"):
+        os.makedirs(home_directory + "/uncooked_zips")
+    if not os.path.isdir(home_directory + "/zips"):
+        os.makedirs(home_directoy + "/zips")
+    if not os.path.isdir(home_directory + "/current_images"):
+        os.makedirs(home_directory + "/current_images")
 
     # All current deepcell models to date use inputs of size 1080x1280,
     # so we're going to be using those dimensions.
     print("Beginning image generation.")
     print(time.time())
-    generate_images_and_zips( number_of_images, images_per_zip )
+    generate_images_and_zips(number_of_images, images_per_zip, home_directory)
     print(time.time())
     print("Finished image generation.")

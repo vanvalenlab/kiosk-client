@@ -48,7 +48,7 @@ function image_generation_and_file_upload() {
   # a set number of zip files.
   # Arguments to benchmarking_images_generation.py are 
   # (number of images to generate) and (number of images per zip file).
-  python ./benchmarking_images_generation.py $IMG_NUM $IMAGES_PER_ZIP &
+  python ./benchmarking_images_generation.py $IMG_NUM $IMAGES_PER_ZIP /conf/data &
   # Argument to file_uplaod.py is (total number of zip files to upload).
   python ./file_upload.py $ZIPS
   echo "$(date): data generation and upload completed" >> benchmarks.txt
