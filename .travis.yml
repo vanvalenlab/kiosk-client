@@ -19,6 +19,7 @@ install:
 script:
   - whoami
   - python -m pytest --pep8 tests
+  - ls /home/travis
 
 jobs:
   include:
