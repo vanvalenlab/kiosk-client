@@ -21,7 +21,7 @@ def test_generate_images_and_zips():
     big.create_directories(home_directory)
 
     # Execute relevant function
-    big.generate_images_and_zips(images_to_create, images_per_zip, \
+    big.generate_images_and_zips(images_to_create, images_per_zip,
             home_directory)
 
     # Check for existence of files
