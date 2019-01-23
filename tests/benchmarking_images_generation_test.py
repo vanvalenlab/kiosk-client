@@ -8,6 +8,7 @@ import math
 import getpass
 import shutil
 
+
 def test__make_zip_archive():
     # Set parameters
     images_to_create = 10
