@@ -188,6 +188,14 @@ def generate_images_and_zips(number_of_images, images_per_zip, home_directory):
         print(str(zip_file_counter) + " zip files created.")
         print("")
 
+def create_directories(home_directory):
+    if not os.path.isdir(home_directory + "/uncooked_zips"):
+        os.makedirs(home_directory + "/uncooked_zips")
+    if not os.path.isdir(home_directory + "/zips"):
+        os.makedirs(home_directoy + "/zips")
+    if not os.path.isdir(home_directory + "/current_images"):
+        os.makedirs(home_directory + "/current_images")
+
 if __name__=='__main__':
     # parse command line args
     number_of_images = int(sys.argv[1])
@@ -203,12 +211,7 @@ if __name__=='__main__':
             time.sleep(10000)
 
     # Make necessary directories
-    if not os.path.isdir(home_directory + "/uncooked_zips"):
-        os.makedirs(home_directory + "/uncooked_zips")
-    if not os.path.isdir(home_directory + "/zips"):
-        os.makedirs(home_directoy + "/zips")
-    if not os.path.isdir(home_directory + "/current_images"):
-        os.makedirs(home_directory + "/current_images")
+    create_directories(home_directory)
 
     # All current deepcell models to date use inputs of size 1080x1280,
     # so we're going to be using those dimensions.
