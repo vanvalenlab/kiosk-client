@@ -192,7 +192,7 @@ def create_directories(home_directory):
     if not os.path.isdir(home_directory + "/uncooked_zips"):
         os.makedirs(home_directory + "/uncooked_zips")
     if not os.path.isdir(home_directory + "/zips"):
-        os.makedirs(home_directoy + "/zips")
+        os.makedirs(home_directory + "/zips")
     if not os.path.isdir(home_directory + "/current_images"):
         os.makedirs(home_directory + "/current_images")
 
