@@ -29,7 +29,7 @@ def test__make_zip_archive():
     big._make_zip_archive(images_to_create, 0, images_per_zip, home_directory)
 
     # Check for existence of files
-    list_of_images = glob.glob(home_directory + "/*.png")
+    list_of_images = glob.glob(home_directory + "/image_*.png")
     assert len(list_of_images) == images_to_create
     for img_num in range(images_to_create):
         image_name = home_directory + "/image_" + int(img_num) + ".png"
