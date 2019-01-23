@@ -13,7 +13,7 @@ def test__make_zip_archive():
     images_to_create = 10
     images_per_zip = 10
     number_of_zips = math.ceil(images_to_create / images_per_zip)
-    home_directory = "/home/ubuntu"
+    home_directory = "/home/travis" # for Travis CI tests
 
     # Make necessary directories
     os.chmod(home_directory, 0o771)
