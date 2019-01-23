@@ -6,7 +6,7 @@ import os
 import glob
 import math
 import getpass
-
+import shutil
 
 def test__make_zip_archive():
     # Set parameters
