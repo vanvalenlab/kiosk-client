@@ -7,10 +7,8 @@ import glob
 import math
 import getpass
 
-def test__make_zip_archive():
-    # whoami?
-    print getpass.getuser()
 
+def test__make_zip_archive():
     # Set parameters
     images_to_create = 10
     images_per_zip = 10
