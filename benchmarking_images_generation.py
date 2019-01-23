@@ -131,9 +131,14 @@ def _make_zip_archive( last_image_to_zip, zip_file_counter, \
                 return 1
             else:
                 break
-    shutil.make_archive( "/conf/data/zips/zip_files" + \
+    shutil.make_archive( "/conf/data/uncooked_zips/zip_files" + \
             str(zip_file_counter), "zip", \
             "/conf/data/current_images/")
+    initial_location = "/conf/data/uncooked_zips/zip_files" + \
+            str(zip_file_counter) + ".zip"
+    final_location = "/conf/data/zips/zip_files" + \
+            str(zip_file_counter) + ".zip"
+    shutil.move( initial_location, final_location)
     for image_number in image_numbers_to_zip:
         try:
             image_name = "image_" + str(image_number) + ".png"
@@ -188,6 +193,8 @@ if __name__=='__main__':
             time.sleep(10000)
 
     # Make necessary directories
+    if not os.path.isdir("/conf/data/uncooked_zips"):
+        os.makedirs("/conf/data/uncooked_zips")
     if not os.path.isdir("/conf/data/zips"):
         os.makedirs("/conf/data/zips")
     if not os.path.isdir("/conf/data/current_images"):
