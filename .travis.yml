@@ -20,9 +20,9 @@ script:
   - whoami
   - python -m pytest --pep8 tests
   - ls /home/travis
-  - ls /home/current_images
-  - ls /home/zips
-  - ls /home/uncooked_zips
+  - ls /home/travis/current_images
+  - ls /home/travis/zips
+  - ls /home/travis/uncooked_zips
 
 jobs:
   include:
