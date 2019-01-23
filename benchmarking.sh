@@ -106,4 +106,5 @@ function main() {
 }
 
 main
-sleep(1000000) # to prevent the pod from restarting
+# the following is to prevent the pod from restarting
+sleep 1000000
