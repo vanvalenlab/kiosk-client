@@ -40,7 +40,7 @@ function preliminary_benchmarking_output() {
   echo " " >> benchmarks.txt
 }
 
-function file_upload() {
+function image_generation_and_file_upload() {
   # We're going to run the image generation script in the background (hence the
   # ampersand), and the file upload script in the foregoround. The expectation 
   # is that the file upload script should not terminate before the image
