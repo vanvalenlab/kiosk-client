@@ -77,7 +77,7 @@ def main():
                             list_of_previously_uploaded_zip_files.\
                                     append(zip_file)
                 else:
-                    sleep(10)
+                    time.sleep(10)
             else:
                 raise ZipFilesAllUploadedError("Where'd they all go????")
     else:
