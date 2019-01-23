@@ -183,7 +183,7 @@ if __name__=='__main__':
 
     # This is a trap for pods that are initialized without a number of images.
     # Just sit here and wait for the deployment to be destroyed and restarted.
-    if img_num==0:
+    if number_of_images==0:
         while True:
             time.sleep(10000)
 
