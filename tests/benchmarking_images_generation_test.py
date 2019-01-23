@@ -9,7 +9,7 @@ import getpass
 import shutil
 
 
-def test__make_zip_archive():
+def test_generate_images_and_zips():
     # Set parameters
     images_to_create = 10
     images_per_zip = 10
@@ -18,15 +18,11 @@ def test__make_zip_archive():
 
     # Make necessary directories
     os.chmod(home_directory, 0o771)
-    if not os.path.isdir(home_directory + "/uncooked_zips"):
-        os.makedirs(home_directory + "/uncooked_zips")
-    if not os.path.isdir(home_directory + "/zips"):
-        os.makedirs(home_directory + "/zips")
-    if not os.path.isdir(home_directory + "/current_images"):
-        os.makedirs(home_directory + "/current_images")
+    big.create_directories(home_directory)
 
     # Execute relevant function
-    big._make_zip_archive(images_to_create, 0, images_per_zip, home_directory)
+    big.generate_images_and_zips(images_to_create, images_per_zip, \
+            home_directory)
 
     # Check for existence of files
     list_of_images = glob.glob(home_directory + "/image_*.png")
