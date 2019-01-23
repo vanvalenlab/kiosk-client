@@ -2,6 +2,7 @@
 
 import benchmarking_images_generation as big
 
+import os
 import glob
 import math
 
@@ -18,7 +19,7 @@ def test__make_zip_archive():
     # Set parameters
     images_to_create = 10
     images_per_zip = 10
-    number_of_zips = math.ceil( images_to_create / images_per_zip )
+    number_of_zips = math.ceil(images_to_create / images_per_zip)
     # Execute relevant function
     big._make_zip_archive(images_to_create, 0, images_per_zip)
 
