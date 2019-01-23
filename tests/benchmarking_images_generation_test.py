@@ -22,7 +22,7 @@ def test_generate_images_and_zips():
 
     # Execute relevant function
     big.generate_images_and_zips(images_to_create, images_per_zip,
-                                    home_directory)
+                                 home_directory)
 
     # Check for existence of files
     list_of_images = glob.glob(home_directory + "/image_*.png")
