@@ -94,8 +94,10 @@ function main() {
   # define variables
   IMAGES_PER_ZIP=500
   # the following expression is constructed to ensure rounding up of remainder
-  ZIPS=(($IMG_NUM+$IMAGES_PER_ZIP-1)/$IMAGES_PER_ZIP) 
+  ZIPS=$(( ($IMG_NUM + $IMAGES_PER_ZIP - 1)/$IMAGES_PER_ZIP )) 
 
+  echo "$IMAGES_PER_ZIP"
+  echo "$ZIPS"
   # execute functions
   preliminary_benchmarking_output
   image_generation_and_file_upload
