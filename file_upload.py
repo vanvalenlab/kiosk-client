@@ -6,8 +6,13 @@ import os
 import subprocess
 import re
 import time
+import glob
+import sys
 
-def selenium_stuff():
+class ZipFilesAllUploadedError(Exception):
+    pass
+
+def selenium_stuff( zip_file_path ):
     opts = Options()
     opts.binary_location = '/usr/lib/chromium-browser/chromium-browser'
     opts.add_argument("--no-sandbox")
@@ -18,7 +23,7 @@ def selenium_stuff():
     # upload zip file
     file_upload_box = browser.find_element_by_css_selector( \
             'input[name=imageUploadInput]')
-    file_upload_box.send_keys('/zip_files.zip')
+    file_upload_box.send_keys( zip_file_path )
     # wait for image to finish uploading
     max_wait_seconds = 300
     for i in range(max_wait_seconds):
@@ -45,13 +50,39 @@ def selenium_stuff():
             ).click()
     time.sleep(1)
 
+def get_list_of_zip_files():
+    list_of_zip_files = glob.glob("/conf/data/zips/*.zip")
+    return list_of_zip_files
+
 def main():
+    # Parse command line argument
+    number_of_expected_zips = int(sys.argv[1])
+
+    # Initialize variables
     cluster_address = os.environ['CLUSTER_ADDRESS']
     if cluster_address!="NA":
-        selenium_stuff()
+        list_of_previously_uploaded_zip_files = []
+        while True:
+            if len(list_of_previously_uploaded_zip_files) \
+                    < number_of_expected_zips:
+                list_of_zip_files = get_list_of_zip_files()
+                if len(list_of_zip_files) > 0:
+                    for zip_file in list_of_zip_files:
+                        if zip_file in list_of_previously_uploaded_zip_files:
+                            pass
+                        else:
+                            selenium_stuff( zip_file )
+                            print("Successfully uploaded " + \
+                                    str(zip_file) + ".")
+                            list_of_previously_uploaded_zip_files.\
+                                    append(zip_file)
+                else:
+                    time.sleep(10)
+            else:
+                raise ZipFilesAllUploadedError("Where'd they all go????")
     else:
-        raise ValueError("There doesn't appear to be an IP address in the " \
-                "CLUSTER_ADDRESS environmental variable.")
+        raise ValueError("There doesn't appear to be an IP address in " \
+                "the CLUSTER_ADDRESS environmental variable.")
 
 if __name__=='__main__':
     main()

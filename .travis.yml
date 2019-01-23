@@ -1,0 +1,40 @@
+sudo: true
+dist: trusty
+
+git:
+  depth: false
+
+language: python
+
+python:
+  - 3.5
+  - 3.6
+
+cache: pip
+
+install:
+  - pip install numpy pillow selenium
+  - pip install pytest pytest-cov==2.5.1 pytest-pep8 coveralls
+
+script:
+  - whoami
+  - python -m pytest --pep8 tests
+  - ls -l /home/travis
+  - ls /home/travis/current_images
+  - ls /home/travis/zips
+  - ls /home/travis/uncooked_zips
+
+jobs:
+  include:
+    - stage: deploy
+      if: (branch = master OR branch =~ ^r[0-9]+.[0-9]+) AND type != pull_request
+      script:
+      - echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
+      - docker build -t "$TRAVIS_REPO_SLUG" .
+      - docker images
+      - docker tag "$TRAVIS_REPO_SLUG" "$TRAVIS_REPO_SLUG":latest
+      - if [[ "$TRAVIS_BRANCH" != "master" ]] ; then docker tag "$TRAVIS_REPO_SLUG" "$TRAVIS_REPO_SLUG":"${TRAVIS_BRANCH#r}" ; fi
+      - docker push "$TRAVIS_REPO_SLUG"
+
+after_success:
+- coveralls
