@@ -17,23 +17,23 @@ def main():
         zip_results[zip_key] = {}
 
     # check for updates to zip_files in Redis
-    # ultimately, we just want an "upload_timestamp" and an "output_timestamp"
+    # ultimately, we just want an "timestamp_upload" and an "timestamp_output"
     all_done = 0
     while all_done == 0:
         all_done = 1
         for zip_file in zip_results.keys():
-            if (b'upload_timestamp' not in zip_results[zip_file].keys()) or \
-                    (b'output_timestamp' not in zip_results[zip_file].keys()):
+            if (b'timestamp_upload' not in zip_results[zip_file].keys()) or \
+                    (b'timestamp_output' not in zip_results[zip_file].keys()):
                 all_done = 0
                 zip_file_info = r.hgetall(zip_file)
-                if (b'upload_timestamp' not in zip_results[zip_file].keys()) \
-                        and (b'upload_timestamp' in zip_file_info.keys()):
-                    zip_results[zip_file][b'upload_timestamp'] = \
-                            zip_file_info[b'upload_timestamp']
-                if (b'output_timestamp' not in zip_results[zip_file].keys()) \
-                        and (b'output_timestamp' in zip_file_info.keys()):
-                    zip_results[zip_file][b'output_timestamp'] = \
-                            zip_file_info[b'output_timestamp']
+                if (b'timestamp_upload' not in zip_results[zip_file].keys()) \
+                        and (b'timestamp_upload' in zip_file_info.keys()):
+                    zip_results[zip_file][b'timestamp_upload'] = \
+                            zip_file_info[b'timestamp_upload']
+                if (b'timestamp_output' not in zip_results[zip_file].keys()) \
+                        and (b'timestamp_output' in zip_file_info.keys()):
+                    zip_results[zip_file][b'timestamp_output'] = \
+                            zip_file_info[b'timestamp_output']
             time.sleep(10)
 
     # Write everything to a file.
