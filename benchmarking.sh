@@ -92,7 +92,7 @@ function wait_for_jobs_to_process() {
 
 function main() {
   # define variables
-  IMAGES_PER_ZIP=500
+  IMAGES_PER_ZIP=100
   # the following expression is constructed to ensure rounding up of remainder
   ZIPS=$(( ($IMG_NUM + $IMAGES_PER_ZIP - 1)/$IMAGES_PER_ZIP )) 
 
