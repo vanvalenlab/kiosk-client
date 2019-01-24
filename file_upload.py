@@ -35,6 +35,9 @@ def selenium_stuff( zip_file_path ):
             if i%5==0:
                 print("Waited for " + str(i) + " seconds so far.")
             time.sleep(1)
+            # If we've failed for the last time...
+            if i == (max_wait_seconds - 1):
+                return 1
     # set model name, which will automatically set model version and
     # post-processing protocol
     model_selector_wrapper = browser.find_element_by_css_selector( \
@@ -49,6 +52,7 @@ def selenium_stuff( zip_file_path ):
     browser.find_element_by_css_selector('#submitButtonWrapper' \
             ).click()
     time.sleep(1)
+    return 0
 
 def get_list_of_zip_files():
     list_of_zip_files = glob.glob("/conf/data/zips/*.zip")
@@ -71,11 +75,12 @@ def main():
                         if zip_file in list_of_previously_uploaded_zip_files:
                             pass
                         else:
-                            selenium_stuff( zip_file )
-                            print("Successfully uploaded " + \
-                                    str(zip_file) + ".")
-                            list_of_previously_uploaded_zip_files.\
-                                    append(zip_file)
+                            selenium_success = selenium_stuff( zip_file )
+                            if selenium_success==0:
+                                print("Successfully uploaded " + \
+                                        str(zip_file) + ".")
+                                list_of_previously_uploaded_zip_files.\
+                                        append(zip_file)
                 else:
                     time.sleep(10)
             else:
