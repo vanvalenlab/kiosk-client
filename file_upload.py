@@ -12,7 +12,7 @@ import sys
 class ZipFilesAllUploadedError(Exception):
     pass
 
-def selenium_stuff( zip_file_path ):
+def selenium_stuff( zip_file_path, max_wait_seconds ):
     opts = Options()
     opts.binary_location = '/usr/lib/chromium-browser/chromium-browser'
     opts.add_argument("--no-sandbox")
@@ -25,7 +25,6 @@ def selenium_stuff( zip_file_path ):
             'input[name=imageUploadInput]')
     file_upload_box.send_keys( zip_file_path )
     # wait for image to finish uploading
-    max_wait_seconds = 300
     for i in range(max_wait_seconds):
         try:
             browser.find_element_by_css_selector('.uploadedImage')
@@ -64,6 +63,8 @@ def main():
 
     # Initialize variables
     cluster_address = os.environ['CLUSTER_ADDRESS']
+    max_wait_seconds = 180
+
     if cluster_address!="NA":
         list_of_previously_uploaded_zip_files = []
         while True:
@@ -75,7 +76,9 @@ def main():
                         if zip_file in list_of_previously_uploaded_zip_files:
                             pass
                         else:
-                            selenium_success = selenium_stuff( zip_file )
+                            selenium_success = selenium_stuff(
+                                    zip_file,
+                                    max_wait_seconds)
                             if selenium_success==0:
                                 print("Successfully uploaded " + \
                                         str(zip_file) + ".")
