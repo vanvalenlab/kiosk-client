@@ -50,7 +50,8 @@ function image_generation_and_file_upload() {
   # (number of images to generate) and (number of images per zip file).
   python ./benchmarking_images_generation.py $IMG_NUM $IMAGES_PER_ZIP /conf/data &
   # Argument to file_uplaod.py is (total number of zip files to upload).
-  python ./file_upload.py $ZIPS
+  python ./file_upload.py $ZIPS &
+  python ./redis_polling.py
   echo "$(date): data generation and upload completed" >> benchmarks.txt
 }
 
