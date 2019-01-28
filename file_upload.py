@@ -20,9 +20,15 @@ def selenium_stuff( zip_file_path, max_wait_seconds ):
     assert opts.headless # Operating in headless mode
     browser = Chrome("/usr/lib/chromium-browser/chromedriver", options=opts)
     browser.get('http://' + str(os.environ['CLUSTER_ADDRESS']) + '/predict')
+    time.sleep(20)
     # upload zip file
-    file_upload_box = browser.find_element_by_css_selector( \
-            'input[name=imageUploadInput]')
+    try:
+        file_upload_box = browser.find_element_by_css_selector( \
+                'input[name=imageUploadInput]')
+    except NoSuchElementException:
+        print("Page failed to load. Trying again later.")
+        time.sleep(1)
+        return 1
     file_upload_box.send_keys( zip_file_path )
     # wait for image to finish uploading
     for i in range(max_wait_seconds):
@@ -39,18 +45,35 @@ def selenium_stuff( zip_file_path, max_wait_seconds ):
                 return 1
     # set model name, which will automatically set model version and
     # post-processing protocol
-    model_selector_wrapper = browser.find_element_by_css_selector( \
+    try:
+        model_selector_wrapper = browser.find_element_by_css_selector( \
             'div[aria-pressed="false"][role="button"][aria-haspopup="true"]')
+    except NoSuchElementException:
+        print("Page failed to load. Trying again later.")
+        time.sleep(1)
+        return 1
     model_selector_wrapper.click()
     time.sleep(1)
-    model_popup_element = browser.find_element_by_css_selector( \
+    try:
+        model_popup_element = browser.find_element_by_css_selector( \
             'li[role="option"][data-value="watershed_nuclear_nofgbg_41_f16"]')
+    except NoSuchElementException:
+        print("Page failed to load. Trying again later.")
+        time.sleep(1)
+        return 1
     model_popup_element.click()
     time.sleep(1)
     # Click submit button
-    browser.find_element_by_css_selector('#submitButtonWrapper' \
+    try:
+        browser.find_element_by_css_selector('#submitButtonWrapper' \
             ).click()
+    except NoSuchElementException:
+        print("Page failed to load. Trying again later.")
+        time.sleep(1)
+        return 1
     time.sleep(1)
+    # Remove zip file to save on hard drive space
+    os.remove(zip_file_path)
     return 0
 
 def get_list_of_zip_files():
