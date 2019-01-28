@@ -15,6 +15,10 @@ RUN pip install \
     redis \
     selenium
 
-COPY benchmarking.sh benchmarking_images_generation.py file_upload.py /
+COPY benchmarking.sh \
+     benchmarking_images_generation.py \
+     file_upload.py \
+     redis_polling.py \
+     /
 
 CMD /benchmarking.sh
