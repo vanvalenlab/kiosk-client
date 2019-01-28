@@ -145,12 +145,11 @@ def _make_zip_archive( last_image_to_zip, zip_file_counter, \
     for image_number in image_numbers_to_zip:
         try:
             image_name = "image_" + str(image_number) + ".png"
-            shutil.move(home_directory + "/current_images/" + image_name, \
-                    home_directory + "/" + image_name)
+            os.remove(home_directory + "/current_images/" + image_name)
         except FileNotFoundError:
             images_in_batch = image_number-last_image_to_zip+images_in_this_zip
             print("Only " + str(images_in_batch) + \
-                    " images found in last batch.")
+                    " images removed from last batch.")
             if images_in_batch == 0:
                 return 1
             else:
