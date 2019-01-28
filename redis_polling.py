@@ -1,23 +1,31 @@
 import os
+import sys
 import time
 import pickle
 import redis
 
-def main():
+def add_keys_to_zip_results(redis_database, zip_results):
+    zip_keys = redis_database.keys('predict_zip*')
+    for zip_key in zip_keys:
+        if zip_key not in zip_results:
+            zip_results[zip_key] = {}
+    return zip_results
+
+def gather_redis_data(expected_zip_keys, pickle_file_name):
     # read in environmental variables
     redis_host = os.environ['REDIS_MASTER_SERVICE_HOST']
     redis_port = os.environ['REDIS_MASTER_SERVICE_PORT']
 
+    # connect to Redis database
     r = redis.Redis(host=redis_host, port=redis_port, db=0)
 
+    # zip_results will contain information about entries to the Redis database
     zip_results = {}
-    zip_keys = r.keys('predict_zip*')
+    zip_results = add_keys_to_zip_results(r, zip_results)
 
-    for zip_key in zip_keys:
-        zip_results[zip_key] = {}
-
-    # check for updates to zip_files in Redis
-    # ultimately, we just want an "timestamp_upload" and an "timestamp_output"
+    # Check for updates to zip_files in Redis.
+    # Ultimately, we just want an "timestamp_upload" and an "timestamp_output"
+    # for each zip file in the database.
     all_done = 0
     while all_done == 0:
         all_done = 1
@@ -30,17 +38,63 @@ def main():
                         and (b'timestamp_upload' in zip_file_info.keys()):
                     zip_results[zip_file][b'timestamp_upload'] = \
                             zip_file_info[b'timestamp_upload']
+                    print("Wrote upload timestamp for " + str(zip_file) + ".")
                 if (b'timestamp_output' not in zip_results[zip_file].keys()) \
                         and (b'timestamp_output' in zip_file_info.keys()):
                     zip_results[zip_file][b'timestamp_output'] = \
                             zip_file_info[b'timestamp_output']
-            time.sleep(10)
+                    print("Wrote output timestamp for " + str(zip_file) + ".")
+        if len(zip_results) < expected_zip_keys:
+            all_done = 0
+            zip_results = add_keys_to_zip_results(r, zip_results)
+        if all_done == 0:
+            time.sleep(5)
 
     # Write everything to a file.
-    with open('zip_file_summary.pkl','wb') as zip_summary_file:
+    with open(pickle_file_name,'wb') as zip_summary_file:
         pickle.dump(zip_results, zip_summary_file)
     print("Whoa, all fields have been filled out and it has been written to " +
             "a file!")
 
+def analyze_redis_data(pickle_file_name, output_file):
+    # import data
+    with open(pickle_file_name,'rb') as zip_summary_file:
+        zip_results = pickle.load(zip_summary_file)
+
+    # organize data
+    upload_times = []
+    for zip_record in zip_results:
+        upload_times.append(float(zip_results[zip_record][b'timestamp_upload']))
+    beginning_of_upload = min(upload_times)
+    end_of_upload = max(upload_times)
+    upload_time = end_of_upload - beginning_of_upload
+    processing_times = []
+    for zip_record in zip_results:
+        processing_times.append(float(zip_results[zip_record][b'timestamp_output']))
+    end_of_processing = max(processing_times)
+    processing_time = end_of_processing - beginning_of_upload
+
+    # report data
+    # first, to file
+    print("Data upload began (approximately) at " + str(beginning_of_upload), file=open(output_file, 'a'))
+    print("Data upload ended at " + str(end_of_upload), file=open(output_file, 'a'))
+    print("Data upload took, in total " + str(upload_time), file=open(output_file, 'a'))
+    print("", file=open(output_file, 'a'))
+    print("Data processing began at " + str(beginning_of_upload), file=open(output_file, 'a'))
+    print("Data processing ended at " + str(end_of_processing), file=open(output_file, 'a'))
+    print("Data processing took, in total " + str(processing_time), file=open(output_file, 'a'))
+    # then, to stdout
+    print("")
+    print("Data upload took, in total " + str(upload_time))
+    print("Data processing took, in total " + str(processing_time))
+    print("Data analysis analyzed.")
+
+def main(expected_zip_keys, output_file):
+    pickle_file_name = 'zip_file_summary.pkl'
+    gather_redis_data(expected_zip_keys, pickle_file_name)
+    analyze_redis_data(pickle_file_name, output_file)
+
 if __name__=='__main__':
-    main()
+    expected_zip_keys = int(sys.argv[1])
+    output_file = str(sys.argv[2])
+    main(expected_zip_keys, output_file)
