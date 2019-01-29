@@ -73,21 +73,37 @@ def analyze_redis_data(pickle_file_name, output_file):
         processing_times.append(float(zip_results[zip_record][b'timestamp_output']))
     end_of_processing = max(processing_times)
     processing_time = end_of_processing - beginning_of_upload
+    # convert from milliseconds to minutes
+    upload_time_minutes = (upload_time / 1000) / 60
+    processing_time_minutes = (processing_time / 1000) / 60
 
     # report data
-    # first, to file
-    print("Data upload began (approximately) at " + str(beginning_of_upload), file=open(output_file, 'a'))
-    print("Data upload ended at " + str(end_of_upload), file=open(output_file, 'a'))
-    print("Data upload took, in total " + str(upload_time), file=open(output_file, 'a'))
-    print("", file=open(output_file, 'a'))
-    print("Data processing began at " + str(beginning_of_upload), file=open(output_file, 'a'))
-    print("Data processing ended at " + str(end_of_processing), file=open(output_file, 'a'))
-    print("Data processing took, in total " + str(processing_time), file=open(output_file, 'a'))
-    # then, to stdout
-    print("")
-    print("Data upload took, in total " + str(upload_time))
-    print("Data processing took, in total " + str(processing_time))
-    print("Data analysis analyzed.")
+    report_data(output_file, upload_time_minutes, processing_time_minutes, 
+                beginning_of_upload, end_of_upload, beginning_of_processing)
+
+def report_data(output_file, upload_time_minutes, processing_time_minutes,
+                beginning_of_upload, end_of_upload, beginning_of_processing):
+    with open(output_file, 'a') as appendices:
+        # first, record to file
+        print("Data upload began (approximately) at " +
+                str(beginning_of_upload), file=appendices)
+        print("Data upload ended at " + str(end_of_upload), file=appendices)
+        print("Data upload took, in total " + str(upload_time_minutes) + 
+                " minutes.", file=appendices)
+        print("", file=appendices)
+        print("Data processing began at " + str(beginning_of_upload), 
+                file=appendices)
+        print("Data processing ended at " + str(end_of_processing), 
+                file=appendices)
+        print("Data processing took, in total " + 
+                str(processing_time_minutes) + " minutes.", file=appendices)
+        # then, record to stdout
+        print("")
+        print("Data upload took, in total " + str(upload_time_minutes) + 
+                " minutes.")
+        print("Data processing took, in total " + 
+                str(processing_time_minutes) + " minutes.")
+        print("Data analysis analyzed.")
 
 def main(expected_zip_keys, output_file):
     pickle_file_name = 'zip_file_summary.pkl'
