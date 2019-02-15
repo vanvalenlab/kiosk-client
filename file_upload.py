@@ -1,6 +1,6 @@
 from selenium.webdriver import Chrome
 from selenium.webdriver.chrome.options import Options
-from selenium.common.exceptions import NoSuchElementException
+from selenium.common.exceptions import NoSuchElementException, WebDriverException
 from selenium.webdriver.common.keys import Keys
 import os
 import subprocess
@@ -25,9 +25,8 @@ def selenium_stuff( zip_file_path, max_wait_seconds ):
     try:
         file_upload_box = browser.find_element_by_css_selector( \
                 'input[name=imageUploadInput]')
-    except NoSuchElementException:
+    except (NoSuchElementException, WebDriverException) as e:
         print("Page failed to load. Trying again later.")
-        time.sleep(1)
         return 1
     file_upload_box.send_keys( zip_file_path )
     # wait for image to finish uploading
@@ -36,7 +35,7 @@ def selenium_stuff( zip_file_path, max_wait_seconds ):
             browser.find_element_by_css_selector('.uploadedImage')
             print("Image uploaded!")
             break
-        except NoSuchElementException:
+        except (NoSuchElementException, WebDriverException) as e:
             if i%5==0:
                 print("Waited for " + str(i) + " seconds so far.")
             time.sleep(1)
@@ -48,18 +47,16 @@ def selenium_stuff( zip_file_path, max_wait_seconds ):
     try:
         model_selector_wrapper = browser.find_element_by_css_selector( \
             'div[aria-pressed="false"][role="button"][aria-haspopup="true"]')
-    except NoSuchElementException:
+    except (NoSuchElementException, WebDriverException) as e:
         print("Page failed to load. Trying again later.")
-        time.sleep(1)
         return 1
     model_selector_wrapper.click()
     time.sleep(1)
     try:
         model_popup_element = browser.find_element_by_css_selector( \
             'li[role="option"][data-value="watershed_nuclear_nofgbg_41_f16"]')
-    except NoSuchElementException:
+    except (NoSuchElementException, WebDriverException) as e:
         print("Page failed to load. Trying again later.")
-        time.sleep(1)
         return 1
     model_popup_element.click()
     time.sleep(1)
@@ -67,9 +64,8 @@ def selenium_stuff( zip_file_path, max_wait_seconds ):
     try:
         browser.find_element_by_css_selector('#submitButtonWrapper' \
             ).click()
-    except NoSuchElementException:
+    except (NoSuchElementException, WebDriverException) as e:
         print("Page failed to load. Trying again later.")
-        time.sleep(1)
         return 1
     time.sleep(1)
     # Remove zip file to save on hard drive space
@@ -86,7 +82,7 @@ def main():
 
     # Initialize variables
     cluster_address = os.environ['CLUSTER_ADDRESS']
-    max_wait_seconds = 180
+    max_wait_seconds = 120
 
     if cluster_address!="NA":
         list_of_previously_uploaded_zip_files = []
