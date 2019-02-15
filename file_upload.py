@@ -8,6 +8,7 @@ import re
 import time
 import glob
 import sys
+import logging
 
 class ZipFilesAllUploadedError(Exception):
     pass
@@ -80,6 +81,9 @@ def main():
     # Parse command line argument
     number_of_expected_zips = int(sys.argv[1])
 
+    # Create logger
+    logging.basicConfig(filename='file_upload.log', level=logging.DEBUG)
+
     # Initialize variables
     cluster_address = os.environ['CLUSTER_ADDRESS']
     max_wait_seconds = 120
@@ -100,6 +104,8 @@ def main():
                                     max_wait_seconds)
                             if selenium_success==0:
                                 print("Successfully uploaded " + \
+                                        str(zip_file) + ".")
+                                logging.debug("Successfully uploaded " + \
                                         str(zip_file) + ".")
                                 list_of_previously_uploaded_zip_files.\
                                         append(zip_file)
