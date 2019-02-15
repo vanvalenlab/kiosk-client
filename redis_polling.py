@@ -79,10 +79,10 @@ def analyze_redis_data(pickle_file_name, output_file):
 
     # report data
     report_data(output_file, upload_time_minutes, processing_time_minutes, 
-                beginning_of_upload, end_of_upload, beginning_of_processing)
+                beginning_of_upload, end_of_upload, end_of_processing)
 
 def report_data(output_file, upload_time_minutes, processing_time_minutes,
-                beginning_of_upload, end_of_upload, beginning_of_processing):
+                beginning_of_upload, end_of_upload, end_of_processing):
     with open(output_file, 'a') as appendices:
         # first, record to file
         print("Data upload began (approximately) at " +
