@@ -103,6 +103,7 @@ def main():
                                         str(zip_file) + ".")
                                 list_of_previously_uploaded_zip_files.\
                                         append(zip_file)
+                                os.remove(zip_file)
                 else:
                     time.sleep(10)
             else:
