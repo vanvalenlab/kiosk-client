@@ -48,10 +48,10 @@ function image_generation_and_file_upload() {
   # a set number of zip files.
   # Arguments to benchmarking_images_generation.py are 
   # (number of images to generate) and (number of images per zip file).
-  python ./benchmarking_images_generation.py $IMG_NUM $IMAGES_PER_ZIP /conf/data &
+  unbuffer python ./benchmarking_images_generation.py $IMG_NUM $IMAGES_PER_ZIP /conf/data &
   # Argument to file_uplaod.py is (total number of zip files to upload).
-  python ./file_upload.py $ZIPS &
-  python ./redis_polling.py $ZIPS zip_results.txt
+  unbuffer python ./file_upload.py $ZIPS &
+  unbuffer python ./redis_polling.py $ZIPS zip_results.txt
   echo " " >> zip_results.txt
   echo "number of images: $IMG_NUM" >> zip_results.txt
   echo "number of GPUs: $GPU_NUM" >> zip_results.txt
@@ -97,7 +97,7 @@ function wait_for_jobs_to_process() {
 
 function main() {
   # define variables
-  IMAGES_PER_ZIP=100
+  IMAGES_PER_ZIP=1000
   GPU_NUM=$([[ "${BENCHMARKING_PU_TYPE_AND_NUMBER}" =~ ([0-9]+) ]] && echo "${BASH_REMATCH[1]}")
   # the following expression is constructed to ensure rounding up of remainder
   ZIPS=$(( ($IMG_NUM + $IMAGES_PER_ZIP - 1)/$IMAGES_PER_ZIP )) 
