@@ -67,21 +67,6 @@ function image_generation_and_file_upload() {
 }
 
 function main() {
-  for i in "$@"
-  do
-  case $i in
-      -z=*|--imagesperzip=*)
-      IMAGES_PER_ZIP="${i#*=}"
-      ;;
-      -u=*|--uploadmethod=*)
-      UPLOADMETHOD="${i#*=}"
-      ;;
-      *)
-      # unknown option
-      ;;
-  esac
-  done
-
   # check variable logic
   if [ "$UPLOADMETHOD" = "direct" ]; then
       :
