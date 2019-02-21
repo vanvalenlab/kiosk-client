@@ -2,6 +2,7 @@ import os
 import sys
 import time
 import pickle
+import logging
 import redis
 
 def add_keys_to_zip_results(redis_database, zip_results):
@@ -11,7 +12,7 @@ def add_keys_to_zip_results(redis_database, zip_results):
             zip_results[zip_key] = {}
     return zip_results
 
-def gather_redis_data(expected_zip_keys, pickle_file_name):
+def gather_redis_data(expected_zip_keys, pickle_file_name, rp_logger):
     # read in environmental variables
     redis_host = os.environ['REDIS_MASTER_SERVICE_HOST']
     redis_port = os.environ['REDIS_MASTER_SERVICE_PORT']
@@ -38,12 +39,14 @@ def gather_redis_data(expected_zip_keys, pickle_file_name):
                         and (b'timestamp_upload' in zip_file_info.keys()):
                     zip_results[zip_file][b'timestamp_upload'] = \
                             zip_file_info[b'timestamp_upload']
-                    print("Wrote upload timestamp for " + str(zip_file) + ".")
+                    rp_logger.debug("Wrote upload timestamp for " + 
+                            str(zip_file) + ".")
                 if (b'timestamp_output' not in zip_results[zip_file].keys()) \
                         and (b'timestamp_output' in zip_file_info.keys()):
                     zip_results[zip_file][b'timestamp_output'] = \
                             zip_file_info[b'timestamp_output']
-                    print("Wrote output timestamp for " + str(zip_file) + ".")
+                    rp_logger.debug("Wrote output timestamp for " + 
+                            str(zip_file) + ".")
         if len(zip_results) < expected_zip_keys:
             all_done = 0
             zip_results = add_keys_to_zip_results(r, zip_results)
@@ -106,11 +109,21 @@ def report_data(output_file, upload_time_minutes, processing_time_minutes,
         print("Data analysis analyzed.")
 
 def main(expected_zip_keys, output_file):
+    # Logging
+    rp_logger = logging.getLogger('redis_polling')
+    rp_logger.setLevel(logging.DEBUG)
+    fh = logging.FileHandler('redis_polling.log')
+    fh.setLevel(logging.DEBUG)
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    fh.setFormatter(formatter)
+    rp_logger.addHandler(fh)
+
     pickle_file_name = 'zip_file_summary.pkl'
-    gather_redis_data(expected_zip_keys, pickle_file_name)
+    gather_redis_data(expected_zip_keys, pickle_file_name, rp_logger)
     analyze_redis_data(pickle_file_name, output_file)
 
 if __name__=='__main__':
+
     expected_zip_keys = int(sys.argv[1])
     output_file = str(sys.argv[2])
     main(expected_zip_keys, output_file)

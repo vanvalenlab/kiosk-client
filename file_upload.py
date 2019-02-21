@@ -20,6 +20,7 @@ def selenium_stuff( zip_file_path, max_wait_seconds ):
     opts.set_headless()
     assert opts.headless # Operating in headless mode
     browser = Chrome("/usr/lib/chromium-browser/chromedriver", options=opts)
+            #service_log_path="/dev/null")
     browser.get('http://' + str(os.environ['CLUSTER_ADDRESS']) + '/predict')
     time.sleep(20)
     # upload zip file
@@ -34,11 +35,9 @@ def selenium_stuff( zip_file_path, max_wait_seconds ):
     for i in range(max_wait_seconds):
         try:
             browser.find_element_by_css_selector('.uploadedImage')
-            print("Image uploaded!")
+            print(str(zip_file_path) + " uploaded in " + str(i) + " seconds")
             break
         except (NoSuchElementException, WebDriverException) as e:
-            if i%5==0:
-                print("Waited for " + str(i) + " seconds so far.")
             time.sleep(1)
             # If we've failed for the last time...
             if i == (max_wait_seconds - 1):
@@ -81,8 +80,18 @@ def main():
     # Parse command line argument
     number_of_expected_zips = int(sys.argv[1])
 
-    # Create logger
-    logging.basicConfig(filename='file_upload.log', level=logging.DEBUG)
+    # Configure logging
+    logging.getLogger("urllib3.connectionpool").setLevel(logging.WARNING)
+    logging.getLogger("selenium.webdriver.remote.remote_connection"
+            ).setLevel(logging.WARNING)
+    fu_logger = logging.getLogger('file_upload')
+    fu_logger.setLevel(logging.DEBUG)
+    fh = logging.FileHandler('file_upload.log')
+    fh.setLevel(logging.DEBUG)
+    formatter = logging.Formatter(
+            '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    fh.setFormatter(formatter)
+    fu_logger.addHandler(fh)
 
     # Initialize variables
     cluster_address = os.environ['CLUSTER_ADDRESS']
@@ -103,17 +112,23 @@ def main():
                                     zip_file,
                                     max_wait_seconds)
                             if selenium_success==0:
-                                print("Successfully uploaded " + \
-                                        str(zip_file) + ".")
-                                logging.debug("Successfully uploaded " + \
+                                fu_logger.debug("Successfully uploaded " + \
                                         str(zip_file) + ".")
                                 list_of_previously_uploaded_zip_files.\
                                         append(zip_file)
-                                os.remove(zip_file)
+                                try:
+                                    os.remove(zip_file)
+                                    fu_logger.debug("Successfully deleted " + \
+                                            str(zip_file) + ".")
+                                except FileNotFoundError:
+                                    fu_logger.debug("Couldn't find " + \
+                                            str(zip_file) + ".")
                 else:
                     time.sleep(10)
             else:
-                raise ZipFilesAllUploadedError("Where'd they all go????")
+                # All zip files have been added to the list of uploaded zips.
+                break
+                #raise ZipFilesAllUploadedError("Where'd they all go????")
     else:
         raise ValueError("There doesn't appear to be an IP address in " \
                 "the CLUSTER_ADDRESS environmental variable.")
