@@ -19,8 +19,16 @@ RUN echo "tzdata tzdata/Areas select America" > /tmp/preseed.txt; \
     #rm /etc/localtime && \
     apt-get update && \
     apt-get install -y tzdata
-
 RUN apt-get install -y expect
+
+# installing gsutil non-interactively to enable the direct uplaod of images
+RUN apt-get install -y \
+    curl \
+    lsb-release
+RUN export CLOUD_SDK_REPO="cloud-sdk-$(lsb_release -c -s)"
+RUN echo "deb http://packages.cloud.google.com/apt $CLOUD_SDK_REPO main" | tee -a /etc/apt/sources.list.d/google-cloud-sdk.list
+RUN curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add -
+RUN apt-get install -y google-cloud-sdk
 
 RUN ln -s /usr/bin/python3 /usr/bin/python && ln -s /usr/bin/pip3 /usr/bin/pip
 
