@@ -6,6 +6,8 @@ from multiprocessing import Pool
 from PIL import Image as pil_image
 import shutil
 from functools import partial
+import subprocess
+import argparse
 
 # this function is originally from
 # https://github.com/vanvalenlab/deepcell-tf/blob/master/tests/deepcell/utils/io_utils_test.py
@@ -97,8 +99,11 @@ def image_data_format():
     return _IMAGE_DATA_FORMAT
 
 def _image_generation(home_directory, file_num):
-    file_path = home_directory + "/image_" + str(file_num) + ".png"
+    image_name = "image_" + str(file_num) + ".png"
+    file_path = home_directory + "uncooked_images/" + image_name
     _write_image(file_path,1280,1080)
+    shutil.move(home_directory + "/uncooked_images" + image_name, \
+            home_directory + "/" + image_name)
 
 def make_zip_files( img_num, images_per_zip, home_directory ):
     remaining_images = img_num
@@ -115,7 +120,6 @@ def make_zip_files( img_num, images_per_zip, home_directory ):
     last_image_zipped = last_image_zipped + images_per_zip
     _make_zip_archive(last_image_zipped, zip_file_counter, \
             images_per_zip, home_directory)
-
 
 def _make_zip_archive( last_image_to_zip, zip_file_counter, \
         images_in_this_zip, home_directory ):
@@ -156,7 +160,28 @@ def _make_zip_archive( last_image_to_zip, zip_file_counter, \
                 break
     return 0
 
-def generate_images_and_zips(number_of_images, images_per_zip, home_directory):
+def _direct_image_uploads(last_image_to_zip, zip_file_counter, \
+        images_in_this_zip, home_directory, upload_address):
+    image_numbers_to_upload = range(last_image_to_zip-images_in_this_zip, \
+            last_image_to_zip)
+    for image_number in image_numbers_to_upload:
+        try:
+            image_name = "image_" + str(image_number) + ".png"
+            image_path = home_directory + "/" + image_name
+            subprocess.run(["gsutil", "cp", image_path, upload_address])
+            os.remove(image_path)
+        except FileNotFoundError:
+            images_in_batch = image_number-last_image_to_zip+images_in_this_zip
+            print("Only " + str(images_in_batch) + \
+                    " images found in last batch.")
+            if images_in_batch == 0:
+                return 1
+            else:
+                break
+    return 0
+
+def generate_images_and_zips(number_of_images, images_per_zip, home_directory,
+                             make_zips, upload_address):
     """Generate (number_of_images) images and package them into a series of zip
     files, each containing no more than (images_per_zip) images.
     """
@@ -177,8 +202,12 @@ def generate_images_and_zips(number_of_images, images_per_zip, home_directory):
         last_image_to_zip = last_image_zipped + images_in_this_zip
         image_number_range = range(last_image_zipped, last_image_to_zip)
         worker_pool.map(_image_generation_partial, image_number_range)
-        _make_zip_archive(last_image_to_zip, zip_file_counter, \
-                images_in_this_zip, home_directory)
+        if make_zips:
+            _make_zip_archive(last_image_to_zip, zip_file_counter, \
+                    images_in_this_zip, home_directory)
+        else:
+            _direct_image_uploads(last_image_to_zip, zip_file_counter,
+                    images_in_this_zip, home_directory, upload_address)
         remaining_images = remaining_images - images_in_this_zip
         last_image_zipped = last_image_to_zip
         zip_file_counter = zip_file_counter + 1
@@ -188,6 +217,8 @@ def generate_images_and_zips(number_of_images, images_per_zip, home_directory):
         #print("")
 
 def create_directories(home_directory):
+    if not os.path.isdir(home_directory + "/uncooked_images"):
+        os.makedirs(home_directory + "/uncooked_images")
     if not os.path.isdir(home_directory + "/uncooked_zips"):
         os.makedirs(home_directory + "/uncooked_zips")
     if not os.path.isdir(home_directory + "/zips"):
@@ -197,11 +228,29 @@ def create_directories(home_directory):
 
 if __name__=='__main__':
     # parse command line args
-    number_of_images = int(sys.argv[1])
-    images_per_zip = int(sys.argv[2])
-    home_directory = str(sys.argv[3])
+    parser = argparse.ArgumentParser()
+    parser.add_argument("home_directory",
+            help="directory to save generated images in")
+    parser.add_argument("number_of_images",
+            help="number of images to generate", type=int)
+    parser.add_argument("-z", "--generate_zips",
+            help="do you want to generate zip files for web upload",
+            action="store_true")
+    parser.add_argument("-i", "--images_per_zip",
+            help="number of images_per zip file", type=int)
+    parser.add_argument("--upload_bucket", help="bucket for direct uploading")
+    parser.add_argument("--upload_folder", help="folder in upload bucket")
+    args = parser.parse_args()
+    # assign command line args
+    number_of_images = args.number_of_images
+    images_per_zip = args.images_per_zip
+    home_directory = args.home_directory
     if home_directory.endswith('/'):
         home_directory = home_directory[:-1]
+    make_zips = args.generate_zips
+    upload_bucket = args.upload_bucket
+    upload_folder = args.upload_folder
+    upload_address = "gs://" + upload_bucket + "/" + upload_folder
 
     # This is a trap for pods that are initialized without a number of images.
     # Just sit here and wait for the deployment to be destroyed and restarted.
@@ -216,6 +265,7 @@ if __name__=='__main__':
     # so we're going to be using those dimensions.
     print("Beginning image generation.")
     print(time.time())
-    generate_images_and_zips(number_of_images, images_per_zip, home_directory)
+    generate_images_and_zips(number_of_images, images_per_zip, home_directory,
+                             make_zips, upload_address)
     print(time.time())
     print("Finished image generation.")

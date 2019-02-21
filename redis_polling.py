@@ -4,15 +4,20 @@ import time
 import pickle
 import logging
 import redis
+import argparse
 
-def add_keys_to_zip_results(redis_database, zip_results):
-    zip_keys = redis_database.keys('predict_zip*')
+def add_keys_to_zip_results(redis_database, zip_results, upload_method):
+    if upload_method=="web":
+        zip_keys = redis_database.keys('predict_zip*')
+    elif upload_method=="direct":
+        zip_keys = redis_database.keys('predict*directupload*')
     for zip_key in zip_keys:
         if zip_key not in zip_results:
             zip_results[zip_key] = {}
     return zip_results
 
-def gather_redis_data(expected_zip_keys, pickle_file_name, rp_logger):
+def gather_redis_data(expected_zip_keys, pickle_file_name, rp_logger, 
+                      upload_method):
     # read in environmental variables
     redis_host = os.environ['REDIS_MASTER_SERVICE_HOST']
     redis_port = os.environ['REDIS_MASTER_SERVICE_PORT']
@@ -22,7 +27,7 @@ def gather_redis_data(expected_zip_keys, pickle_file_name, rp_logger):
 
     # zip_results will contain information about entries to the Redis database
     zip_results = {}
-    zip_results = add_keys_to_zip_results(r, zip_results)
+    zip_results = add_keys_to_zip_results(r, zip_results, upload_method)
 
     # Check for updates to zip_files in Redis.
     # Ultimately, we just want an "timestamp_upload" and an "timestamp_output"
@@ -108,7 +113,21 @@ def report_data(output_file, upload_time_minutes, processing_time_minutes,
                 str(processing_time_minutes) + " minutes.")
         print("Data analysis analyzed.")
 
-def main(expected_zip_keys, output_file):
+def main():
+    # parse command line args
+    parser = argparse.ArgumentParser()
+    parser.add_argument("upload_method", 
+            help="which method was used to upload the files?", 
+            choices=["web", "direct"])
+    parser.add_argument("total_keys", help="how many files did we upload?", 
+            type=int)
+    parser.add_argument("output_file", help="output file for results")
+    args = parser.parse_args()
+    # assign parsed command line args
+    upload_method = args.upload_method
+    expected_zip_keys = args.total_keys
+    output_file = args.output_file
+
     # Logging
     rp_logger = logging.getLogger('redis_polling')
     rp_logger.setLevel(logging.DEBUG)
@@ -118,12 +137,12 @@ def main(expected_zip_keys, output_file):
     fh.setFormatter(formatter)
     rp_logger.addHandler(fh)
 
+    # define necessary variable
     pickle_file_name = 'zip_file_summary.pkl'
-    gather_redis_data(expected_zip_keys, pickle_file_name, rp_logger)
+
+    # start gathering data
+    gather_redis_data(expected_zip_keys, pickle_file_name, rp_logger, upload_method)
     analyze_redis_data(pickle_file_name, output_file)
 
 if __name__=='__main__':
-
-    expected_zip_keys = int(sys.argv[1])
-    output_file = str(sys.argv[2])
-    main(expected_zip_keys, output_file)
+    main()

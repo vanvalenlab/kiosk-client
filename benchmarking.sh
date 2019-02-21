@@ -18,26 +18,26 @@ function preliminary_benchmarking_output() {
   echo "Image cuts: $BENCHMARK_CUTS"
 
   # benchmark file creation
-  touch benchmarks.txt
-  echo " " >> benchmarks.txt
-  echo " " >> benchmarks.txt
-  echo "$BENCHMARK_TYPE" >> benchmarks.txt
-  echo " " >> benchmarks.txt
-  echo "Processing Unit Type: $BENCHMARKING_PU_TYPE" >> benchmarks.txt
-  echo "Processing Units and Number: $BENCHMARKING_PU_TYPE_AND_NUMBER" >> benchmarks.txt
+  touch benchmarking.log
+  echo " " >> benchmarking.log
+  echo " " >> benchmarking.log
+  echo "$BENCHMARK_TYPE" >> benchmarking.log
+  echo " " >> benchmarking.log
+  echo "Processing Unit Type: $BENCHMARKING_PU_TYPE" >> benchmarking.log
+  echo "Processing Units and Number: $BENCHMARKING_PU_TYPE_AND_NUMBER" >> benchmarking.log
   if [ "$BENCHMARKING_PU_TYPE" = "GPU" ]; then
-      echo "If GPU, GPU type: $GPU_TYPE" >> benchmarks.txt
+      echo "If GPU, GPU type: $GPU_TYPE" >> benchmarking.log
   else
-      echo "CPU type unknown." >> benchmarks.txt
+      echo "CPU type unknown." >> benchmarking.log
   fi
-  echo "Number of images: $IMG_NUM" >> benchmarks.txt
-  echo "Images per zip file: $IMAGES_PER_ZIP" >> benchmarks.txt
-  echo "Number of zip files: $ZIPS" >> benchmarks.txt
-  echo "Deepcell model: $BENCHMARK_MODEL" >> benchmarks.txt
-  echo "Deepcell Model Version: $BENCHMARK_MODEL_VERSION" >> benchmarks.txt
-  echo "Deepcell postprocessing: $BENCHMARK_POSTPROCESSING" >> benchmarks.txt
-  echo "Image cuts: $BENCHMARK_CUTS" >> benchmarks.txt
-  echo " " >> benchmarks.txt
+  echo "Number of images: $IMG_NUM" >> benchmarking.log
+  echo "Images per zip file: $IMAGES_PER_ZIP" >> benchmarking.log
+  echo "Number of zip files: $ZIPS" >> benchmarking.log
+  echo "Deepcell model: $BENCHMARK_MODEL" >> benchmarking.log
+  echo "Deepcell Model Version: $BENCHMARK_MODEL_VERSION" >> benchmarking.log
+  echo "Deepcell postprocessing: $BENCHMARK_POSTPROCESSING" >> benchmarking.log
+  echo "Image cuts: $BENCHMARK_CUTS" >> benchmarking.log
+  echo " " >> benchmarking.log
 }
 
 function image_generation_and_file_upload() {
@@ -48,67 +48,73 @@ function image_generation_and_file_upload() {
   # a set number of zip files.
   # Arguments to benchmarking_images_generation.py are 
   # (number of images to generate) and (number of images per zip file).
-  unbuffer python ./benchmarking_images_generation.py $IMG_NUM $IMAGES_PER_ZIP /conf/data &
-  # Argument to file_uplaod.py is (total number of zip files to upload).
-  unbuffer python ./file_upload.py $ZIPS &
-  unbuffer python ./redis_polling.py $ZIPS zip_results.txt
+  if [ "$UPLOADMETHOD" = "web" ]; then
+    unbuffer python ./benchmarking_images_generation.py $IMAGE_DIRECTORY $IMG_NUM --generate_zips --images_per_zip $IMAGES_PER_ZIP &
+    # Argument to file_uplaod_web.py is (total number of zip files to upload).
+    unbuffer python ./file_upload_web.py $ZIPS &
+    unbuffer python ./redis_polling.py $UPLOADMETHOD $ZIPS zip_results.txt
+  else
+    # benchmarking_images_generation currently uploads directly when --generate_zips isn't specified,
+    # so we're not calling another upload script explicitly
+    unbuffer python ./benchmarking_images_generation.py $IMAGE_DIRECTORY $IMG_NUM --upload_bucket $BUCKET --upload_folder $BUCKET_FOLDER &
+    unbuffer python ./redis_polling.py $UPLOADMETHOD $IMG_NUM zip_results.txt
+  fi
   echo " " >> zip_results.txt
   echo "number of images: $IMG_NUM" >> zip_results.txt
   echo "number of GPUs: $GPU_NUM" >> zip_results.txt
   echo "All data analyzed."
-  #echo "$(date): data generation and upload completed" >> benchmarks.txt
-}
-
-function wait_for_gpu() {
-  kubens deepcell
-  # wait for GPU creation
-  echo "$(date): GPU requisition begins" >> benchmarks.txt
-  kubens deepcell
-  while true; do
-      sleep 1
-      if [ $(kubectl get pods | grep -E "tf-serving.+Running" | wc -l) -gt 0 ]; then
-          echo "$(date)"
-          echo "Active pods:"
-          echo "$(kubectl get pods)"
-          break
-      else
-          echo "$(date): tf-serving pod status: $(kubectl get pods | grep tf-serving)"
-      fi
-  done
-  echo "$(date): GPU requisition completed" >> benchmarks.txt
-  echo " " >> benchmarks.txt
-}
-
-function wait_for_jobs_to_process() {
-  # wait for all jobs to be processed
-  echo "$(date): image processing begins" >> benchmarks.txt
-  echo "Initial number of GPU nodes: $(kubectl get nodes | grep gpu | wc -l)" >> benchmarks.txt
-  while true; do
-      echo $(kubectl exec redis-master-0 -- redis-cli --eval hgetmultiple.lua)
-      if [ "$(kubectl exec redis-master-0 -- redis-cli --eval hgetmultiple.lua)" -eq "0" ]; then
-          break
-      fi
-      sleep 3
-  done
-  echo "Final number of GPU nodes: $(kubectl get nodes | grep gpu | wc -l)" >> benchmarks.txt
-  echo "$(date): image processing completed" >> benchmarks.txt
-  echo " " >> benchmarks.txt
+  #echo "$(date): data generation and upload completed" >> benchmarking.log
 }
 
 function main() {
-  # define variables
-  IMAGES_PER_ZIP=1000
+  for i in "$@"
+  do
+  case $i in
+      -z=*|--imagesperzip=*)
+      IMAGES_PER_ZIP="${i#*=}"
+      ;;
+      -u=*|--uploadmethod=*)
+      UPLOADMETHOD="${i#*=}"
+      ;;
+      *)
+      # unknown option
+      ;;
+  esac
+  done
+
+  # check variable logic
+  if [ "$UPLOADMETHOD" = "direct" ]; then
+      :
+  elif [ "$UPLOADMETHOD" = "web" ]; then 
+      if [ -n "$IMAGES_PER_ZIP" ]; then
+          # the following expression is constructed to ensure rounding up of remainder
+          ZIPS=$(( ($IMG_NUM + $IMAGES_PER_ZIP - 1)/$IMAGES_PER_ZIP )) 
+      else
+          touch benchmarking.log
+          echo "" > benchmarking.log
+          echo "UPLOADMETHOD = web, but IMAGES_PER_ZIP is not set." > benchmarking.log
+          echo "Set it with the -z command line option." > benchmarking.log
+          echo "" > benchmarking.log
+          exit 1
+      fi
+  else
+      touch benchmarking.log
+      echo "" > benchmarking.log
+      echo "UPLOADMETHOD is not set." > benchmarking.log
+      echo "Set it with the -u command line option." > benchmarking.log
+      echo "" > benchmarking.log
+      exit 1
+  fi
+
+  # define necessary variables
   GPU_NUM=$([[ "${BENCHMARKING_PU_TYPE_AND_NUMBER}" =~ ([0-9]+) ]] && echo "${BASH_REMATCH[1]}")
-  # the following expression is constructed to ensure rounding up of remainder
-  ZIPS=$(( ($IMG_NUM + $IMAGES_PER_ZIP - 1)/$IMAGES_PER_ZIP )) 
+  IMAGE_DIRECTORY=/conf/data
 
   echo "$IMAGES_PER_ZIP"
   echo "$ZIPS"
   # execute functions
   preliminary_benchmarking_output
   image_generation_and_file_upload
-  #wait_for_gpu
-  #wait_for_jobs_to_process
 }
 
 main
