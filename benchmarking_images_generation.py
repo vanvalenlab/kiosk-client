@@ -100,9 +100,9 @@ def image_data_format():
 
 def _image_generation(home_directory, file_num):
     image_name = "image_" + str(file_num) + ".png"
-    file_path = home_directory + "uncooked_images/" + image_name
+    file_path = home_directory + "/uncooked_images/" + image_name
     _write_image(file_path,1280,1080)
-    shutil.move(home_directory + "/uncooked_images" + image_name, \
+    shutil.move(home_directory + "/uncooked_images/" + image_name, \
             home_directory + "/" + image_name)
 
 def make_zip_files( img_num, images_per_zip, home_directory ):
@@ -168,7 +168,10 @@ def _direct_image_uploads(last_image_to_zip, zip_file_counter, \
         try:
             image_name = "image_" + str(image_number) + ".png"
             image_path = home_directory + "/" + image_name
-            subprocess.run(["gsutil", "cp", image_path, upload_address])
+            upload_filename = "directupload_" + \
+                    "WatershedNuclearNofgbg41F16_0_watershed_0_" + image_name
+            upload_path = upload_address + "/" + upload_filename
+            subprocess.run(["gsutil", "cp", image_path, upload_path])
             os.remove(image_path)
         except FileNotFoundError:
             images_in_batch = image_number-last_image_to_zip+images_in_this_zip
@@ -198,6 +201,8 @@ def generate_images_and_zips(number_of_images, images_per_zip, home_directory,
 
     # Create images (images_per_zip) at a time and zip them as they're created.
     while remaining_images > 0:
+        print("remaining: " + str(remaining_images))
+        print("per_zip: " + str(images_per_zip))
         images_in_this_zip = min(remaining_images, images_per_zip)
         last_image_to_zip = last_image_zipped + images_in_this_zip
         image_number_range = range(last_image_zipped, last_image_to_zip)
@@ -244,13 +249,15 @@ if __name__=='__main__':
     # assign command line args
     number_of_images = args.number_of_images
     images_per_zip = args.images_per_zip
+    if not images_per_zip:
+        images_per_zip = 1000
     home_directory = args.home_directory
     if home_directory.endswith('/'):
         home_directory = home_directory[:-1]
     make_zips = args.generate_zips
     upload_bucket = args.upload_bucket
     upload_folder = args.upload_folder
-    upload_address = "gs://" + upload_bucket + "/" + upload_folder + "/"
+    upload_address = "gs://" + upload_bucket + "/" + upload_folder
 
     # This is a trap for pods that are initialized without a number of images.
     # Just sit here and wait for the deployment to be destroyed and restarted.
