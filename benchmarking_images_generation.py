@@ -250,7 +250,7 @@ if __name__=='__main__':
     make_zips = args.generate_zips
     upload_bucket = args.upload_bucket
     upload_folder = args.upload_folder
-    upload_address = "gs://" + upload_bucket + "/" + upload_folder
+    upload_address = "gs://" + upload_bucket + "/" + upload_folder + "/"
 
     # This is a trap for pods that are initialized without a number of images.
     # Just sit here and wait for the deployment to be destroyed and restarted.
