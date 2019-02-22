@@ -49,11 +49,13 @@ function image_generation_and_file_upload() {
   # Arguments to benchmarking_images_generation.py are 
   # (number of images to generate) and (number of images per zip file).
   if [ "$UPLOAD_METHOD" = "web" ]; then
+    echo "$UPLOAD_METHOD is \"web\""
     unbuffer python3 ./benchmarking_images_generation.py $IMAGE_DIRECTORY $IMG_NUM --generate_zips --images_per_zip $IMAGES_PER_ZIP &
     # Argument to file_uplaod_web.py is (total number of zip files to upload).
     unbuffer python3 ./file_upload_web.py $ZIPS &
     unbuffer python3 ./redis_polling.py $UPLOAD_METHOD $ZIPS zip_results.txt
   else
+    echo "$UPLOAD_METHOD is not \"web\""
     # benchmarking_images_generation currently uploads directly when --generate_zips isn't specified,
     # so we're not calling another upload script explicitly
     unbuffer python3 ./benchmarking_images_generation.py $IMAGE_DIRECTORY $IMG_NUM --upload_bucket $BUCKET --upload_folder $BUCKET_FOLDER &

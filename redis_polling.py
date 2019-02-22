@@ -14,6 +14,7 @@ def add_keys_to_zip_results(redis_database, zip_results, upload_method):
     for zip_key in zip_keys:
         if zip_key not in zip_results:
             zip_results[zip_key] = {}
+    rp_logger.info("Total number of entries: " + str(len(zip_results)))
     return zip_results
 
 def gather_redis_data(expected_zip_keys, pickle_file_name, rp_logger, 
@@ -44,17 +45,17 @@ def gather_redis_data(expected_zip_keys, pickle_file_name, rp_logger,
                         and (b'timestamp_upload' in zip_file_info.keys()):
                     zip_results[zip_file][b'timestamp_upload'] = \
                             zip_file_info[b'timestamp_upload']
-                    rp_logger.debug("Wrote upload timestamp for " + 
+                    rp_logger.info("Wrote upload timestamp for " + 
                             str(zip_file) + ".")
                 if (b'timestamp_output' not in zip_results[zip_file].keys()) \
                         and (b'timestamp_output' in zip_file_info.keys()):
                     zip_results[zip_file][b'timestamp_output'] = \
                             zip_file_info[b'timestamp_output']
-                    rp_logger.debug("Wrote output timestamp for " + 
+                    rp_logger.info("Wrote output timestamp for " + 
                             str(zip_file) + ".")
         if len(zip_results) < expected_zip_keys:
             all_done = 0
-            zip_results = add_keys_to_zip_results(r, zip_results)
+            zip_results = add_keys_to_zip_results(r, zip_results, upload_method)
         if all_done == 0:
             time.sleep(5)
 
