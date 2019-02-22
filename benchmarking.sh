@@ -48,16 +48,16 @@ function image_generation_and_file_upload() {
   # a set number of zip files.
   # Arguments to benchmarking_images_generation.py are 
   # (number of images to generate) and (number of images per zip file).
-  if [ "$UPLOADMETHOD" = "web" ]; then
-    unbuffer python ./benchmarking_images_generation.py $IMAGE_DIRECTORY $IMG_NUM --generate_zips --images_per_zip $IMAGES_PER_ZIP &
+  if [ "$UPLOAD_METHOD" = "web" ]; then
+    unbuffer python3 ./benchmarking_images_generation.py $IMAGE_DIRECTORY $IMG_NUM --generate_zips --images_per_zip $IMAGES_PER_ZIP &
     # Argument to file_uplaod_web.py is (total number of zip files to upload).
-    unbuffer python ./file_upload_web.py $ZIPS &
-    unbuffer python ./redis_polling.py $UPLOADMETHOD $ZIPS zip_results.txt
+    unbuffer python3 ./file_upload_web.py $ZIPS &
+    unbuffer python3 ./redis_polling.py $UPLOAD_METHOD $ZIPS zip_results.txt
   else
     # benchmarking_images_generation currently uploads directly when --generate_zips isn't specified,
     # so we're not calling another upload script explicitly
-    unbuffer python ./benchmarking_images_generation.py $IMAGE_DIRECTORY $IMG_NUM --upload_bucket $BUCKET --upload_folder $BUCKET_FOLDER &
-    unbuffer python ./redis_polling.py $UPLOADMETHOD $IMG_NUM zip_results.txt
+    unbuffer python3 ./benchmarking_images_generation.py $IMAGE_DIRECTORY $IMG_NUM --upload_bucket $BUCKET --upload_folder $BUCKET_FOLDER &
+    unbuffer python3 ./redis_polling.py $UPLOAD_METHOD $IMG_NUM zip_results.txt
   fi
   echo " " >> zip_results.txt
   echo "number of images: $IMG_NUM" >> zip_results.txt
@@ -68,16 +68,16 @@ function image_generation_and_file_upload() {
 
 function main() {
   # check variable logic
-  if [ "$UPLOADMETHOD" = "direct" ]; then
+  if [ "$UPLOAD_METHOD" = "direct" ]; then
       :
-  elif [ "$UPLOADMETHOD" = "web" ]; then 
+  elif [ "$UPLOAD_METHOD" = "web" ]; then 
       if [ -n "$IMAGES_PER_ZIP" ]; then
           # the following expression is constructed to ensure rounding up of remainder
           ZIPS=$(( ($IMG_NUM + $IMAGES_PER_ZIP - 1)/$IMAGES_PER_ZIP )) 
       else
           touch benchmarking.log
           echo "" > benchmarking.log
-          echo "UPLOADMETHOD = web, but IMAGES_PER_ZIP is not set." > benchmarking.log
+          echo "UPLOAD_METHOD = web, but IMAGES_PER_ZIP is not set." > benchmarking.log
           echo "Set it with the -z command line option." > benchmarking.log
           echo "" > benchmarking.log
           exit 1
@@ -85,7 +85,7 @@ function main() {
   else
       touch benchmarking.log
       echo "" > benchmarking.log
-      echo "UPLOADMETHOD is not set." > benchmarking.log
+      echo "UPLOAD_METHOD is not set." > benchmarking.log
       echo "Set it with the -u command line option." > benchmarking.log
       echo "" > benchmarking.log
       exit 1
