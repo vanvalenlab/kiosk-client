@@ -169,7 +169,7 @@ def _direct_image_uploads(last_image_to_zip, zip_file_counter, \
             image_name = "image_" + str(image_number) + ".png"
             image_path = home_directory + "/" + image_name
             upload_filename = "directupload_" + \
-                    "WatershedNuclearNofgbg41F16_0_watershed_0_" + image_name
+                    "watershednuclearnofgbg41f16_0_watershed_0_" + image_name
             upload_path = upload_address + "/" + upload_filename
             subprocess.run(["gsutil", "cp", image_path, upload_path])
             os.remove(image_path)
