@@ -6,7 +6,8 @@ import logging
 import redis
 import argparse
 
-def add_keys_to_zip_results(redis_database, zip_results, upload_method):
+def add_keys_to_zip_results(redis_database, zip_results, upload_method,
+                            rp_logger):
     if upload_method=="web":
         zip_keys = redis_database.keys('predict_zip*')
     elif upload_method=="direct":
@@ -28,7 +29,8 @@ def gather_redis_data(expected_zip_keys, pickle_file_name, rp_logger,
 
     # zip_results will contain information about entries to the Redis database
     zip_results = {}
-    zip_results = add_keys_to_zip_results(r, zip_results, upload_method)
+    zip_results = add_keys_to_zip_results(r, zip_results, upload_method, 
+                  rp_logger)
 
     # Check for updates to zip_files in Redis.
     # Ultimately, we just want an "timestamp_upload" and an "timestamp_output"
@@ -55,7 +57,8 @@ def gather_redis_data(expected_zip_keys, pickle_file_name, rp_logger,
                             str(zip_file) + ".")
         if len(zip_results) < expected_zip_keys:
             all_done = 0
-            zip_results = add_keys_to_zip_results(r, zip_results, upload_method)
+            zip_results = add_keys_to_zip_results(r, zip_results, 
+                          upload_method, rp_logger)
         if all_done == 0:
             time.sleep(5)
 
