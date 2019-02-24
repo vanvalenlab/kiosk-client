@@ -15,6 +15,7 @@ def add_keys_to_zip_results(redis_database, zip_results, upload_method,
     for zip_key in zip_keys:
         if zip_key not in zip_results:
             zip_results[zip_key] = {}
+    rp_logger.info(" ")
     rp_logger.info("Total number of entries: " + str(len(zip_results)))
     return zip_results
 
@@ -42,6 +43,7 @@ def gather_redis_data(expected_zip_keys, pickle_file_name, rp_logger,
             if (b'timestamp_upload' not in zip_results[zip_file].keys()) or \
                     (b'timestamp_output' not in zip_results[zip_file].keys()):
                 all_done = 0
+                rp_logger.info("Data incomplete for " + str(zip_file))
                 zip_file_info = r.hgetall(zip_file)
                 if (b'timestamp_upload' not in zip_results[zip_file].keys()) \
                         and (b'timestamp_upload' in zip_file_info.keys()):
@@ -57,6 +59,7 @@ def gather_redis_data(expected_zip_keys, pickle_file_name, rp_logger,
                             str(zip_file) + ".")
         if len(zip_results) < expected_zip_keys:
             all_done = 0
+            rp_logger.info("Not enough entries in database yet.")
             zip_results = add_keys_to_zip_results(r, zip_results, 
                           upload_method, rp_logger)
         if all_done == 0:
