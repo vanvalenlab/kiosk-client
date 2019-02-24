@@ -171,7 +171,7 @@ def _direct_image_uploads(last_image_to_zip, zip_file_counter, \
             upload_filename = "directupload_" + \
                     "watershednuclearnofgbg41f16_0_watershed_0_" + image_name
             upload_path = upload_address + "/" + upload_filename
-            subprocess.run(["gsutil", "cp", image_path, upload_path])
+            subprocess.run(["gsutil", "-m", "cp", image_path, upload_path])
             os.remove(image_path)
         except FileNotFoundError:
             images_in_batch = image_number-last_image_to_zip+images_in_this_zip
