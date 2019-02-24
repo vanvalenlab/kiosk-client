@@ -51,12 +51,16 @@ def gather_redis_data(expected_zip_keys, pickle_file_name, rp_logger,
                             zip_file_info[b'timestamp_upload']
                     rp_logger.info("Wrote upload timestamp for " + 
                             str(zip_file) + ".")
+                    rp_logger.info("Value is " + 
+                            str(zip_file_info[b'timestamp_upload']))
                 if (b'timestamp_output' not in zip_results[zip_file].keys()) \
                         and (b'timestamp_output' in zip_file_info.keys()):
                     zip_results[zip_file][b'timestamp_output'] = \
                             zip_file_info[b'timestamp_output']
                     rp_logger.info("Wrote output timestamp for " + 
                             str(zip_file) + ".")
+                    rp_logger.info("Value is " + 
+                            str(zip_file_info[b'timestamp_output']))
         if len(zip_results) < expected_zip_keys:
             all_done = 0
             rp_logger.info("Not enough entries in database yet.")
