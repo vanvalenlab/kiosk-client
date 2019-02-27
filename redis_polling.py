@@ -3,8 +3,9 @@ import sys
 import time
 import pickle
 import logging
-import redis
 import argparse
+import redis
+from redis.execptions import ConnectionError
 
 def add_keys_to_zip_results(redis_database, zip_results, upload_method,
                             rp_logger):
@@ -44,7 +45,13 @@ def gather_redis_data(expected_zip_keys, pickle_file_name, rp_logger,
                     (b'timestamp_output' not in zip_results[zip_file].keys()):
                 all_done = 0
                 rp_logger.info("Data incomplete for " + str(zip_file))
-                zip_file_info = r.hgetall(zip_file)
+                while True:
+                    try:
+                        zip_file_info = r.hgetall(zip_file)
+                    except ConnectionError:
+                        time.sleep(1)
+                        continue
+                    break
                 if (b'timestamp_upload' not in zip_results[zip_file].keys()) \
                         and (b'timestamp_upload' in zip_file_info.keys()):
                     zip_results[zip_file][b'timestamp_upload'] = \
@@ -64,8 +71,14 @@ def gather_redis_data(expected_zip_keys, pickle_file_name, rp_logger,
         if len(zip_results) < expected_zip_keys:
             all_done = 0
             rp_logger.info("Not enough entries in database yet.")
-            zip_results = add_keys_to_zip_results(r, zip_results, 
-                          upload_method, rp_logger)
+            while True:
+                try:
+                    zip_results = add_keys_to_zip_results(r, zip_results,
+                                  upload_method, rp_logger)
+                except ConnectionError:
+                    time.sleep(1)
+                    continue
+                break
         if all_done == 0:
             time.sleep(5)
 
