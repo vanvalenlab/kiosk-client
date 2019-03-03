@@ -183,6 +183,43 @@ def _direct_image_uploads(last_image_to_zip, zip_file_counter, \
                 break
     return 0
 
+def _lean_image_generation(home_directory):
+    img_w = 1280
+    img_h = 1080
+    filepath = home_directory + "/image_1.png"
+
+    # generate only one image
+    bias = np.random.rand(img_w, img_h, 1) * 64
+    variance = np.random.rand(img_w, img_h, 1) * (255 - 64)
+    imarray = np.random.rand(img_w, img_h, 1) * variance + bias
+    if filepath.lower().endswith('tif') or filepath.lower().endswith('tiff'):
+        tiff.imsave(filepath, imarray[:, :, 0])
+    else:
+        img = array_to_img(imarray, scale=False, data_format='channels_last')
+        img.save(filepath)
+    return filepath
+    
+def _lean_image_uploads(filepath, number_of_images, home_directory, upload_address):
+    # upload first image, which is stored locally
+    first_image_name = "image_0.png"
+    first_upload_filename = "directupload_" + \
+            "watershednuclearnofgbg41f16_0_watershed_0_" + first_image_name
+    first_upload_path = upload_address + "/" + first_upload_filename
+    subprocess.run(["gsutil", "cp", filepath, first_upload_path])
+    # make a ton of copies of that original image in the bucket itself
+    # since the goal here is benchmarking, we are implicitly assuming that
+    # no component in our prediction pipeline uses caching. The only one 
+    # that might right now is tensorflow-serving, but I don't think it does.
+    previous_upload_path = first_upload_path
+    for img_num in range(1,number_of_images):
+        image_name = "image_" + str(img_num) + ".png"
+        upload_filename = "directupload_" + \
+                "watershednuclearnofgbg41f16_0_watershed_0_" + image_name
+        upload_path = upload_address + "/" + upload_filename
+        subprocess.run(["gsutil", "cp", previous_upload_path, upload_path])
+        previous_upload_path = upload_path
+        
+
 def generate_images_and_zips(number_of_images, images_per_zip, home_directory,
                              make_zips, upload_address):
     """Generate (number_of_images) images and package them into a series of zip
@@ -196,30 +233,34 @@ def generate_images_and_zips(number_of_images, images_per_zip, home_directory,
     last_image_zipped = 0
     zip_file_counter = 0
 
-    # create partial function for divvying up jobs between worker_pool workers
-    _image_generation_partial = partial(_image_generation, home_directory)
+    if make_zips:
+        # create partial function for divvying up jobs between worker_pool workers
+        _image_generation_partial = partial(_image_generation, home_directory)
 
-    # Create images (images_per_zip) at a time and zip them as they're created.
-    while remaining_images > 0:
-        print("remaining: " + str(remaining_images))
-        print("per_zip: " + str(images_per_zip))
-        images_in_this_zip = min(remaining_images, images_per_zip)
-        last_image_to_zip = last_image_zipped + images_in_this_zip
-        image_number_range = range(last_image_zipped, last_image_to_zip)
-        worker_pool.map(_image_generation_partial, image_number_range)
-        if make_zips:
-            _make_zip_archive(last_image_to_zip, zip_file_counter, \
-                    images_in_this_zip, home_directory)
-        else:
-            _direct_image_uploads(last_image_to_zip, zip_file_counter,
+        # Create images (images_per_zip) at a time and zip them as they're created.
+        while remaining_images > 0:
+            print("remaining: " + str(remaining_images))
+            print("per_zip: " + str(images_per_zip))
+            images_in_this_zip = min(remaining_images, images_per_zip)
+            last_image_to_zip = last_image_zipped + images_in_this_zip
+            image_number_range = range(last_image_zipped, last_image_to_zip)
+            worker_pool.map(_image_generation_partial, image_number_range)
+            if make_zips:
+                _make_zip_archive(last_image_to_zip, zip_file_counter, \
+                        images_in_this_zip, home_directory)
+            else:
+                _direct_image_uploads(last_image_to_zip, zip_file_counter,
                     images_in_this_zip, home_directory, upload_address)
-        remaining_images = remaining_images - images_in_this_zip
-        last_image_zipped = last_image_to_zip
-        zip_file_counter = zip_file_counter + 1
-        #print("")
-        #print(str(remaining_images) + " images left to generate.")
-        print(str(zip_file_counter) + " zip files created.")
-        #print("")
+            remaining_images = remaining_images - images_in_this_zip
+            last_image_zipped = last_image_to_zip
+            zip_file_counter = zip_file_counter + 1
+            #print("")
+            #print(str(remaining_images) + " images left to generate.")
+            print(str(zip_file_counter) + " zip files created.")
+            #print("")
+    else:
+        filepath = _lean_image_generation()
+        _lean_image_uploads(filepath, number_of_images, home_directory, upload_address)
 
 def create_directories(home_directory):
     if not os.path.isdir(home_directory + "/uncooked_images"):
