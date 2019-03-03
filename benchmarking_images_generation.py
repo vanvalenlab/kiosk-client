@@ -216,12 +216,37 @@ def _lean_image_uploads(filepath, number_of_images, home_directory, upload_addre
         upload_filename = "directupload_" + \
                 "watershednuclearnofgbg41f16_0_watershed_0_" + image_name
         upload_path = upload_address + "/" + upload_filename
+        ig_logger.debug("Copying " + previous_upload_path + " to " + upload_path)
         subprocess.run(["gsutil", "cp", previous_upload_path, upload_path])
         previous_upload_path = upload_path
-        
+
+def _lean_upploads_arithmetic(filepath, number_of_images, home_directory, upload_address):
+    # upload first image, which is stored locally
+    first_image_name = "image_0.png"
+    first_upload_filename = "directupload_" + \
+            "watershednuclearnofgbg41f16_0_watershed_0_" + first_image_name
+    first_upload_path = upload_address + "/" + first_upload_filename
+    subprocess.run(["gsutil", "cp", filepath, first_upload_path])
+    # Make a ton of copies of that original image in the bucket itself.
+    # Since the goal here is benchmarking, we are implicitly assuming that
+    # no component in our prediction pipeline uses caching. The only one 
+    # that might right now is tensorflow-serving, but I don't think it does.
+    previous_upload_path = first_upload_path
+    for img_num in range(1,number_of_images):
+        # keeping in mind that img_num is essentially how many entries we have available for copying,
+        # we can minimize the number of gsutil calls we need by using every available entry every time
+
+        image_name = "image_" + str(img_num) + ".png"
+        upload_filename = "directupload_" + \
+                "watershednuclearnofgbg41f16_0_watershed_0_" + image_name
+        upload_path = upload_address + "/" + upload_filename
+        ig_logger.debug("Copying " + previous_upload_path + " to " + upload_path)
+        subprocess.run(["gsutil", "cp", previous_upload_path, upload_path])
+        previous_upload_path = upload_path
+
 
 def generate_images_and_zips(number_of_images, images_per_zip, home_directory,
-                             make_zips, upload_address):
+                             make_zips, upload_address, ig_logger):
     """Generate (number_of_images) images and package them into a series of zip
     files, each containing no more than (images_per_zip) images.
     """
@@ -259,8 +284,9 @@ def generate_images_and_zips(number_of_images, images_per_zip, home_directory,
             print(str(zip_file_counter) + " zip files created.")
             #print("")
     else:
-        filepath = _lean_image_generation()
-        _lean_image_uploads(filepath, number_of_images, home_directory, upload_address)
+        filepath = _lean_image_generation(home_directory)
+        _lean_image_uploads(filepath, number_of_images, home_directory, 
+                upload_address, ig_logger)
 
 def create_directories(home_directory):
     if not os.path.isdir(home_directory + "/uncooked_images"):
@@ -300,6 +326,19 @@ if __name__=='__main__':
     upload_folder = args.upload_folder
     upload_address = "gs://" + upload_bucket + "/" + upload_folder
 
+    # Configure logging
+    logging.getLogger("urllib3.connectionpool").setLevel(logging.WARNING)
+    logging.getLogger("selenium.webdriver.remote.remote_connection"
+            ).setLevel(logging.WARNING)
+    ig_logger = logging.getLogger('image_generation')
+    ig_logger.setLevel(logging.DEBUG)
+    fh = logging.FileHandler('image_generation.log')
+    fh.setLevel(logging.DEBUG)
+    formatter = logging.Formatter(
+            '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    fh.setFormatter(formatter)
+    ig_logger.addHandler(fh)
+    
     # This is a trap for pods that are initialized without a number of images.
     # Just sit here and wait for the deployment to be destroyed and restarted.
     if number_of_images==0:
@@ -314,6 +353,6 @@ if __name__=='__main__':
     print("Beginning image generation.")
     print(time.time())
     generate_images_and_zips(number_of_images, images_per_zip, home_directory,
-                             make_zips, upload_address)
+                             make_zips, upload_address, ig_logger)
     print(time.time())
     print("Finished image generation.")
