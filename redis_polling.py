@@ -5,7 +5,7 @@ import pickle
 import logging
 import argparse
 import redis
-from redis.execptions import ConnectionError
+from redis.exceptions import ConnectionError
 
 def add_keys_to_zip_results(redis_database, zip_results, upload_method,
                             rp_logger):
