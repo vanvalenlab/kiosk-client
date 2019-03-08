@@ -5,168 +5,214 @@ import pickle
 import logging
 import argparse
 import redis
+from redis import StrictRedis
 from redis.exceptions import ConnectionError
 
-def add_keys_to_zip_results(redis_database, zip_results, upload_method,
-                            rp_logger):
-    if upload_method=="web":
-        zip_keys = redis_database.keys('predict_zip*')
-    elif upload_method=="direct":
-        zip_keys = redis_database.keys('predict*directupload*')
-    for zip_key in zip_keys:
-        if zip_key not in zip_results:
-            zip_results[zip_key] = {}
-    rp_logger.info(" ")
-    rp_logger.info("Total number of entries: " + str(len(zip_results)))
-    return zip_results
+class RedisPoller():
+    def __init__(self, args):
+        # assign parsed command line args
+        self.upload_method = args.upload_method
+        self.expected_zip_keys = args.total_keys
+        self.output_file = args.output_file
 
-def gather_redis_data(expected_zip_keys, pickle_file_name, rp_logger, 
-                      upload_method):
-    # read in environmental variables
-    redis_host = os.environ['REDIS_MASTER_SERVICE_HOST']
-    redis_port = os.environ['REDIS_MASTER_SERVICE_PORT']
+        # read in environmental variables
+        self.redis_host = os.environ['REDIS_MASTER_SERVICE_HOST']
+        self.redis_port = os.environ['REDIS_MASTER_SERVICE_PORT']
 
-    # connect to Redis database
-    r = redis.Redis(host=redis_host, port=redis_port, db=0)
+        # define necessary variables
+        self.pickle_file_name = 'zip_file_summary.pkl'
+        self.relevant_entries = {}
 
-    # zip_results will contain information about entries to the Redis database
-    zip_results = {}
-    zip_results = add_keys_to_zip_results(r, zip_results, upload_method, 
-                  rp_logger)
+        # connect to Redis database
+        self.redis_connection = StrictRedis(host=self.redis_host,
+                port=self.redis_port, db=0)
 
-    # Check for updates to zip_files in Redis.
-    # Ultimately, we just want an "timestamp_upload" and an "timestamp_output"
-    # for each zip file in the database.
-    all_done = 0
-    while all_done == 0:
-        all_done = 1
-        for zip_file in zip_results.keys():
-            if (b'timestamp_upload' not in zip_results[zip_file].keys()) or \
-                    (b'timestamp_output' not in zip_results[zip_file].keys()):
-                all_done = 0
-                rp_logger.info("Data incomplete for " + str(zip_file))
-                while True:
-                    try:
-                        zip_file_info = r.hgetall(zip_file)
-                    except ConnectionError:
-                        time.sleep(1)
-                        continue
-                    break
-                if (b'timestamp_upload' not in zip_results[zip_file].keys()) \
-                        and (b'timestamp_upload' in zip_file_info.keys()):
-                    zip_results[zip_file][b'timestamp_upload'] = \
-                            zip_file_info[b'timestamp_upload']
-                    rp_logger.info("Wrote upload timestamp for " + 
-                            str(zip_file) + ".")
-                    rp_logger.info("Value is " + 
-                            str(zip_file_info[b'timestamp_upload']))
-                if (b'timestamp_output' not in zip_results[zip_file].keys()) \
-                        and (b'timestamp_output' in zip_file_info.keys()):
-                    zip_results[zip_file][b'timestamp_output'] = \
-                            zip_file_info[b'timestamp_output']
-                    rp_logger.info("Wrote output timestamp for " + 
-                            str(zip_file) + ".")
-                    rp_logger.info("Value is " + 
-                            str(zip_file_info[b'timestamp_output']))
-        if len(zip_results) < expected_zip_keys:
-            all_done = 0
-            rp_logger.info("Not enough entries in database yet.")
-            while True:
-                try:
-                    zip_results = add_keys_to_zip_results(r, zip_results,
-                                  upload_method, rp_logger)
-                except ConnectionError:
-                    time.sleep(1)
-                    continue
+        # configure logging
+        self._configure_logger()
+
+    def _configure_logger(self):
+        self.self._logger = logging.getLogger('redis-polling')
+        self.self._logger.setLevel(logging.DEBUG)
+        # Send logs to stdout so they can be read via Kubernetes.
+        sh = logging.StreamHandler(sys.stdout)
+        sh.setLevel(logging.DEBUG)
+        formatter = logging.Formatter(
+                '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        sh.setFormatter(formatter)
+        self.self._logger.addHandler(sh)
+        # Also send logs to a file for later inspection.
+        fh = logging.FileHandler('redis-polling.log')
+        fh.setLevel(logging.DEBUG)
+        formatter = logging.Formatter(
+                '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        fh.setFormatter(formatter)
+        self.self._logger.addHandler(fh)
+
+    def _redis_keys(self, search_string = "*"):
+        self._logger.debug("Getting all Redis keys matching \"" +
+                search_string + "\".")
+        while True:
+            try:
+                redis_keys = self.redis_connection.keys(search_string)
                 break
-        if all_done == 0:
-            time.sleep(5)
+            except ConnectionError:
+                # For some reason, we're unable to connect to Redis right now.
+                # Keep trying until we can.
+                self._logger.warn("Trouble connecting to Redis. Retrying.")
+                time.sleep(5)
+        self._logger.debug("Got all Redis keys matching \"" +
+                search_string + "\".")
+        return redis_keys
 
-    # Write everything to a file.
-    with open(pickle_file_name,'wb') as zip_summary_file:
-        pickle.dump(zip_results, zip_summary_file)
-    print("Whoa, all fields have been filled out and it has been written to " +
-            "a file!")
+    def _redis_hgetall(self, key):
+        while True:
+            try:
+                key_values = self.redis_client.hgetall(key)
+                break
+            except ConnectionError:
+                # For some reason, we're unable to connect to Redis right now.
+                # Keep trying until we can.
+                self.as_logger.warn("Trouble connecting to Redis. Retrying.")
+                time.sleep(5)
+        return key_values
 
-def analyze_redis_data(pickle_file_name, output_file):
-    # import data
-    with open(pickle_file_name,'rb') as zip_summary_file:
-        zip_results = pickle.load(zip_summary_file)
+    def _add_to_relevant_entries(self):
+        if self.upload_method=="web":
+            redis_keys = self._redis_keys('predict_zip*')
+        elif self.upload_method=="direct":
+            redis_keys = self._redis_keys('predict*directupload*')
+        for new_key in redis_keys:
+            if new_key not in self.relevant_entries:
+                self.relevant_entries[new_key] = {}
+        self._logger.debug(" ")
+        self._logger.debug("Number of relevant Redis entries: " +
+                str(len(self.relevant_entries)))
 
-    # organize data
-    upload_times = []
-    for zip_record in zip_results:
-        upload_times.append(float(zip_results[zip_record][b'timestamp_upload']))
-    beginning_of_upload = min(upload_times)
-    end_of_upload = max(upload_times)
-    upload_time = end_of_upload - beginning_of_upload
-    processing_times = []
-    for zip_record in zip_results:
-        processing_times.append(float(zip_results[zip_record][b'timestamp_output']))
-    end_of_processing = max(processing_times)
-    processing_time = end_of_processing - beginning_of_upload
-    # convert from milliseconds to minutes
-    upload_time_minutes = (upload_time / 1000) / 60
-    processing_time_minutes = (processing_time / 1000) / 60
+    def _gather_redis_data(self):
+        # Start tracking any new relevant entries in the Redis database.
+        self._add_to_relevant_entries()
 
-    # report data
-    report_data(output_file, upload_time_minutes, processing_time_minutes, 
-                beginning_of_upload, end_of_upload, end_of_processing)
+        # Check for updates to relevant keys in Redis.
+        # Ultimately, we just want a "timestamp_upload" and a
+        # "timestamp_output" for each key in the database.
+        all_done = False
+        while not all_done:
+            # Assuming that all data is in relevant_entries.
+            # (Probably a false assumption.)
+            all_done = True
+            # See whether all current entries have both pieces of data. If
+            # either piece is missing from any entry, our database is
+            # incomplete and we need to re-run the loop.
+            for entry in self.relevant_entries.keys():
+                if (b'timestamp_upload'
+                        not in self.relevant_entries[entry].keys()) or \
+                        (b'timestamp_output'
+                                not in self.relevant_entries[entry].keys()):
+                    all_done = False
+                    self._logger.info("Data incomplete for " + str(entry))
+                    entry_info = self._redis_hgetall(entry)
+                    if (b'timestamp_upload'
+                            not in self.relevant_entries[entry].keys()) \
+                            and (b'timestamp_upload' in entry_info.keys()):
+                        self.relevant_entries[entry][b'timestamp_upload'] = \
+                                entry_info[b'timestamp_upload']
+                        self._logger.info("Wrote upload timestamp for " +
+                                str(entry) + ".")
+                        self._logger.info("Value is " +
+                                str(entry_info[b'timestamp_upload']))
+                    if (b'timestamp_output' not in
+                            self.relevant_entries[entry].keys()) \
+                            and (b'timestamp_output' in entry_info.keys()):
+                        self.relevant_entries[entry][b'timestamp_output'] = \
+                                entry_info[b'timestamp_output']
+                        self._logger.info("Wrote output timestamp for " +
+                                str(entry) + ".")
+                        self._logger.info("Value is " +
+                                str(entry_info[b'timestamp_output']))
+            # Check to see that the database has enough entries. If there are
+            # too few, then we'll need to gather more and then re-run the loop
+            # to fill them in.
+            if len(self.relevant_entries) < self.expected_zip_keys:
+                all_done = False
+                self._logger.info("Not enough entries in database yet.")
+                self._add_to_relevant_entries()
+            if not all_done:
+                time.sleep(5)
 
-def report_data(output_file, upload_time_minutes, processing_time_minutes,
-                beginning_of_upload, end_of_upload, end_of_processing):
-    with open(output_file, 'a') as appendices:
-        # first, record to file
-        print("Data upload began (approximately) at " +
-                str(beginning_of_upload), file=appendices)
-        print("Data upload ended at " + str(end_of_upload), file=appendices)
-        print("Data upload took, in total " + str(upload_time_minutes) + 
-                " minutes.", file=appendices)
-        print("", file=appendices)
-        print("Data processing began at " + str(beginning_of_upload), 
-                file=appendices)
-        print("Data processing ended at " + str(end_of_processing), 
-                file=appendices)
-        print("Data processing took, in total " + 
-                str(processing_time_minutes) + " minutes.", file=appendices)
-        # then, record to stdout
-        print("")
-        print("Data upload took, in total " + str(upload_time_minutes) + 
-                " minutes.")
-        print("Data processing took, in total " + 
-                str(processing_time_minutes) + " minutes.")
-        print("Data analysis analyzed.")
+        # The database is complete, so write everything to a file for a record.
+        with open(self.pickle_file_name,'wb') as summary_file:
+            pickle.dump(self.relevant_entries, summary_file)
+        self._logger.debug("Whoa, all fields have been filled out and " +
+                "everything has been written to " +
+                self.pickle_file_name + "!")
 
-def main():
+    def _analyze_redis_data(self):
+        # organize data
+        upload_times = []
+        for entry in self.relevant_entries:
+            upload_time = float(
+                    self.relevant_entries[entry][b'timestamp_upload'])
+            upload_times.append(upload_time)
+        beginning_of_upload = min(upload_times)
+        end_of_upload = max(upload_times)
+        upload_time = end_of_upload - beginning_of_upload
+        processing_times = []
+        for entry in self.relevant_entries:
+            processing_time = float(
+                    self.relevant_entries[entry][b'timestamp_output'])
+            processing_times.append(processing_time)
+        end_of_processing = max(processing_times)
+        processing_time = end_of_processing - beginning_of_upload
+        # convert from milliseconds to minutes
+        upload_time_minutes = (upload_time / 1000) / 60
+        processing_time_minutes = (processing_time / 1000) / 60
+
+        # report data
+        self._report_data(upload_time_minutes, processing_time_minutes,
+                    beginning_of_upload, end_of_upload, end_of_processing)
+
+    def _report_data(self, upload_time_minutes, processing_time_minutes,
+                    beginning_of_upload, end_of_upload, end_of_processing):
+        with open(self.output_file, 'a') as appendices:
+            # first, record to file
+            print("Data upload began (approximately) at " +
+                    str(beginning_of_upload), file=appendices)
+            print("Data upload ended at " + str(end_of_upload),
+                    file=appendices)
+            print("Data upload took, in total " + str(upload_time_minutes) +
+                    " minutes.", file=appendices)
+            print("", file=appendices)
+            print("Data processing began at " + str(beginning_of_upload),
+                    file=appendices)
+            print("Data processing ended at " + str(end_of_processing),
+                    file=appendices)
+            print("Data processing took, in total " +
+                    str(processing_time_minutes) + " minutes.",
+                    file=appendices)
+            # then, record to stdout
+            self._logger.debug("")
+            self._logger.debug("Data upload took, in total " +
+                    str(upload_time_minutes) + " minutes.")
+            self._logger.debug("Data processing took, in total " +
+                    str(processing_time_minutes) + " minutes.")
+            self._logger.debug("Data analysis analyzed.")
+
+    def watch_redis(self):
+        # start gathering data
+        _gather_redis_data()
+        _analyze_redis_data(pickle_file_name, output_file)
+
+if __name__=='__main__':
     # parse command line args
     parser = argparse.ArgumentParser()
-    parser.add_argument("upload_method", 
-            help="which method was used to upload the files?", 
+    parser.add_argument("upload_method",
+            help="which method was used to upload the files?",
             choices=["web", "direct"])
-    parser.add_argument("total_keys", help="how many files did we upload?", 
+    parser.add_argument("total_keys", help="how many files did we upload?",
             type=int)
     parser.add_argument("output_file", help="output file for results")
     args = parser.parse_args()
-    # assign parsed command line args
-    upload_method = args.upload_method
-    expected_zip_keys = args.total_keys
-    output_file = args.output_file
 
-    # Logging
-    rp_logger = logging.getLogger('redis_polling')
-    rp_logger.setLevel(logging.DEBUG)
-    fh = logging.FileHandler('redis_polling.log')
-    fh.setLevel(logging.DEBUG)
-    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-    fh.setFormatter(formatter)
-    rp_logger.addHandler(fh)
-
-    # define necessary variable
-    pickle_file_name = 'zip_file_summary.pkl'
-
-    # start gathering data
-    gather_redis_data(expected_zip_keys, pickle_file_name, rp_logger, upload_method)
-    analyze_redis_data(pickle_file_name, output_file)
-
-if __name__=='__main__':
-    main()
+    # Create RedisPoller object and tell it to watch Redis.
+    rp = RedisPoller(args)
+    rp.watch_redis()
