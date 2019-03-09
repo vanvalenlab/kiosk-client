@@ -5,8 +5,8 @@ RUN apt-get update && apt-get install -y \
     chromium-chromedriver \
     python3 \
     python3-pip \
+    vim \
     wget
-
 
 # configureing tzdata non-intercatively, to enable the installation of expect,
 # which contains the unbuffer command
