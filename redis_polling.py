@@ -31,48 +31,50 @@ class RedisPoller():
         self._configure_logger()
 
     def _configure_logger(self):
-        self.self._logger = logging.getLogger('redis-polling')
-        self.self._logger.setLevel(logging.DEBUG)
+        self._logger = logging.getLogger('redis-polling')
+        self._logger.setLevel(logging.DEBUG)
         # Send logs to stdout so they can be read via Kubernetes.
         sh = logging.StreamHandler(sys.stdout)
-        sh.setLevel(logging.DEBUG)
+        sh.setLevel(logging.INFO)
         formatter = logging.Formatter(
                 '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
         sh.setFormatter(formatter)
-        self.self._logger.addHandler(sh)
+        self._logger.addHandler(sh)
         # Also send logs to a file for later inspection.
         fh = logging.FileHandler('redis-polling.log')
         fh.setLevel(logging.DEBUG)
         formatter = logging.Formatter(
                 '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
         fh.setFormatter(formatter)
-        self.self._logger.addHandler(fh)
+        self._logger.addHandler(fh)
 
     def _redis_keys(self, search_string = "*"):
-        self._logger.debug("Getting all Redis keys matching \"" +
+        self._logger.info("Getting all Redis keys matching \"" +
                 search_string + "\".")
         while True:
             try:
                 redis_keys = self.redis_connection.keys(search_string)
                 break
-            except ConnectionError:
+            except ConnectionError as err:
                 # For some reason, we're unable to connect to Redis right now.
                 # Keep trying until we can.
-                self._logger.warn("Trouble connecting to Redis. Retrying.")
+                self._logger.warn("Trouble connecting to Redis. Retrying." +
+                        "\n%s: %s", type(err).__name__, err)
                 time.sleep(5)
-        self._logger.debug("Got all Redis keys matching \"" +
+        self._logger.info("Got all Redis keys matching \"" +
                 search_string + "\".")
         return redis_keys
 
     def _redis_hgetall(self, key):
         while True:
             try:
-                key_values = self.redis_client.hgetall(key)
+                key_values = self.redis_connection.hgetall(key)
                 break
-            except ConnectionError:
+            except ConnectionError as err:
                 # For some reason, we're unable to connect to Redis right now.
                 # Keep trying until we can.
-                self.as_logger.warn("Trouble connecting to Redis. Retrying.")
+                self._logger.warn("Trouble connecting to Redis. Retrying." +
+                        "\n%s: %s", type(err).__name__, err)
                 time.sleep(5)
         return key_values
 
@@ -84,8 +86,7 @@ class RedisPoller():
         for new_key in redis_keys:
             if new_key not in self.relevant_entries:
                 self.relevant_entries[new_key] = {}
-        self._logger.debug(" ")
-        self._logger.debug("Number of relevant Redis entries: " +
+        self._logger.info("Number of relevant Redis entries: " +
                 str(len(self.relevant_entries)))
 
     def _gather_redis_data(self):
@@ -103,38 +104,46 @@ class RedisPoller():
             # See whether all current entries have both pieces of data. If
             # either piece is missing from any entry, our database is
             # incomplete and we need to re-run the loop.
+            incomplete_entries = 0
             for entry in self.relevant_entries.keys():
                 if (b'timestamp_upload'
                         not in self.relevant_entries[entry].keys()) or \
                         (b'timestamp_output'
                                 not in self.relevant_entries[entry].keys()):
-                    all_done = False
-                    self._logger.info("Data incomplete for " + str(entry))
+                    if all_done:
+                        # Log first entry which is incomplete.
+                        self._logger.info("Data incomplete for " + str(entry)
+                                + ", and possibly others.")
+                        all_done = False
+                    incomplete_entries += 1
                     entry_info = self._redis_hgetall(entry)
                     if (b'timestamp_upload'
                             not in self.relevant_entries[entry].keys()) \
                             and (b'timestamp_upload' in entry_info.keys()):
                         self.relevant_entries[entry][b'timestamp_upload'] = \
                                 entry_info[b'timestamp_upload']
-                        self._logger.info("Wrote upload timestamp for " +
+                        self._logger.debug("Wrote upload timestamp for " +
                                 str(entry) + ".")
-                        self._logger.info("Value is " +
+                        self._logger.debug("Value is " +
                                 str(entry_info[b'timestamp_upload']))
                     if (b'timestamp_output' not in
                             self.relevant_entries[entry].keys()) \
                             and (b'timestamp_output' in entry_info.keys()):
                         self.relevant_entries[entry][b'timestamp_output'] = \
                                 entry_info[b'timestamp_output']
-                        self._logger.info("Wrote output timestamp for " +
+                        self._logger.debug("Wrote output timestamp for " +
                                 str(entry) + ".")
-                        self._logger.info("Value is " +
+                        self._logger.debug("Value is " +
                                 str(entry_info[b'timestamp_output']))
             # Check to see that the database has enough entries. If there are
             # too few, then we'll need to gather more and then re-run the loop
             # to fill them in.
+            self._logger.info("There are %s incomplete entries.",
+                    incomplete_entries)
             if len(self.relevant_entries) < self.expected_zip_keys:
                 all_done = False
-                self._logger.info("Not enough entries in database yet.")
+                self._logger.info("Not enough entries in database yet. " +
+                        "We only have %s.", len(relevant_entries))
                 self._add_to_relevant_entries()
             if not all_done:
                 time.sleep(5)
@@ -142,7 +151,7 @@ class RedisPoller():
         # The database is complete, so write everything to a file for a record.
         with open(self.pickle_file_name,'wb') as summary_file:
             pickle.dump(self.relevant_entries, summary_file)
-        self._logger.debug("Whoa, all fields have been filled out and " +
+        self._logger.info("Whoa, all fields have been filled out and " +
                 "everything has been written to " +
                 self.pickle_file_name + "!")
 
@@ -190,17 +199,17 @@ class RedisPoller():
                     str(processing_time_minutes) + " minutes.",
                     file=appendices)
             # then, record to stdout
-            self._logger.debug("")
-            self._logger.debug("Data upload took, in total " +
+            self._logger.info("")
+            self._logger.info("Data upload took, in total " +
                     str(upload_time_minutes) + " minutes.")
-            self._logger.debug("Data processing took, in total " +
+            self._logger.info("Data processing took, in total " +
                     str(processing_time_minutes) + " minutes.")
-            self._logger.debug("Data analysis analyzed.")
+            self._logger.info("Data analysis analyzed.")
 
     def watch_redis(self):
         # start gathering data
-        _gather_redis_data()
-        _analyze_redis_data(pickle_file_name, output_file)
+        self._gather_redis_data()
+        self._analyze_redis_data()
 
 if __name__=='__main__':
     # parse command line args
