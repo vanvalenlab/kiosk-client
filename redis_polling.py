@@ -98,6 +98,8 @@ class RedisPoller():
         # "timestamp_output" for each key in the database.
         all_done = False
         while not all_done:
+            # log prettification
+            self._logger.info("")
             # Assuming that all data is in relevant_entries.
             # (Probably a false assumption.)
             all_done = True
@@ -111,10 +113,14 @@ class RedisPoller():
                         (b'timestamp_output'
                                 not in self.relevant_entries[entry].keys()):
                     if all_done:
-                        # Log first entry which is incomplete.
+                        # Log first entry which is incomplete at info level.
                         self._logger.info("Data incomplete for " + str(entry)
                                 + ", and possibly others.")
                         all_done = False
+                    else:
+                        # Log all other incomplete entries at debug level.
+                        self._logger.debug("Data also incomplete for " \
+                                + str(entry) + ".")
                     incomplete_entries += 1
                     entry_info = self._redis_hgetall(entry)
                     if (b'timestamp_upload'
@@ -143,7 +149,7 @@ class RedisPoller():
             if len(self.relevant_entries) < self.expected_zip_keys:
                 all_done = False
                 self._logger.info("Not enough entries in database yet. " +
-                        "We only have %s.", len(relevant_entries))
+                        "We only have %s.", len(self.relevant_entries))
                 self._add_to_relevant_entries()
             if not all_done:
                 time.sleep(5)
