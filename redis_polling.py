@@ -16,8 +16,8 @@ class RedisPoller():
         self.output_file = args.output_file
 
         # read in environmental variables
-        self.redis_host = os.environ['REDIS_MASTER_SERVICE_HOST']
-        self.redis_port = os.environ['REDIS_MASTER_SERVICE_PORT']
+        self.redis_host = os.getenv('REDIS_HOST', "redis-master")
+        self.redis_port = os.getenv('REDIS_PORT', "6379")
 
         # define necessary variables
         self.pickle_file_name = 'zip_file_summary.pkl'
