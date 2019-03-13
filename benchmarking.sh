@@ -108,5 +108,5 @@ main
 # the following is to prevent the pod from restarting
 while :; do
     echo "$(date): sleeping"
-    sleep 1000000
+    sleep 5d
 done
