@@ -1,19 +1,49 @@
-from selenium.webdriver import Chrome
-from selenium.webdriver.chrome.options import Options
-from selenium.common.exceptions import NoSuchElementException, WebDriverException
-from selenium.webdriver.common.keys import Keys
+# Copyright 2016-2019 The Van Valen Lab at the California Institute of
+# Technology (Caltech), with support from the Paul Allen Family Foundation,
+# Google, & National Institutes of Health (NIH) under Grant U24CA224309-01.
+# All rights reserved.
+#
+# Licensed under a modified Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.github.com/vanvalenlab/kiosk-benchmarking/LICENSE
+#
+# The Work provided may be used for non-commercial academic purposes only.
+# For any other use of the Work, including commercial use, please contact:
+# vanvalenlab@gmail.com
+#
+# Neither the name of Caltech nor the names of its contributors may be used
+# to endorse or promote products derived from this software without specific
+# prior written permission.
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ============================================================================
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+
 import os
-import subprocess
-import re
 import time
 import glob
 import sys
 import logging
 
+from selenium.webdriver import Chrome
+from selenium.webdriver.chrome.options import Options
+from selenium.common.exceptions import NoSuchElementException, WebDriverException
+from selenium.webdriver.common.keys import Keys
+
+
 class ZipFilesAllUploadedError(Exception):
     pass
 
-def selenium_stuff( zip_file_path, max_wait_seconds ):
+
+def selenium_stuff(zip_file_path, max_wait_seconds):
     opts = Options()
     opts.binary_location = '/usr/lib/chromium-browser/chromium-browser'
     opts.add_argument("--no-sandbox")
@@ -30,7 +60,7 @@ def selenium_stuff( zip_file_path, max_wait_seconds ):
     except (NoSuchElementException, WebDriverException) as e:
         print("Page failed to load. Trying again later.")
         return 1
-    file_upload_box.send_keys( zip_file_path )
+    file_upload_box.send_keys(zip_file_path)
     # wait for image to finish uploading
     for i in range(max_wait_seconds):
         try:
@@ -82,14 +112,15 @@ def main():
 
     # Configure logging
     logging.getLogger("urllib3.connectionpool").setLevel(logging.WARNING)
-    logging.getLogger("selenium.webdriver.remote.remote_connection"
-            ).setLevel(logging.WARNING)
+    logging.getLogger(
+        "selenium.webdriver.remote.remote_connection").setLevel(
+            logging.WARNING)
     fu_logger = logging.getLogger('file_upload')
     fu_logger.setLevel(logging.DEBUG)
     fh = logging.FileHandler('file_upload.log')
     fh.setLevel(logging.DEBUG)
     formatter = logging.Formatter(
-            '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     fh.setFormatter(formatter)
     fu_logger.addHandler(fh)
 
@@ -97,7 +128,7 @@ def main():
     cluster_address = os.environ['CLUSTER_ADDRESS']
     max_wait_seconds = 120
 
-    if cluster_address!="NA":
+    if cluster_address != "NA":
         list_of_previously_uploaded_zip_files = []
         while True:
             if len(list_of_previously_uploaded_zip_files) \
@@ -109,29 +140,29 @@ def main():
                             pass
                         else:
                             selenium_success = selenium_stuff(
-                                    zip_file,
-                                    max_wait_seconds)
-                            if selenium_success==0:
-                                fu_logger.debug("Successfully uploaded " + \
-                                        str(zip_file) + ".")
+                                zip_file,
+                                max_wait_seconds)
+                            if selenium_success == 0:
+                                fu_logger.debug('Successfully uploaded %s.',
+                                                zip_file)
                                 list_of_previously_uploaded_zip_files.\
                                         append(zip_file)
                                 try:
                                     os.remove(zip_file)
-                                    fu_logger.debug("Successfully deleted " + \
-                                            str(zip_file) + ".")
+                                    fu_logger.debug('Successfully deleted %s.',
+                                                    zip_file)
                                 except FileNotFoundError:
-                                    fu_logger.debug("Couldn't find " + \
-                                            str(zip_file) + ".")
+                                    fu_logger.debug('Could not find %s.',
+                                                    zip_file)
                 else:
                     time.sleep(10)
             else:
                 # All zip files have been added to the list of uploaded zips.
                 break
-                #raise ZipFilesAllUploadedError("Where'd they all go????")
+                # raise ZipFilesAllUploadedError("Where'd they all go????")
     else:
-        raise ValueError("There doesn't appear to be an IP address in " \
-                "the CLUSTER_ADDRESS environmental variable.")
+        raise ValueError("There doesn't appear to be an IP address in "
+                         "the CLUSTER_ADDRESS environmental variable.")
 
-if __name__=='__main__':
+if __name__ == '__main__':
     main()
