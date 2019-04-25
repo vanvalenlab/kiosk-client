@@ -43,4 +43,6 @@ COPY benchmarking.sh \
      redis_polling.py \
      /
 
+RUN pip install python-dateutil
+
 CMD /benchmarking.sh
