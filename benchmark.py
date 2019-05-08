@@ -155,7 +155,7 @@ if __name__ == '__main__':
 
         for i in range(0, len(remaining_job_ids), max_jobs):
             job_ids = remaining_job_ids[i: i + max_jobs]
-            assert job_ids == remaining_job_ids
+
             payload = {'hashes': job_ids}
 
             response = requests.post(host + '/api/batch/status', json=payload)
