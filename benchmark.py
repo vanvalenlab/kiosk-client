@@ -7,7 +7,7 @@
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#     http://www.github.com/vanvalenlab/kiosk-benchmarking/LICENSE
+#     http://www.github.com/vanvalenlab/kiosk-benchmarker/LICENSE
 #
 # The Work provided may be used for non-commercial academic purposes only.
 # For any other use of the Work, including commercial use, please contact:
@@ -34,11 +34,32 @@ import copy
 import json
 import time
 import timeit
+import signal
 import logging
 import logging.handlers
+import multiprocessing
 import argparse
 
 import requests
+
+
+class GracefulDeath:
+    """Catch signals to allow graceful shutdown.
+
+    Adapted from: https://stackoverflow.com/questions/18499497
+    """
+
+    def __init__(self):
+        self.signum = None
+        self.kill_now = False
+        self.logger = logging.getLogger(str(self.__class__.__name__))
+        signal.signal(signal.SIGINT, self.handle_signal)
+        signal.signal(signal.SIGTERM, self.handle_signal)
+
+    def handle_signal(self, signum, frame):  # pylint: disable=unused-argument
+        self.signum = signum
+        self.kill_now = True
+        self.logger.debug('Received signal `%s` and frame `%s`', signum, frame)
 
 
 def initialize_logger(debug_mode=True):
@@ -96,25 +117,156 @@ def get_arg_parser():
     parser.add_argument('-b', '--backoff', default=1, type=int,
                         help='Time to wait between HTTP requests.')
 
+    parser.add_argument('-x', '--expire-time', default=600, type=int,
+                        help='Time in seconds to expire the completed jobs.')
+
+    parser.add_argument('-r', '--retries', default=3, type=int,
+                        help='Number of times to retry an HTTP ConnectionError')
+
+    parser.add_argument('--retry-backoff', default=1, type=int,
+                        help='Time to wait between HTTP retries')
+
     return parser
 
 
-if __name__ == '__main__':
-    START = timeit.default_timer()
-    initialize_logger()
+def chunk(lst, chunk_size):
+    """Break a single list into several lists of length `chunk_size`"""
+    chunked = []
+    for i in range(0, len(lst), chunk_size):
+        chunked.append((lst[i: i + chunk_size]))
+    return chunked
 
-    _logger = logging.getLogger('benchmark')
 
-    # process the input
-    ARGS = get_arg_parser().parse_args()
+def _retry_post_wrapper(endpoint, payload):
+    """Wraps a HTTP POST request in a retry loop"""
+    logger = logging.getLogger('benchmark._retry_post_wrapper')
+    for i in range(1, RETRY_COUNT + 1):
+        try:
+            response = requests.post(endpoint, json=payload)
+            break
+        except requests.exceptions.ConnectionError as err:
+            if i == RETRY_COUNT:
+                raise err
+            logger.warning('Encountered %s.  Retring %s/%s in %s seconds.',
+                           err, i, RETRY_COUNT, RETRY_BACKOFF)
+            time.sleep(RETRY_BACKOFF)
+    return response
 
-    if not ARGS.host.startswith('http://'):
-        host = 'http://{}'.format(ARGS.host)
-    else:
-        host = ARGS.host
 
-    # create the request objects
+def create_jobs(jobs):
+    logger = logging.getLogger('benchmark.create_jobs')
     start = timeit.default_timer()
+    endpoint = HOST + '/api/batch/predict'
+
+    response = _retry_post_wrapper(endpoint, {'jobs': jobs})
+
+    job_ids = response.json()['hashes']
+    if len(job_ids) != len(jobs):
+        logger.warning('Tried to create %s jobs but only got back %s'
+                       ' job IDs', len(jobs), len(job_ids))
+    logger.debug('Created %s jobs in %s seconds.',
+                 len(job_ids), timeit.default_timer() - start)
+    return job_ids
+
+
+def create_jobs_multi(jobs, chunk_size):
+    """Use a multiprocessing.Pool to call many create_jobs in parallel"""
+    logger = logging.getLogger('benchmark.create_jobs_multi')
+    start = timeit.default_timer()
+
+    # chunk the list of jobs and upload in parallel, then flatten the results
+    job_ids = POOL.map(create_jobs, chunk(jobs, chunk_size))
+    job_ids = [item for chunked in job_ids for item in chunked]
+
+    logger.info('Uploaded %s jobs in %s seconds.',
+                len(job_ids), timeit.default_timer() - start)
+
+    return job_ids
+
+
+def get_completed_jobs(job_ids):
+    """Get the status of all job_ids"""
+    logger = logging.getLogger('benchmark.get_completed_jobs')
+    start = timeit.default_timer()
+
+    completed_jobs = {}  # dict to track key and status
+
+    endpoint = HOST + '/api/batch/status'
+    response = _retry_post_wrapper(endpoint, {'hashes': job_ids})
+    try:
+        statuses = response.json()['statuses']
+    except json.decoder.JSONDecodeError as err:
+        self.logger.warning('Failed to parse JSON response with status %s',
+                            response.status_code)
+        statuses = []
+
+    for job_id, status in zip(job_ids, statuses):
+        if status in {'done', 'failed'}:
+            completed_jobs[job_id] = {'status': status}
+
+    logger.debug('Found %s completed jobs in %s seconds.',
+                 len(completed_jobs), timeit.default_timer() - start)
+
+    return completed_jobs
+
+
+def get_completed_jobs_multi(job_ids, chunk_size):
+    """Use a multiprocessing.Pool to call many get_completed_jobs in parallel"""
+    logger = logging.getLogger('benchmark.get_completed_jobs_multi')
+    start = timeit.default_timer()
+
+    # chunk requests for status updates, then flatten results
+    newly_completed = POOL.map(get_completed_jobs, chunk(job_ids, chunk_size))
+    newly_completed = dict(j for i in newly_completed for j in i.items())
+
+    logger.debug('Found %s completed jobs in %s seconds.',
+                 len(newly_completed), timeit.default_timer() - start)
+
+    return newly_completed
+
+
+def expire_job(job_id):
+    """Expire the Redis key `job_id` in `expire_seconds`"""
+    logger = logging.getLogger('benchmark.expire_job')
+    start = timeit.default_timer()
+
+    endpoint = HOST + '/api/redis/expire'
+    payload = {'hash': job_id, 'expireIn': EXPIRE_TIME}
+    response = _retry_post_wrapper(endpoint, payload)
+
+    if response.status_code != 200:
+        logger.warning('Failed to expire job `%s`', job_id)
+    else:
+        logger.debug('Expired job %s in %s seconds.',
+                     job_id, timeit.default_timer() - start)
+    try:
+        value = int(response.json()['value'])
+    except json.decoder.JSONDecodeError:
+        value = 0
+
+    return value
+
+
+def expire_job_multi(job_ids):
+    """Use a multiprocessing.Pool to call many expire_job in parallel"""
+    logger = logging.getLogger('benchmark.expire_job_multi')
+    start = timeit.default_timer()
+
+    # chunk requests for expiration
+    expired = POOL.map(expire_job, job_ids)
+    # expired = [item for chunked in expired for item in chunked]
+    if not len(job_ids) == sum(expired):
+        logger.warning('%s job not expired!', len(job_ids) - sum(expired))
+    logger.info('%s jobs expired in %s seconds.',
+                sum(expired), timeit.default_timer() - start)
+    return expired
+
+
+def main():
+    # create the request objects
+    logger = logging.getLogger('benchmark')
+    _ = timeit.default_timer()
+
     all_jobs = []
     model_name, model_version = ARGS.model.split(':')
     for _ in range(ARGS.count):
@@ -126,57 +278,79 @@ if __name__ == '__main__':
             'postprocessFunction':  ARGS.post,
             'preprocessFunction':  ARGS.pre,
         })
-    _logger.info('Created JSON payloads for %s jobs in %s seconds.',
-                 len(all_jobs), timeit.default_timer() - start)
 
-    # create all of the jobs by sending API requests
-    start = timeit.default_timer()
-    all_job_ids = []
-    max_jobs = 100
-    for i in range(0, len(all_jobs), max_jobs):
-        payload = {'jobs': all_jobs[i: i + max_jobs]}
-        response = requests.post(host + '/api/batch/predict', json=payload)
-        all_job_ids.extend(response.json()['hashes'])
-        # if there are are more job_ids to upload, sleep
-        if all_jobs[i + max_jobs + 1:]:
-            time.sleep(ARGS.backoff)
+    logger.info('Created JSON payloads for %s jobs in %s seconds.',
+                len(all_jobs), timeit.default_timer() - _)
 
-    _logger.debug('Got hashes: %s', all_job_ids)
-    _logger.info('Uploaded %s jobs in %s seconds.',
-                 len(all_job_ids), timeit.default_timer() - start)
+    all_job_ids = create_jobs_multi(all_jobs, MAX_JOBS)
 
     # monitor job_ids until they all have a `done` or `failed` status.
-    start = timeit.default_timer()
+    _ = timeit.default_timer()
     completed_hashes = {}
     remaining_job_ids = copy.copy(all_job_ids)
     while len(completed_hashes) != len(all_jobs):
-        # using temp dict for easier set differences at the end of the loop
-        newly_completed_hashes = {}
+        try:
+            new_hashes = get_completed_jobs_multi(remaining_job_ids, MAX_JOBS)
 
-        for i in range(0, len(remaining_job_ids), max_jobs):
-            job_ids = remaining_job_ids[i: i + max_jobs]
+            # update the `completed_hashes` with results newly completed jobs
+            completed_hashes.update(new_hashes)
+            # update remaining job ids, which are chunked next loop
+            remaining_job_ids = list(set(remaining_job_ids) - set(new_hashes.keys()))
 
-            payload = {'hashes': job_ids}
+            logger.info('Found %s newly completed jobs. '
+                        '%s of %s jobs are complete. '
+                        'Sleeping for %s seconds.',
+                        len(new_hashes), len(completed_hashes),
+                        len(all_job_ids), ARGS.backoff)
 
-            response = requests.post(host + '/api/batch/status', json=payload)
-            statuses = response.json()['statuses']
+            if len(completed_hashes) != len(all_jobs):
+                time.sleep(ARGS.backoff)
+        except Exception as err:
+            logger.error('Encountered %s: %s', type(err).__name__, err)
 
-            time.sleep(ARGS.backoff)
 
-            for job_id, status in zip(job_ids, statuses):
-                if status in {'done', 'failed'}:
-                    newly_completed_hashes[job_id] = {'status': status}
+        if SIGNAL_HANDLER.kill_now:
+            break
 
-            _logger.info('Jobs completed: %s',
-                         json.dumps(newly_completed_hashes, indent=4))
+    # all jobs are finished
+    if SIGNAL_HANDLER.kill_now:
+        logger.info('Gracefully exiting. Expiring hashes.')
+    else:
+        logger.info('All %s jobs are completed in %s seconds.',
+                    len(completed_hashes), timeit.default_timer() - _)
 
-        completed_hashes.update(newly_completed_hashes)
-        remaining_job_ids = list(set(remaining_job_ids) - set(newly_completed_hashes.keys()))
+    # expire all the keys we added.
+    all_expired = expire_job_multi(all_job_ids)
 
-    _logger.info('All %s jobs are completed in %s seconds.',
-                 len(completed_hashes), timeit.default_timer() - start)
+    logger.info('%s of %s jobs will expire in %s seconds.',
+                sum(all_expired), len(all_job_ids), EXPIRE_TIME)
 
-    # all jobs are finished, analyze results
+    # analyze results
+    logger.info('Benchmarking completed in %s seconds.',
+                timeit.default_timer() - _)
 
-    _logger.info('Benchmarking completed in %s seconds.',
-                 timeit.default_timer() - START)
+
+if __name__ == '__main__':
+    initialize_logger()
+
+    SIGNAL_HANDLER = GracefulDeath()
+
+    # process the input
+    ARGS = get_arg_parser().parse_args()
+
+    # set up shared constant values
+    MAX_JOBS = 100  # maximum number of jobs per request
+    EXPIRE_TIME = ARGS.expire_time
+    RETRY_COUNT = ARGS.retries
+    RETRY_BACKOFF = ARGS.retry_backoff
+
+    if not ARGS.host.startswith('http://'):
+        HOST = 'http://{}'.format(ARGS.host)
+    else:
+        HOST = ARGS.host
+
+    # declare shared pool before calling main()
+    # so each process has the same context
+    POOL = multiprocessing.Pool()
+
+    main()
