@@ -147,7 +147,7 @@ def _retry_post_wrapper(endpoint, payload):
         except requests.exceptions.ConnectionError as err:
             if i == RETRY_COUNT:
                 raise err
-            logger.warning('Encountered %s.  Retring %s/%s in %s seconds.',
+            logger.warning('Encountered %s. Retrying %s/%s in %s seconds.',
                            err, i, RETRY_COUNT, RETRY_BACKOFF)
             time.sleep(RETRY_BACKOFF)
     return response
