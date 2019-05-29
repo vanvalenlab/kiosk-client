@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 python benchmark.py \
   --file $FILE \
