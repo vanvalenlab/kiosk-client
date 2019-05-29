@@ -31,10 +31,8 @@ from __future__ import print_function
 import os
 import sys
 import copy
-import json
 import time
 import timeit
-import signal
 import logging
 import logging.handlers
 import multiprocessing
