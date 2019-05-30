@@ -87,7 +87,7 @@ def create_jobs_multi(pool, jobs, chunk_size):
     job_ids = pool.map(create_jobs, chunk(jobs, chunk_size))
     job_ids = [item for chunked in job_ids for item in chunked]
 
-    logger.info('Uploaded %s jobs in %s seconds.',
+    logger.info('Created %s jobs in %s seconds.',
                 len(job_ids), timeit.default_timer() - start)
 
     return job_ids
