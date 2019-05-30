@@ -36,9 +36,8 @@ from PIL import Image
 def is_image_file(filepath):
     """Returns True if the file is an image file, otherwise False"""
     try:
-        im = Image.open(filepath)
-        im.verify()
-        im.close()
+        with Image.open(filepath) as im:
+            im.verify()
         return True
     except:  # pylint: disable=W0702
         return False
