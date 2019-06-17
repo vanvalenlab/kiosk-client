@@ -39,6 +39,7 @@ RUN apt-get update && apt-get install -y google-cloud-sdk
 
 COPY benchmarking.sh \
      benchmarking_images_generation.py \
+     entrypoint.py \
      file_upload_web.py \
      redis_polling.py \
      /
