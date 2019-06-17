@@ -83,7 +83,8 @@ class RedisPoller():
             try:
                 redis_keys = self.redis_connection.keys(search_string)
                 break
-            except redis.exceptions.ConnectionError as err:
+            except (redis.exceptions.ConnectionError,
+                    redis.exceptions.ResponseError) as err:
                 # For some reason, we're unable to connect to Redis right now.
                 # Keep trying until we can.
                 self._logger.warning('Trouble connecting to Redis. Retrying.'
@@ -97,7 +98,8 @@ class RedisPoller():
             try:
                 key_values = self.redis_connection.hgetall(key)
                 break
-            except redis.exceptions.ConnectionError as err:
+            except (redis.exceptions.ConnectionError,
+                    redis.exceptions.ResponseError) as err:
                 # For some reason, we're unable to connect to Redis right now.
                 # Keep trying until we can.
                 self._logger.warning('Trouble connecting to Redis. Retrying.'
