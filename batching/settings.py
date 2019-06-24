@@ -45,15 +45,14 @@ DEBUG = config('DEBUG', cast=bool, default=False)
 # Cloud storage
 CLOUD_PROVIDER = config('CLOUD_PROVIDER', cast=str, default='gke').lower()
 
-if CLOUD_PROVIDER == 'aws':
-    # AWS credentials
-    AWS_REGION = config('AWS_REGION', default='us-east-1')
-    AWS_S3_BUCKET = config('AWS_S3_BUCKET')
-    AWS_ACCESS_KEY_ID = config('AWS_ACCESS_KEY_ID')
-    AWS_SECRET_ACCESS_KEY = config('AWS_SECRET_ACCESS_KEY')
-elif CLOUD_PROVIDER == 'gke':
-    # Google credentials
-    GCLOUD_STORAGE_BUCKET = config('GKE_BUCKET')
+# AWS credentials
+AWS_REGION = config('AWS_REGION', default='us-east-1')
+AWS_S3_BUCKET = config('AWS_S3_BUCKET', default='')
+AWS_ACCESS_KEY_ID = config('AWS_ACCESS_KEY_ID', default='')
+AWS_SECRET_ACCESS_KEY = config('AWS_SECRET_ACCESS_KEY', default='')
+
+# Google credentials
+GCLOUD_STORAGE_BUCKET = config('GKE_BUCKET', default='')
 
 # Batch API Host (IP Address or FQDN)
 HOST = config('API_HOST', cast=str)
