@@ -35,8 +35,8 @@ from google.cloud.exceptions import TooManyRequests
 
 import pytest
 
-from redis_consumer import storage
-from redis_consumer import utils
+from batching import storage
+from batching import utils
 
 
 class DummyGoogleClient(object):
@@ -92,7 +92,7 @@ def test_get_client():
 class TestStorage(object):
 
     def test_get_download_path(self):
-        with utils.get_tempdir() as tempdir:
+        with tempfile.TemporaryDirectory() as tempdir:
             bucket = 'test-bucket'
             stg_cls = storage.Storage
             # monkey-patch the storage client function
@@ -109,7 +109,7 @@ class TestStorage(object):
 class TestGoogleStorage(object):
 
     def test_get_public_url(self):
-        with utils.get_tempdir() as tempdir:
+        with tempfile.TemporaryDirectory() as tempdir:
             bucket = 'test-bucket'
             stg_cls = storage.GoogleStorage
             stg_cls.get_storage_client = DummyGoogleClient
@@ -118,7 +118,7 @@ class TestGoogleStorage(object):
             assert url == 'public-url'
 
     def test_upload(self):
-        with utils.get_tempdir() as tempdir:
+        with tempfile.TemporaryDirectory() as tempdir:
             with tempfile.NamedTemporaryFile(dir=tempdir) as temp:
                 bucket = 'test-bucket'
                 stg_cls = storage.GoogleStorage
@@ -142,7 +142,7 @@ class TestGoogleStorage(object):
 
     def test_download(self):
         remote_file = '/test/file.txt'
-        with utils.get_tempdir() as tempdir:
+        with tempfile.TemporaryDirectory() as tempdir:
             bucket = 'test-bucket'
             stg_cls = storage.GoogleStorage
             stg_cls.get_storage_client = DummyGoogleClient
@@ -161,14 +161,14 @@ class TestGoogleStorage(object):
 class TestS3Storage(object):
 
     def test_get_public_url(self):
-        with utils.get_tempdir() as tempdir:
+        with tempfile.TemporaryDirectory() as tempdir:
             bucket = 'test-bucket'
             stg = storage.S3Storage(bucket, tempdir)
             url = stg.get_public_url('test')
             assert url == 'https://{}/{}'.format(stg.bucket_url, 'test')
 
     def test_upload(self):
-        with utils.get_tempdir() as tempdir:
+        with tempfile.TemporaryDirectory() as tempdir:
             with tempfile.NamedTemporaryFile(dir=tempdir) as temp:
                 bucket = 'test-bucket'
                 stg = storage.S3Storage(bucket, tempdir)
@@ -193,7 +193,7 @@ class TestS3Storage(object):
 
     def test_download(self):
         remote_file = '/test/file.txt'
-        with utils.get_tempdir() as tempdir:
+        with tempfile.TemporaryDirectory() as tempdir:
             bucket = 'test-bucket'
             stg = storage.S3Storage(bucket, tempdir)
 
