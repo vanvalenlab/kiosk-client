@@ -44,7 +44,7 @@ def is_image_file(filepath):
 
 
 def iter_image_files(path, include_archives=True):
-    archive_extensions = {'.zip',}
+    archive_extensions = {'.zip'}
     for (dirpath, _, filenames) in os.walk(path):
         for filename in filenames:
             filepath = os.path.join(dirpath, filename)
