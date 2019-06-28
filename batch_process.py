@@ -44,6 +44,7 @@ from batching import storage
 from batching.jobs import create_jobs_multi
 from batching.jobs import get_completed_jobs_multi
 from batching.jobs import expire_job_multi
+from batching.jobs import get_job_output_paths_multi
 from batching.utils import iter_image_files
 
 
@@ -102,10 +103,15 @@ def prepare_jobs(filename, model, pre='', post=''):
     model_name, model_version = model.split(':')
 
     all_jobs = []
+
+    logger.info('Preparing jobs in %s', filename)
+
     for f in iter_image_files(filename):
         # upload file
         relpath = os.path.relpath(f, filename)
         subdir = os.path.dirname(relpath)
+
+        logger.info('uploading %s', f)
 
         uploaded_name, _ = storage_client.upload(f, subdir)
 
@@ -164,6 +170,17 @@ def main():
 
     logger.info('All %s jobs are completed in %s seconds.',
                 len(completed_hashes), timeit.default_timer() - start)
+
+    output_paths = get_job_output_paths_multi(POOL, all_job_ids, settings.MAX_JOBS)
+
+    storage_client = storage.get_client(settings.CLOUD_PROVIDER)
+    for path in output_paths:
+        try:
+            storage_client.download(path, settings.DOWNLOAD_DIR)
+        except Exception as err:
+            logger.error(err)
+            logger.error(path)
+            import pdb; pdb.set_trace()
 
     # expire all the keys we added.
     all_expired = expire_job_multi(POOL, all_job_ids)
