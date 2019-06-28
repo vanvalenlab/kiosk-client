@@ -54,7 +54,7 @@ class JobManager(object):
         self.postprocess = kwargs.get('postprocess', '')
         self.upload_prefix = kwargs.get('upload_prefix', 'uploads')
         self.refresh_rate = int(kwargs.get('refresh_rate', 2))
-        self.status_update_interval = kwargs.get('status_update_interval', 10)
+        self.update_interval = kwargs.get('update_interval', 10)
         self.start_delay = kwargs.get('start_delay', .1)
         self.headers = {'Content-Type': ['application/json']}
         self.started_at = None
@@ -65,7 +65,7 @@ class JobManager(object):
                    model_name=self.model_name,
                    model_version=self.model_version,
                    postprocess=self.postprocess,
-                   status_update_interval=self.status_update_interval,
+                   update_interval=self.update_interval,
                    upload_prefix=self.upload_prefix)
 
     def start_jobs(self, job_index=0):

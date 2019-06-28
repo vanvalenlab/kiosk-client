@@ -55,8 +55,8 @@ class Job(object):
         self.preprocess = kwargs.get('preprocess', '')
         self.postprocess = kwargs.get('postprocess', '')
         self.upload_prefix = kwargs.get('upload_prefix', 'uploads')
-        self.expire_time = kwargs.get('expire_time', 3600)
-        self.status_update_interval = kwargs.get('status_update_interval', 10)
+        self.expire_time = int(kwargs.get('expire_time', 3600))
+        self.update_interval = int(kwargs.get('update_interval', 10))
 
         self.headers = {'Content-Type': ['application/json']}
         self.status = None
@@ -78,7 +78,7 @@ class Job(object):
 
     def delayed(self, args, cb):
         # pylint: disable=E1101
-        return reactor.callLater(self.status_update_interval, cb, args)
+        return reactor.callLater(self.update_interval, cb, args)
 
     def parse_json_response(self, response):
         L = self.logger.debug if response.code == 200 else self.logger.warning
@@ -161,8 +161,9 @@ class Job(object):
                              diff.total_seconds(), self.output_url)
 
         # all summary data fetched, expire the key
-
-        return
+        d = self.expire()
+        d.addCallback(self.handle_expire)
+        return d
 
 
     def monitor(self, json_response):
