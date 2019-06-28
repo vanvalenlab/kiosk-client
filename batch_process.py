@@ -128,13 +128,15 @@ def prepare_jobs(filename, model, pre='', post=''):
 def main():
     start = timeit.default_timer()
     logger = logging.getLogger('benchmark')
-    pool = multiprocessing.Pool()  # Create the shared pool
 
     # create the request objects
     all_jobs = prepare_jobs(ARGS.file, ARGS.model, ARGS.pre, ARGS.post)
 
     # send the requests to the batch create API
-    all_job_ids = create_jobs_multi(pool, all_jobs, settings.MAX_JOBS)
+    all_job_ids = create_jobs_multi(POOL, all_jobs, settings.MAX_JOBS)
+
+    if not all_job_ids:
+        raise ValueError('No jobs were created!')
 
     # monitor job_ids until they all have a `done` or `failed` status.
     completed_hashes = {}
@@ -142,7 +144,7 @@ def main():
     while len(completed_hashes) != len(all_jobs):
         try:
             new_hashes = get_completed_jobs_multi(
-                pool, remaining_job_ids, settings.MAX_JOBS)
+                POOL, remaining_job_ids, settings.MAX_JOBS)
 
             # update the `completed_hashes` with results newly completed jobs
             completed_hashes.update(new_hashes)
@@ -164,7 +166,7 @@ def main():
                 len(completed_hashes), timeit.default_timer() - start)
 
     # expire all the keys we added.
-    all_expired = expire_job_multi(pool, all_job_ids)
+    all_expired = expire_job_multi(POOL, all_job_ids)
 
     logger.info('%s of %s jobs will expire in %s seconds.',
                 sum(all_expired), len(all_job_ids), settings.EXPIRE_TIME)
@@ -182,5 +184,7 @@ if __name__ == '__main__':
 
     # declare shared pool before calling main()
     # so each process has the same context
+
+    POOL = multiprocessing.Pool()
 
     main()
