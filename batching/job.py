@@ -115,7 +115,7 @@ class Job(object):
                               'JSON response: %s', err, json_response)
 
     def expire(self):
-        host = '{}/api/expire'.format(self.host)
+        host = '{}/api/redis/expire'.format(self.host)
         payload = {'hash': self.job_id, 'expireIn': self.expire_time}
         body = json.dumps(payload).encode('ascii')
         d = treq.post(host, body, headers=self.headers)
