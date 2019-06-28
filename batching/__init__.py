@@ -27,11 +27,11 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-from batching import jobs
-from batching import settings
-from batching import storage
+from batching import batch_requests
 from batching import job
 from batching import manager
+from batching import settings
+from batching import storage
 
 del absolute_import
 del division

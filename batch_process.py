@@ -41,10 +41,10 @@ import sys
 
 from batching import settings
 from batching import storage
-from batching.jobs import create_jobs_multi
-from batching.jobs import get_completed_jobs_multi
-from batching.jobs import expire_job_multi
-from batching.jobs import get_job_output_paths_multi
+from batching.batch_requests import create_jobs_multi
+from batching.batch_requests import get_completed_jobs_multi
+from batching.batch_requests import expire_job_multi
+from batching.batch_requests import get_job_output_paths_multi
 from batching.utils import iter_image_files
 
 
