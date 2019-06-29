@@ -31,7 +31,6 @@ from __future__ import print_function
 import json
 import logging
 import os
-import timeit
 
 import dateutil.parser
 import treq
@@ -57,6 +56,7 @@ class Job(object):
         self.upload_prefix = kwargs.get('upload_prefix', 'uploads')
         self.expire_time = int(kwargs.get('expire_time', 3600))
         self.update_interval = int(kwargs.get('update_interval', 10))
+        self.original_name = kwargs.get('original_name', self.filepath)
 
         self.headers = {'Content-Type': ['application/json']}
         self.status = None
