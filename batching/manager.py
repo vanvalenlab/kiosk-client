@@ -53,56 +53,41 @@ class JobManager(object):
         self.preprocess = kwargs.get('preprocess', '')
         self.postprocess = kwargs.get('postprocess', '')
         self.upload_prefix = kwargs.get('upload_prefix', 'uploads')
-        self.refresh_rate = int(kwargs.get('refresh_rate', 2))
+        self.refresh_rate = int(kwargs.get('refresh_rate', 10))
         self.update_interval = kwargs.get('update_interval', 10)
-        self.start_delay = kwargs.get('start_delay', .1)
+        self.start_delay = kwargs.get('start_delay', 0)
         self.headers = {'Content-Type': ['application/json']}
-        self.started_at = None
+        self.created_at = timeit.default_timer()
 
-    def make_job(self, filepath):
+    def delay(self, delay_seconds, cb, *args, **kwargs):
+        """Wrapper around `reactor.callLater`"""
+        # pylint: disable=E1101
+        return reactor.callLater(delay_seconds, cb, *args, **kwargs)
+
+    def make_job(self, filepath, original_name=None):
+        if not original_name:
+            original_name = filepath
         return Job(filepath=filepath,
                    host=self.host,
                    model_name=self.model_name,
                    model_version=self.model_version,
                    postprocess=self.postprocess,
                    update_interval=self.update_interval,
-                   upload_prefix=self.upload_prefix)
+                   upload_prefix=self.upload_prefix,
+                   original_name=original_name)
 
-    def start_jobs(self, job_index=0):
-        if job_index == 0:
-            self.logger.info('Creating %s jobs', len(self.all_jobs))
-
-        if job_index < len(self.all_jobs):
-            job = self.all_jobs[job_index]
-            job.create()
-            return reactor.callLater(self.start_delay, self.start_jobs, job_index + 1)
-
-        self.logger.info('All %s jobs created', len(self.all_jobs))
-        return reactor.callLater(self.start_delay, self.check_benchmarking_status)
-
-    def benchmark(self, filepath, count):
-        self.started_at = timeit.default_timer()
-        self.logger.info('Benchmarking %s jobs of file `%s`', count, filepath)
-
-        for _ in range(count):
-            job = self.make_job(filepath)
-            self.all_jobs.append(job)
-
-        return reactor.callLater(self.start_delay, self.start_jobs, 0)
-
-    def check_benchmarking_status(self):
+    def check_job_status(self):
         complete = sum(j.is_done for j in self.all_jobs)
         self.logger.info('%s of %s jobs complete', complete, len(self.all_jobs))
 
         if complete == len(self.all_jobs):
-            return reactor.callLater(self.refresh_rate, self.summarize)
+            return self.delay(self.refresh_rate, self.summarize)
 
-        return reactor.callLater(self.refresh_rate, self.check_benchmarking_status)
+        return self.delay(self.refresh_rate, self.check_job_status)
 
     def summarize(self):
-        self.logger.info('Finished %s jobs in %s seconds',
-                         len(self.all_jobs),
-                         timeit.default_timer() - self.started_at)
+        self.logger.info('Finished %s jobs in %s seconds', len(self.all_jobs),
+                         timeit.default_timer() - self.created_at)
         statuses = {}
         for j in self.all_jobs:
             if j.status not in statuses:
@@ -113,4 +98,21 @@ class JobManager(object):
         for k, v in statuses.items():
             self.logger.info('%s = %s', k, v)
 
-        reactor.stop()
+        reactor.stop()  # pylint: disable=E1101
+
+    def run_job(self, *args, **kwargs):
+        raise NotImplementedError
+
+
+class BenchmarkingJobManager(JobManager):
+
+    def run_job(self, filepath, count):  # pylint: disable=W0221
+        self.logger.info('Benchmarking %s jobs of file `%s`', count, filepath)
+
+        for _ in range(count):
+            job = self.make_job(filepath)
+            self.all_jobs.append(job)
+            self.delay(self.start_delay, job.create)
+
+        return self.delay(self.start_delay, self.check_job_status)
+
