@@ -55,7 +55,7 @@ AWS_SECRET_ACCESS_KEY = config('AWS_SECRET_ACCESS_KEY', default='')
 GCLOUD_STORAGE_BUCKET = config('GKE_BUCKET', default='')
 
 # Batch API Host (IP Address or FQDN)
-HOST = config('API_HOST', cast=str)
+HOST = config('API_HOST', cast=str, default='')
 if not any(HOST.lower().startswith(x) for x in ('http://', 'https://')):
     HOST = 'http://{}'.format(HOST)
 
