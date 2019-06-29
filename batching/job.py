@@ -130,10 +130,12 @@ class Job(object):
             d.addCallback(self.summarize, attributes[0])
             return d
 
+        # find index of the current property, enables moving to next property
         index = attributes.index(name)
 
         # update the property
         setattr(self, name, response.get('value'))
+
         # If the property is still None, try updating it again
         if getattr(self, name) is None and self.status != 'failed':
             self.logger.info('Job `%s` has null value for %s, retrying',
@@ -161,10 +163,7 @@ class Job(object):
                              diff.total_seconds(), self.output_url)
 
         # all summary data fetched, expire the key
-        d = self.expire()
-        d.addCallback(self.handle_expire)
-        return d
-
+        return self.expire()
 
     def monitor(self, json_response):
         # First monitor call will be from create response
