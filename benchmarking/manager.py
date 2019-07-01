@@ -37,9 +37,9 @@ import uuid
 from twisted.internet import reactor
 from google.cloud import storage as google_storage
 
-from batching.job import Job
-from batching.utils import iter_image_files
-from batching import settings
+from benchmarking.job import Job
+from benchmarking.utils import iter_image_files
+from benchmarking import settings
 
 
 class JobManager(object):

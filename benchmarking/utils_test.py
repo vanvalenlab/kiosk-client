@@ -23,14 +23,39 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
+"""Tests for utility functions"""
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-from batching import job
-from batching import manager
-from batching import utils
+import os
+import tempfile
 
-del absolute_import
-del division
-del print_function
+from PIL import Image
+import pytest
+
+from benchmarking import utils
+
+
+class TestUtils(object):
+
+    def test_is_image_file(self):
+        with tempfile.TemporaryDirectory() as tempdir:
+            # Test valid image
+            valid_image = os.path.join(tempdir, 'image.png')
+            img = Image.new('RGB', (800, 1280), (255, 255, 255))
+            img.save(valid_image, 'PNG')
+            assert utils.is_image_file(valid_image)
+
+            # Test invalid image
+            invalid_image = os.path.join(tempdir, 'bad_image.png')
+            with open(invalid_image, 'w') as f:
+                f.write('line1')
+            assert not utils.is_image_file(invalid_image)
+
+            # Test image file does not exist
+            missing_image = os.path.join(tempdir, 'nofile.png')
+            assert not utils.is_image_file(missing_image)
+
+    def test_iter_image_files(self):
+        pass
