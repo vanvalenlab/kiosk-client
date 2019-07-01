@@ -28,12 +28,18 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import json
 import logging
+import os
 import timeit
+import uuid
 
 from twisted.internet import reactor
+from google.cloud import storage as google_storage
 
 from batching.job import Job
+from batching.utils import iter_image_files
+from batching import settings
 
 
 class JobManager(object):
@@ -113,3 +119,27 @@ class BenchmarkingJobManager(JobManager):
 
         return self.delay(self.start_delay, self.check_job_status)
 
+
+class BatchProcessingJobManager(JobManager):
+
+    def run_job(self, filepath):  # pylint: disable=W0221
+        self.logger.info('Benchmarking all image/zip files in `%s`', filepath)
+
+        storage_client = google_storage.Client()
+
+        for f in iter_image_files(filepath):
+
+            self.logger.debug('Uploading %s', f)
+            _, ext = os.path.splitext(f)
+            dest = '{}{}'.format(uuid.uuid4().hex, ext)
+
+            bucket = storage_client.get_bucket(settings.GCLOUD_STORAGE_BUCKET)
+            blob = bucket.blob(os.path.join(self.upload_prefix, dest))
+            blob.upload_from_filename(f, predefined_acl='publicRead')
+
+            # uploaded_name = 'output/a/mibi_nuclear_2.tif'
+            job = self.make_job(dest, original_name=f)
+            self.all_jobs.append(job)
+            self.delay(self.start_delay, job.create)
+
+        return self.delay(self.start_delay, self.check_job_status)
