@@ -63,6 +63,8 @@ class Job(object):
         self.job_id = None
         self.created_at = None
         self.finished_at = None
+        self.postprocess_time = None
+        self.prediction_time = None
         self.output_url = None
         self._finished_statuses = {'done', 'failed'}
 
@@ -83,6 +85,8 @@ class Job(object):
             'download_url': self.output_url,
             'created_at': self.created_at,
             'finished_at': self.finished_at,
+            'prediction_time': self.prediction_time,
+            'postprocess_time': self.postprocess_time,
             'model': '{}:{}'.format(self.model_name, self.model_version),
             'postprocess': self.postprocess,
             'preprocess': self.preprocess,
@@ -142,7 +146,14 @@ class Job(object):
         return d
 
     def summarize(self, response=None, name=None):
-        attributes = ['created_at', 'finished_at', 'output_url']
+        attributes = [
+            'created_at',
+            'finished_at',
+            'prediction_time',
+            'postprocess_time',
+            'output_url',
+        ]
+
         if response is None:  # the first time `summarize` is called
             d = self.get_redis_value(attributes[0])
             d.addCallback(self.summarize, attributes[0])
