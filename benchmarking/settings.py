@@ -28,6 +28,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import errno
 import os
 
 from decouple import config
@@ -74,6 +75,15 @@ UPLOAD_PREFIX = config('UPLOAD_PREFIX', default='uploads', cast=str)
 # Application directories
 ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DOWNLOAD_DIR = os.path.join(ROOT_DIR, 'download')
+OUTPUT_DIR = os.path.join(ROOT_DIR, 'output')
 
 # Overwrite directories with environment variabls
 DOWNLOAD_DIR = config('DOWNLOAD_DIR', default=DOWNLOAD_DIR)
+OUTPUT_DIR = config('OUTPUT_DIR', default=OUTPUT_DIR)
+
+for d in (DOWNLOAD_DIR, OUTPUT_DIR):
+    try:
+        os.makedirs(d)
+    except OSError as exc:  # Guard against race condition
+        if exc.errno != errno.EEXIST:
+            raise

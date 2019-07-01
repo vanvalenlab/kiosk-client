@@ -95,7 +95,11 @@ class JobManager(object):
         self.logger.info('Finished %s jobs in %s seconds', len(self.all_jobs),
                          timeit.default_timer() - self.created_at)
         jsondata = [j.json() for j in self.all_jobs]
-        output_filepath = '{}.json'.format(uuid.uuid4().hex)
+
+        output_filepath = os.path.join(
+            settings.OUTPUT_DIR,
+            '{}.json'.format(uuid.uuid4().hex))
+
         with open(output_filepath, 'w') as jsonfile:
             json.dump(jsondata, jsonfile, indent=4)
 
