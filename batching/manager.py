@@ -81,22 +81,19 @@ class JobManager(object):
         self.logger.info('%s of %s jobs complete', complete, len(self.all_jobs))
 
         if complete == len(self.all_jobs):
-            return self.delay(self.refresh_rate, self.summarize)
+            return self.summarize()  # no need for a delay here
 
         return self.delay(self.refresh_rate, self.check_job_status)
 
     def summarize(self):
         self.logger.info('Finished %s jobs in %s seconds', len(self.all_jobs),
                          timeit.default_timer() - self.created_at)
-        statuses = {}
-        for j in self.all_jobs:
-            if j.status not in statuses:
-                statuses[j.status] = 1
-            else:
-                statuses[j.status] += 1
+        jsondata = [j.json() for j in self.all_jobs]
+        output_filepath = '{}.json'.format(uuid.uuid4().hex)
+        with open(output_filepath, 'w') as jsonfile:
+            json.dump(jsondata, jsonfile, indent=4)
 
-        for k, v in statuses.items():
-            self.logger.info('%s = %s', k, v)
+            self.logger.info('Wrote job data as JSON to %s', output_filepath)
 
         reactor.stop()  # pylint: disable=E1101
 
