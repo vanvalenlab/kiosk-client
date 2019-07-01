@@ -76,6 +76,24 @@ class Job(object):
         is_summarized = all(x is not None for x in summaries)
         return is_summarized and self.is_done
 
+    def json(self):
+        jsondata = {
+            'input_file': self.original_name,
+            'status': self.status,
+            'download_url': self.output_url,
+            'created_at': self.created_at,
+            'finished_at': self.finished_at,
+            'model': '{}:{}'.format(self.model_name, self.model_version),
+            'postprocess': self.postprocess,
+            'preprocess': self.preprocess,
+            'job_id': self.job_id,
+        }
+        # make sure each value is a string.
+        for x in jsondata:
+            if x is None:
+                jsondata[x] = ''
+        return jsondata
+
     def delayed(self, args, cb):
         # pylint: disable=E1101
         return reactor.callLater(self.update_interval, cb, args)
