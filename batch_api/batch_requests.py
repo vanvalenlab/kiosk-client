@@ -35,7 +35,7 @@ import timeit
 
 import requests
 
-from batching.settings import HOST, EXPIRE_TIME, HTTP_RETRY_BACKOFF, HTTP_RETRIES
+from batch_api.settings import HOST, EXPIRE_TIME, HTTP_RETRY_BACKOFF, HTTP_RETRIES
 
 
 def chunk(lst, chunk_size):

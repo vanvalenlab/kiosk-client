@@ -38,10 +38,10 @@ import logging.handlers
 import multiprocessing
 import argparse
 
-from batching import settings
-from batching.batch_requests import create_jobs_multi
-from batching.batch_requests import get_completed_jobs_multi
-from batching.batch_requests import expire_job_multi
+from batch_api import settings
+from batch_api.batch_requests import create_jobs_multi
+from batch_api.batch_requests import get_completed_jobs_multi
+from batch_api.batch_requests import expire_job_multi
 
 
 def initialize_logger(debug_mode=True):
