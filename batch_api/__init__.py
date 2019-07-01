@@ -27,9 +27,8 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-from batching import job
-from batching import manager
-from batching import utils
+from batch_api import batch_requests
+from batch_api import settings
 
 del absolute_import
 del division
