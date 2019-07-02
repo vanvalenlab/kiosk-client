@@ -116,10 +116,11 @@ class BenchmarkingJobManager(JobManager):
     def run(self, filepath, count):  # pylint: disable=W0221
         self.logger.info('Benchmarking %s jobs of file `%s`', count, filepath)
 
-        for _ in range(count):
+        for i in range(count):
+
             job = self.make_job(filepath)
             self.all_jobs.append(job)
-            self.delay(self.start_delay, job.create)
+            self.delay(self.start_delay * i, job.create)
 
         return self.delay(self.start_delay, self.check_job_status)
 
@@ -131,7 +132,7 @@ class BatchProcessingJobManager(JobManager):
 
         storage_client = google_storage.Client()
 
-        for f in iter_image_files(filepath):
+        for i, f in enumerate(iter_image_files(filepath)):
 
             self.logger.debug('Uploading %s', f)
             _, ext = os.path.splitext(f)
@@ -141,9 +142,9 @@ class BatchProcessingJobManager(JobManager):
             blob = bucket.blob(os.path.join(self.upload_prefix, dest))
             blob.upload_from_filename(f, predefined_acl='publicRead')
 
-            # uploaded_name = 'output/a/mibi_nuclear_2.tif'
             job = self.make_job(dest, original_name=f)
             self.all_jobs.append(job)
-            self.delay(self.start_delay, job.create)
+            # stagger the delay seconds
+            self.delay(self.start_delay * i, job.create)
 
         return self.delay(self.start_delay, self.check_job_status)
