@@ -107,13 +107,13 @@ class JobManager(object):
 
         reactor.stop()  # pylint: disable=E1101
 
-    def run_job(self, *args, **kwargs):
+    def run(self, *args, **kwargs):
         raise NotImplementedError
 
 
 class BenchmarkingJobManager(JobManager):
 
-    def run_job(self, filepath, count):  # pylint: disable=W0221
+    def run(self, filepath, count):  # pylint: disable=W0221
         self.logger.info('Benchmarking %s jobs of file `%s`', count, filepath)
 
         for _ in range(count):
@@ -126,7 +126,7 @@ class BenchmarkingJobManager(JobManager):
 
 class BatchProcessingJobManager(JobManager):
 
-    def run_job(self, filepath):  # pylint: disable=W0221
+    def run(self, filepath):  # pylint: disable=W0221
         self.logger.info('Benchmarking all image/zip files in `%s`', filepath)
 
         storage_client = google_storage.Client()
