@@ -40,37 +40,38 @@ _strip = lambda x: '/'.join(y for y in x.split('/') if y)
 # Debug Mode
 DEBUG = config('DEBUG', cast=bool, default=False)
 
-# Cloud storage
-CLOUD_PROVIDER = config('CLOUD_PROVIDER', cast=str, default='gke').lower()
-
-# AWS credentials
-AWS_REGION = config('AWS_REGION', default='us-east-1')
-AWS_S3_BUCKET = config('AWS_S3_BUCKET', default='')
-AWS_ACCESS_KEY_ID = config('AWS_ACCESS_KEY_ID', default='')
-AWS_SECRET_ACCESS_KEY = config('AWS_SECRET_ACCESS_KEY', default='')
-
 # Google credentials
-GCLOUD_STORAGE_BUCKET = config('GKE_BUCKET', default='')
+GCLOUD_STORAGE_BUCKET = config('GCLOUD_STORAGE_BUCKET', default='')
 
 # Batch API Host (IP Address or FQDN)
 HOST = config('API_HOST', cast=str, default='')
 if not any(HOST.lower().startswith(x) for x in ('http://', 'https://')):
     HOST = 'http://{}'.format(HOST)
 
-# Time to wait between HTTP requests.
-BACKOFF = config('BACKOFF', default=1, cast=int)
+# TensorFlow Servable
+MODEL_NAME, MODEL_VERSION = config('MODEL', default='HeLaS3watershed:2').split(':')
 
-# Number of times to retry an HTTP ConnectionError
-HTTP_RETRIES = config('HTTP_RETRIES', default=3, cast=int)
+# Pre- and Post-Processing functions
+PREPROCESS = config('PREPROCESS', default='')
+POSTPROCESS = config('POSTPROCESS', default='watershed')
 
-# Time to wait between HTTP retries
-HTTP_RETRY_BACKOFF = config('HTTP_RETRY_BACKOFF', default=3, cast=int)
+# How frequently Jobs update their statuses
+UPDATE_INTERVAL = config('UPDATE_INTERVAL', default=10, cast=float)
+
+# Time to wait between starting jobs (for staggering redis entries)
+START_DELAY = config('START_DELAY', default=1, cast=float)
+
+# Time interval between Manager status checks
+MANAGER_REFRESH_RATE = config('MANAGER_REFRESH_RATE', default=10, cast=float)
+
+# Bucket prefix to upload all folders
+UPLOAD_PREFIX = config('UPLOAD_PREFIX', default='uploads')
 
 # Time in seconds to expire the completed jobs.
 EXPIRE_TIME = config('EXPIRE_TIME', default=600, cast=int)
 
 # Name of upload folder in storage bucket.
-UPLOAD_PREFIX = config('UPLOAD_PREFIX', default='uploads', cast=str)
+UPLOAD_PREFIX = _strip(config('UPLOAD_PREFIX', default='uploads', cast=str))
 
 # Application directories
 ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
