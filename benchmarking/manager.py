@@ -71,8 +71,7 @@ class JobManager(object):
         return reactor.callLater(delay_seconds, cb, *args, **kwargs)
 
     def make_job(self, filepath, original_name=None):
-        if not original_name:
-            original_name = filepath
+        original_name = original_name if original_name else filepath
         return Job(filepath=filepath,
                    host=self.host,
                    model_name=self.model_name,
