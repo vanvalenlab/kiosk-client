@@ -102,11 +102,16 @@ class Job(object):
                 jsondata[x] = ''
         return jsondata
 
-    def delayed(self, args, cb):
+    def delayed(self, *args, cb=None, **kwargs):
+        """Wrapper around `reactor.callLater`"""
         # pylint: disable=E1101
-        return reactor.callLater(self.update_interval, cb, args)
+        # self.logger.info('%s %s %s', cb, args, kwargs)
+        return reactor.callLater(self.update_interval, cb, *args, **kwargs)
 
-    def parse_json_response(self, response):
+    def parse_json_response(self, response=None, payload={}, cb=None):
+        if response is None:
+            return response
+
         L = self.logger.debug if response.code == 200 else self.logger.warning
         L('%s %s - %s %s',
           response.request.method.decode(),
@@ -114,17 +119,32 @@ class Job(object):
           response.code, response.phrase.decode())
 
         if response.code != 200:
-            d = defer.Deferred()
-            d.addErrback(self.log_error, response)
+            d = treq.request(response.request.method.decode(),
+                             response.request.absoluteURI.decode(),
+                             json=payload,
+                             headers=self.headers)
+            d.addErrback(self.handle_error, 'parse_json')
+            d.addCallback(self.delayed, cb=self.parse_json_response, payload=payload)
+            # d.addCallback(self.parse_json_response, payload=payload)
             return d
 
-        return treq.json_content(response)
+        d = treq.json_content(response)
+        if cb is not None:
+            d.addCallback(cb)
+        return d
+
+    def handle_error(self, failure, source='DEFAULT'):
+        self.logger.error('%s Encountered Error in %s', self.job_id, source)
+        self.logger.error(failure)
+        self.logger.error(failure.printDetailedTraceback())
+
 
     def get_redis_value(self, field):
         host = '{}/api/redis'.format(self.host)
-        body = json.dumps({'hash': self.job_id, 'key': field}).encode('ascii')
-        d = treq.post(host, body, headers=self.headers)
-        d.addCallback(self.parse_json_response)
+        payload = {'hash': self.job_id, 'key': field}
+        d = treq.post(host, json=payload, headers=self.headers)
+        d.addErrback(self.handle_error, 'get redis %s' % field)
+        d.addCallback(self.parse_json_response, payload=payload)
         return d
 
     def handle_expire(self, json_response):
@@ -143,9 +163,9 @@ class Job(object):
     def expire(self):
         host = '{}/api/redis/expire'.format(self.host)
         payload = {'hash': self.job_id, 'expireIn': self.expire_time}
-        body = json.dumps(payload).encode('ascii')
-        d = treq.post(host, body, headers=self.headers)
-        d.addCallback(self.parse_json_response)
+        d = treq.post(host, json=payload, headers=self.headers)
+        d.addErrback(self.handle_error, 'expire')
+        d.addCallback(self.parse_json_response, payload=payload)
         d.addCallback(self.handle_expire)
         return d
 
@@ -176,7 +196,7 @@ class Job(object):
             self.logger.info('Job `%s` has null value for %s, retrying',
                              self.job_id, name)
             d = self.get_redis_value(name)
-            d.addCallback(self.delayed, name, self.summarize)
+            d.addCallback(self.delayed, cb=self.summarize, name=name)
             return d
 
         # move on to the next property to update
@@ -217,11 +237,8 @@ class Job(object):
             return self.summarize()
 
         d = self.get_redis_value('status')
-        d.addCallback(self.delayed, self.monitor)
+        d.addCallback(self.delayed, cb=self.monitor)
         return d
-
-    def log_error(self, failure):
-        self.logger.error(failure)
 
     def create(self):
         job_data = {
@@ -233,9 +250,8 @@ class Job(object):
             'uploadedName': os.path.join(self.upload_prefix, self.filepath),
         }
         host = '{}/api/predict'.format(self.host)
-        body = json.dumps(job_data).encode('ascii')
-        d = treq.post(host, body, headers=self.headers)
-        d.addCallback(self.parse_json_response)
-        d.addCallback(self.monitor)
-        d.addErrback(self.log_error)
+        d = treq.post(host, json=job_data, headers=self.headers)
+        d.addErrback(self.handle_error, 'create')
+        d.addCallback(self.parse_json_response, payload=job_data, cb=self.monitor)
+        # d.addCallback(self.monitor)
         return d
