@@ -82,7 +82,15 @@ class JobManager(object):
                    original_name=original_name)
 
     def check_job_status(self):
-        complete = sum(j.is_summarized for j in self.all_jobs)
+        complete = 0
+        failed = 0
+        for j in self.all_jobs:
+            complete += int(j.is_summarized)
+
+            if j.failed:
+                failed += int(j.failed)
+                self.delay(self.start_delay * failed, j.restart_from_failure)
+
         self.logger.info('%s of %s jobs complete', complete, len(self.all_jobs))
 
         if complete == len(self.all_jobs):

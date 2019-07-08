@@ -58,6 +58,8 @@ class Job(object):
         self.update_interval = int(kwargs.get('update_interval', 10))
         self.original_name = kwargs.get('original_name', self.filepath)
 
+        self.failed = False  # for error handling
+
         self.headers = {'Content-Type': ['application/json']}
         self.status = None
         self.job_id = None
@@ -137,6 +139,19 @@ class Job(object):
         self.logger.error('%s Encountered Error in %s', self.job_id, source)
         self.logger.error(failure)
         self.logger.error(failure.printDetailedTraceback())
+        self.failed = True
+
+    def restart_from_failure(self):
+        # pylint: disable=E1101
+        self.logger.info('Restarting Job %s from a failed state.', self.job_id)
+        if self.job_id is None:  # never got started in the first place
+            return reactor.callLater(self.update_interval, self.create)
+
+        if self.is_done:
+            return reactor.callLater(self.update_interval, self.summarize)
+
+        payload = {'value': 'restarting_from_failure'}
+        return reactor.callLater(self.update_interval, self.monitor, payload)
 
 
     def get_redis_value(self, field):
