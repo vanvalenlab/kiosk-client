@@ -143,6 +143,7 @@ class Job(object):
 
     def restart_from_failure(self):
         # pylint: disable=E1101
+        self.failed = False
         self.logger.info('Restarting Job %s from a failed state.', self.job_id)
         if self.job_id is None:  # never got started in the first place
             return reactor.callLater(self.update_interval, self.create)
