@@ -65,6 +65,8 @@ class Job(object):
         self.finished_at = None
         self.postprocess_time = None
         self.prediction_time = None
+        self.download_time = None
+        self.upload_time = None
         self.output_url = None
         self._finished_statuses = {'done', 'failed'}
 
@@ -87,6 +89,8 @@ class Job(object):
             'finished_at': self.finished_at,
             'prediction_time': self.prediction_time,
             'postprocess_time': self.postprocess_time,
+            'upload_time': self.upload_time,
+            'download_time': self.download_time,
             'model': '{}:{}'.format(self.model_name, self.model_version),
             'postprocess': self.postprocess,
             'preprocess': self.preprocess,
@@ -151,6 +155,8 @@ class Job(object):
             'finished_at',
             'prediction_time',
             'postprocess_time',
+            'upload_time',
+            'download_time',
             'output_url',
         ]
 
