@@ -1,6 +1,6 @@
 #!/bin/sh
 
-python benchmark.py \
+python -m benchmarking \
   --file $FILE \
   --count $COUNT \
   --model $MODEL \
