@@ -83,7 +83,7 @@ class JobManager(object):
                    original_name=original_name)
 
     def check_job_status(self):
-        complete = sum(j.is_done for j in self.all_jobs)
+        complete = sum(j.is_summarized for j in self.all_jobs)
         self.logger.info('%s of %s jobs complete', complete, len(self.all_jobs))
 
         if complete == len(self.all_jobs):
