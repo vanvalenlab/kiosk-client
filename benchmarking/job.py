@@ -127,12 +127,12 @@ class Job(object):
                              headers=self.headers)
             d.addErrback(self.handle_error, 'parse_json')
             d.addCallback(self.delayed, cb=self.parse_json_response, payload=payload)
-            # d.addCallback(self.parse_json_response, payload=payload)
             return d
 
         d = treq.json_content(response)
         if cb is not None:
             d.addCallback(cb)
+            d.addErrback(self.handle_error)
         return d
 
     def handle_error(self, failure, source='DEFAULT'):
@@ -213,12 +213,14 @@ class Job(object):
                              self.job_id, name)
             d = self.get_redis_value(name)
             d.addCallback(self.delayed, cb=self.summarize, name=name)
+            d.addErrback(self.handle_error)
             return d
 
         # move on to the next property to update
         if index < len(attributes) - 1:
             d = self.get_redis_value(attributes[index + 1])
             d.addCallback(self.summarize, attributes[index + 1])
+            d.addErrback(self.handle_error)
             return d
 
         if self.status == 'done':
@@ -254,6 +256,7 @@ class Job(object):
 
         d = self.get_redis_value('status')
         d.addCallback(self.delayed, cb=self.monitor)
+        d.addErrback(self.handle_error)
         return d
 
     def create(self):
