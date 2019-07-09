@@ -239,6 +239,12 @@ class Job(object):
         return self.expire()
 
     def monitor(self, json_response):
+        if not hasattr(json_response, 'get'):
+            self.logger.error('Monitoring job `%s` got a response of type %s',
+                              self.job_id, type(json_response).__name__)
+            self.failed = True  # TODO: prevent this failure mode
+            return json_response
+
         # First monitor call will be from create response
         if self.job_id is None:
             self.job_id = json_response.get('hash')
