@@ -276,6 +276,6 @@ class Job(object):
         host = '{}/api/predict'.format(self.host)
         d = treq.post(host, json=job_data, headers=self.headers)
         d.addErrback(self.handle_error, 'create')
+        # pass the next callback in as a kwarg to retry errors
         d.addCallback(self.parse_json_response, payload=job_data, cb=self.monitor)
-        # d.addCallback(self.monitor)
         return d
