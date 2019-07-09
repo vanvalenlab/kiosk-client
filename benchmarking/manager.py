@@ -84,14 +84,18 @@ class JobManager(object):
     def check_job_status(self):
         complete = 0
         failed = 0
+        created = 0
         for j in self.all_jobs:
             complete += int(j.is_summarized)
+            created += int(j.job_id is not None)
 
             if j.failed:
                 failed += int(j.failed)
                 self.delay(self.start_delay * failed, j.restart_from_failure)
 
-        self.logger.info('%s of %s jobs complete', complete, len(self.all_jobs))
+        self.logger.info('%s of %s jobs created; %s of %s jobs complete',
+                         created, len(self.all_jobs),
+                         complete, len(self.all_jobs))
 
         if complete == len(self.all_jobs):
             return self.summarize()  # no need for a delay here
