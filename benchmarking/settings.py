@@ -77,12 +77,14 @@ UPLOAD_PREFIX = _strip(config('UPLOAD_PREFIX', default='uploads', cast=str))
 ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DOWNLOAD_DIR = os.path.join(ROOT_DIR, 'download')
 OUTPUT_DIR = os.path.join(ROOT_DIR, 'output')
+LOG_DIR = os.path.join(ROOT_DIR, 'logs')
 
 # Overwrite directories with environment variabls
 DOWNLOAD_DIR = config('DOWNLOAD_DIR', default=DOWNLOAD_DIR)
 OUTPUT_DIR = config('OUTPUT_DIR', default=OUTPUT_DIR)
+LOG_DIR = config('LOG_DIR', default=LOG_DIR)
 
-for d in (DOWNLOAD_DIR, OUTPUT_DIR):
+for d in (DOWNLOAD_DIR, OUTPUT_DIR, LOG_DIR):
     try:
         os.makedirs(d)
     except OSError as exc:  # Guard against race condition
