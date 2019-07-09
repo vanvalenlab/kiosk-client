@@ -61,7 +61,7 @@ class JobManager(object):
         self.upload_prefix = kwargs.get('upload_prefix', 'uploads')
         self.refresh_rate = int(kwargs.get('refresh_rate', 10))
         self.update_interval = kwargs.get('update_interval', 10)
-        self.start_delay = kwargs.get('start_delay', 0.01)
+        self.start_delay = kwargs.get('start_delay', 0.05)
         self.headers = {'Content-Type': ['application/json']}
         self.created_at = timeit.default_timer()
 

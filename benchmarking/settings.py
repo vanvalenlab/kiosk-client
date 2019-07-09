@@ -59,7 +59,7 @@ POSTPROCESS = config('POSTPROCESS', default='watershed')
 UPDATE_INTERVAL = config('UPDATE_INTERVAL', default=10, cast=float)
 
 # Time to wait between starting jobs (for staggering redis entries)
-START_DELAY = config('START_DELAY', default=0.01, cast=float)
+START_DELAY = config('START_DELAY', default=0.05, cast=float)
 
 # Time interval between Manager status checks
 MANAGER_REFRESH_RATE = config('MANAGER_REFRESH_RATE', default=10, cast=float)
