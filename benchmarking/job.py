@@ -132,7 +132,7 @@ class Job(object):
         d = treq.json_content(response)
         if cb is not None:
             d.addCallback(cb)
-            d.addErrback(self.handle_error)
+            d.addErrback(self.handle_error, 'parse_json_callback')
         return d
 
     def handle_error(self, failure, source='DEFAULT'):
@@ -181,7 +181,6 @@ class Job(object):
         d = treq.post(host, json=payload, headers=self.headers)
         d.addErrback(self.handle_error, 'expire')
         d.addCallback(self.parse_json_response, payload=payload)
-        d.addCallback(self.handle_expire)
         return d
 
     def summarize(self, response=None, name=None):
@@ -198,6 +197,7 @@ class Job(object):
         if response is None:  # the first time `summarize` is called
             d = self.get_redis_value(attributes[0])
             d.addCallback(self.summarize, attributes[0])
+            d.addErrback(self.handle_error, 'summarize %s' % attributes[0])
             return d
 
         # find index of the current property, enables moving to next property
@@ -212,14 +212,14 @@ class Job(object):
                              self.job_id, name)
             d = self.get_redis_value(name)
             d.addCallback(self.delayed, cb=self.summarize, name=name)
-            d.addErrback(self.handle_error)
+            d.addErrback(self.handle_error, 'summarize %s' % name)
             return d
 
         # move on to the next property to update
         if index < len(attributes) - 1:
             d = self.get_redis_value(attributes[index + 1])
             d.addCallback(self.summarize, attributes[index + 1])
-            d.addErrback(self.handle_error)
+            d.addErrback(self.handle_error, 'summarize %s' % attributes[index + 1])
             return d
 
         if self.status == 'done':
@@ -261,7 +261,7 @@ class Job(object):
 
         d = self.get_redis_value('status')
         d.addCallback(self.delayed, cb=self.monitor)
-        d.addErrback(self.handle_error)
+        d.addErrback(self.handle_error, 'delayed monitor')
         return d
 
     def create(self):
