@@ -136,9 +136,8 @@ class Job(object):
         return d
 
     def handle_error(self, failure, source='DEFAULT'):
-        self.logger.error('%s Encountered Error in %s', self.job_id, source)
-        self.logger.error(failure)
-        self.logger.error(failure.printDetailedTraceback())
+        self.logger.error('%s Encountered Error in %s: %s',
+                          self.job_id, source, failure)
         self.failed = True
 
     def restart_from_failure(self):
