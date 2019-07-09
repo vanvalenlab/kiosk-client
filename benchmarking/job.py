@@ -142,14 +142,19 @@ class Job(object):
 
     def restart_from_failure(self):
         # pylint: disable=E1101
-        self.failed = False
-        self.logger.info('Restarting Job %s from a failed state.', self.job_id)
+        if not self.failed:
+            self.logger.warning('Job `%s` was restarted but is not failed.')
+            return None
+
+        self.failed = False  # reset failure mode to prevent further restarts
+        self.logger.info('Restarting failed job `%s`.', self.job_id)
         if self.job_id is None:  # never got started in the first place
             return reactor.callLater(self.update_interval, self.create)
 
-        if self.is_done:
+        if self.is_done:  # no need to monitor, skip straight to summarize
             return reactor.callLater(self.update_interval, self.summarize)
 
+        # job has begun but was not finished, monitor status
         payload = {'value': 'restarting_from_failure'}
         return reactor.callLater(self.update_interval, self.monitor, payload)
 
@@ -241,6 +246,7 @@ class Job(object):
         if not hasattr(json_response, 'get'):
             self.logger.error('Monitoring job `%s` got a response of type %s',
                               self.job_id, type(json_response).__name__)
+            # May be None from previous Error?
             self.failed = True  # TODO: prevent this failure mode
             return json_response
 
@@ -259,6 +265,7 @@ class Job(object):
             self.logger.info('Hash `%s` is finished', self.job_id)
             return self.summarize()
 
+        # monitoring loop, check status every N seconds
         d = self.get_redis_value('status')
         d.addCallback(self.delayed, cb=self.monitor)
         d.addErrback(self.handle_error, 'delayed monitor')
