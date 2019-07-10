@@ -118,11 +118,10 @@ class JobManager(object):
 
             complete = self.get_completed_job_count()
 
-        else:
-            self.logger.critical('after while loop!')
-            self.summarize()
+        self.logger.critical('after while loop!')
+        self.summarize()
 
-            yield reactor.stop()  # pylint: disable=E1101
+        yield reactor.stop()  # pylint: disable=E1101
 
     def summarize(self):
         self.logger.info('Finished %s jobs in %s seconds', len(self.all_jobs),
