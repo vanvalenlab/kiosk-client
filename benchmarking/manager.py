@@ -34,8 +34,9 @@ import os
 import timeit
 import uuid
 
-from twisted.internet import reactor
 from google.cloud import storage as google_storage
+from twisted.internet import defer, reactor
+from twisted.internet.task import deferLater
 
 from benchmarking.job import Job
 from benchmarking.utils import iter_image_files
@@ -61,14 +62,13 @@ class JobManager(object):
         self.upload_prefix = kwargs.get('upload_prefix', 'uploads')
         self.refresh_rate = int(kwargs.get('refresh_rate', 10))
         self.update_interval = kwargs.get('update_interval', 10)
-        self.start_delay = kwargs.get('start_delay', 0.05)
+        self.start_delay = kwargs.get('start_delay', 0.1)
         self.headers = {'Content-Type': ['application/json']}
         self.created_at = timeit.default_timer()
 
-    def delay(self, delay_seconds, cb, *args, **kwargs):
-        """Wrapper around `reactor.callLater`"""
-        # pylint: disable=E1101
-        return reactor.callLater(delay_seconds, cb, *args, **kwargs)
+    def sleep(self, seconds):
+        """Simple helper to delay asynchronously for some number of seconds."""
+        return deferLater(reactor, seconds, lambda: None)
 
     def make_job(self, filepath, original_name=None):
         original_name = original_name if original_name else filepath
@@ -81,26 +81,34 @@ class JobManager(object):
                    upload_prefix=self.upload_prefix,
                    original_name=original_name)
 
-    def check_job_status(self):
-        complete = 0
-        failed = 0
-        created = 0
+    @defer.inlineCallbacks
+    def get_completed_job_count(self):
+        created, complete, failed = 0, 0, 0
+
         for j in self.all_jobs:
             complete += int(j.is_summarized)
             created += int(j.job_id is not None)
+            failed += int(j.failed)
 
             if j.failed:
-                failed += int(j.failed)
-                self.delay(self.start_delay * failed, j.restart_from_failure)
+                yield self.sleep(self.start_delay)
+                j.restart()
 
-        self.logger.info('%s of %s jobs created; %s of %s jobs complete',
-                         created, len(self.all_jobs),
-                         complete, len(self.all_jobs))
+        self.logger.info('%s created, %s complete, %s failed of %s jobs total',
+                         created, complete, failed, len(self.all_jobs))
 
-        if complete == len(self.all_jobs):
-            return self.summarize()  # no need for a delay here
+        defer.returnValue(complete)
 
-        return self.delay(self.refresh_rate, self.check_job_status)
+    @defer.inlineCallbacks
+    def check_job_status(self):
+        complete = -1  # initialize comparison value
+        while complete != len(self.all_jobs):
+            yield self.sleep(self.refresh_rate)
+            complete = yield self.get_completed_job_count()
+
+        self.summarize()
+
+        yield reactor.stop()  # pylint: disable=E1101
 
     def summarize(self):
         self.logger.info('Finished %s jobs in %s seconds', len(self.all_jobs),
@@ -116,34 +124,37 @@ class JobManager(object):
 
             self.logger.info('Wrote job data as JSON to %s', output_filepath)
 
-        reactor.stop()  # pylint: disable=E1101
-
     def run(self, *args, **kwargs):
         raise NotImplementedError
 
 
 class BenchmarkingJobManager(JobManager):
 
+    @defer.inlineCallbacks
     def run(self, filepath, count):  # pylint: disable=W0221
         self.logger.info('Benchmarking %s jobs of file `%s`', count, filepath)
 
-        for i in range(count):
+        for _ in range(count):
 
             job = self.make_job(filepath)
             self.all_jobs.append(job)
-            self.delay(self.start_delay * i, job.create)
 
-        return self.delay(self.start_delay, self.check_job_status)
+            job.start()
+
+            yield self.sleep(self.start_delay)
+
+        yield self.check_job_status()
 
 
 class BatchProcessingJobManager(JobManager):
 
+    @defer.inlineCallbacks
     def run(self, filepath):  # pylint: disable=W0221
         self.logger.info('Benchmarking all image/zip files in `%s`', filepath)
 
         storage_client = google_storage.Client()
 
-        for i, f in enumerate(iter_image_files(filepath)):
+        for f in iter_image_files(filepath):
 
             self.logger.debug('Uploading %s', f)
             _, ext = os.path.splitext(f)
@@ -155,7 +166,8 @@ class BatchProcessingJobManager(JobManager):
 
             job = self.make_job(dest, original_name=f)
             self.all_jobs.append(job)
-            # stagger the delay seconds
-            self.delay(self.start_delay * i, job.create)
+            job.start()
 
-        return self.delay(self.start_delay, self.check_job_status)
+            yield self.sleep(self.start_delay)  # stagger the delay seconds
+
+        yield self.check_job_status()
