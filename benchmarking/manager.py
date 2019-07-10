@@ -70,6 +70,18 @@ class JobManager(object):
         """Simple helper to delay asynchronously for some number of seconds."""
         return deferLater(reactor, seconds, lambda: None)
 
+    def upload_file(self, filepath, acl='publicRead'):
+        storage_client = google_storage.Client()
+
+        self.logger.debug('Uploading %s', filepath)
+        _, ext = os.path.splitext(filepath)
+        dest = '{}{}'.format(uuid.uuid4().hex, ext)
+
+        bucket = storage_client.get_bucket(settings.GCLOUD_STORAGE_BUCKET)
+        blob = bucket.blob(os.path.join(self.upload_prefix, dest))
+        blob.upload_from_filename(filepath, predefined_acl=acl)
+        return dest
+
     def make_job(self, filepath, original_name=None):
         original_name = original_name if original_name else filepath
         return Job(filepath=filepath,
@@ -81,7 +93,6 @@ class JobManager(object):
                    upload_prefix=self.upload_prefix,
                    original_name=original_name)
 
-    @defer.inlineCallbacks
     def get_completed_job_count(self):
         created, complete, failed = 0, 0, 0
 
@@ -91,24 +102,27 @@ class JobManager(object):
             failed += int(j.failed)
 
             if j.failed:
-                yield self.sleep(self.start_delay)
-                j.restart()
+                j.restart(delay=self.start_delay * failed)
 
-        self.logger.info('%s created, %s complete, %s failed of %s jobs total',
-                         created, complete, failed, len(self.all_jobs))
+        self.logger.warning('%s created, %s complete, %s failed of %s jobs total',
+                            created, complete, failed, len(self.all_jobs))
 
-        defer.returnValue(complete)
+        return complete
 
     @defer.inlineCallbacks
     def check_job_status(self):
         complete = -1  # initialize comparison value
+
         while complete != len(self.all_jobs):
             yield self.sleep(self.refresh_rate)
-            complete = yield self.get_completed_job_count()
 
-        self.summarize()
+            complete = self.get_completed_job_count()
 
-        yield reactor.stop()  # pylint: disable=E1101
+        else:
+            self.logger.critical('after while loop!')
+            self.summarize()
+
+            yield reactor.stop()  # pylint: disable=E1101
 
     def summarize(self):
         self.logger.info('Finished %s jobs in %s seconds', len(self.all_jobs),
@@ -131,17 +145,20 @@ class JobManager(object):
 class BenchmarkingJobManager(JobManager):
 
     @defer.inlineCallbacks
-    def run(self, filepath, count):  # pylint: disable=W0221
+    def run(self, filepath, count, upload=False):  # pylint: disable=W0221
         self.logger.info('Benchmarking %s jobs of file `%s`', count, filepath)
 
-        for _ in range(count):
+        for i in range(count):
 
-            job = self.make_job(filepath)
+            if upload:
+                dest = self.upload_file(filepath)
+                job = self.make_job(dest, original_name=filepath)
+            else:
+                job = self.make_job(filepath)
+
             self.all_jobs.append(job)
 
-            job.start()
-
-            yield self.sleep(self.start_delay)
+            job.start(delay=self.start_delay * i)  # stagger the delay seconds
 
         yield self.check_job_status()
 
@@ -152,22 +169,12 @@ class BatchProcessingJobManager(JobManager):
     def run(self, filepath):  # pylint: disable=W0221
         self.logger.info('Benchmarking all image/zip files in `%s`', filepath)
 
-        storage_client = google_storage.Client()
+        for i, f in enumerate(iter_image_files(filepath)):
 
-        for f in iter_image_files(filepath):
-
-            self.logger.debug('Uploading %s', f)
-            _, ext = os.path.splitext(f)
-            dest = '{}{}'.format(uuid.uuid4().hex, ext)
-
-            bucket = storage_client.get_bucket(settings.GCLOUD_STORAGE_BUCKET)
-            blob = bucket.blob(os.path.join(self.upload_prefix, dest))
-            blob.upload_from_filename(f, predefined_acl='publicRead')
+            dest = self.upload_file(f)
 
             job = self.make_job(dest, original_name=f)
             self.all_jobs.append(job)
-            job.start()
-
-            yield self.sleep(self.start_delay)  # stagger the delay seconds
+            job.start(delay=self.start_delay * i)  # stagger the delay seconds
 
         yield self.check_job_status()

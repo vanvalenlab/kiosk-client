@@ -80,6 +80,7 @@ class Job(object):
             twisted_client.RequestTransmissionFailed,
             twisted_errors.ConnectBindError,
             twisted_errors.TimeoutError,
+            twisted_errors.ConnectionRefusedError,
         )
 
     @property
@@ -126,25 +127,6 @@ class Job(object):
             response.request.method.decode(),
             response.request.absoluteURI.decode(),
             response.code, response.phrase.decode())
-
-    @defer.inlineCallbacks
-    def restart(self):
-        if not self.failed:
-            self.logger.warning('Job `%s` was restarted but is not failed.')
-
-        yield self.sleep(self.update_interval)
-
-        self.failed = False  # reset failure mode to prevent further restarts
-        self.logger.info('Restarting failed job `%s`.', self.job_id)
-
-        if self.job_id is None:  # never got started in the first place
-            yield self.start()
-
-        elif self.is_done:  # no need to monitor, skip straight to summarize
-            yield self.summarize()
-
-        else:  # job has begun but was not finished, monitor status
-            yield self.monitor()
 
     @defer.inlineCallbacks
     def get_redis_value(self, field):
@@ -227,7 +209,7 @@ class Job(object):
 
             if self.status != status:
                 self.status = status
-                self.logger.info('Hash `%s` has new status `%s`',
+                self.logger.info('Job `%s` has new status `%s`',
                                  self.job_id, self.status)
 
         # job is_done, log and summarize
@@ -250,17 +232,20 @@ class Job(object):
         ]
 
         for name in attributes:
-
+            retry = False
             value = None  # retry each request if the field is still null
             while value is None:
-                yield self.sleep(self.update_interval)  # prevent 429s
+                if retry:
+                    yield self.sleep(self.update_interval)  # prevent 429s
 
                 try:
                     value = yield self.get_redis_value(name)
+                    retry = value is None
                 except self._http_errors as err:
                     self.logger.error('Job `%s` encountered error while '
                                       'summarizing %s: %s',
                                       self.job_id, name, err)
+                    retry = True
 
             setattr(self, name, value)  # save the valid value to self
 
@@ -307,7 +292,33 @@ class Job(object):
         defer.returnValue(value)  # "return" the value
 
     @defer.inlineCallbacks
-    def start(self):
+    def restart(self, delay=0):
+        if not self.failed:
+            self.logger.warning('Job `%s` was restarted but is not failed.',
+                                self.job_id)
+
+        self.failed = False  # reset failure mode to prevent further restarts
+
+        if delay:
+            yield self.sleep(delay)
+
+        self.logger.info('Restarting failed job `%s`.', self.job_id)
+
+        if self.job_id is None:  # never got started in the first place
+            yield self.start()
+
+        elif self.is_done:  # no need to monitor, skip straight to summarize
+            yield self.summarize()
+
+        else:  # job has begun but was not finished, monitor status
+            yield self.monitor()
+
+    @defer.inlineCallbacks
+    def start(self, delay=0):
+
+        if delay:
+            yield self.sleep(delay) # delay the start if required
+
         try:
             self.job_id = yield self.create()
 
@@ -336,6 +347,6 @@ class Job(object):
 
         except Exception as err:
             self.failed = True
-            self.logger.error('Job `%s` encountered nexpected error start: %s',
-                              self.job_id, err)
+            self.logger.error('Job `%s` encountered unexpected error in '
+                              'job.start(): %s', self.job_id, err)
             defer.returnValue(False)
