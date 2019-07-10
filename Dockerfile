@@ -6,17 +6,16 @@ ENV FILE \
     COUNT \
     MODEL \
     API_HOST="frontend:8080" \
-    BACKOFF="5" \
-    PREPROCESS="none" \
-    POSTPROCESS="none" \
+    PREPROCESS="" \
+    POSTPROCESS="" \
     UPLOAD_PREFIX="uploads" \
-    RETRY_COUNT="3" \
-    RETRY_BACKOFF="1" \
-    EXPIRE_TIME="3600"
+    EXPIRE_TIME="3600" \
+    LOG_LEVEL="DEBUG"
 
 COPY requirements.txt .
 
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
