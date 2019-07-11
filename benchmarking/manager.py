@@ -63,6 +63,7 @@ class JobManager(object):
         self.upload_prefix = kwargs.get('upload_prefix', 'uploads')
         self.refresh_rate = int(kwargs.get('refresh_rate', 10))
         self.update_interval = kwargs.get('update_interval', 10)
+        self.expire_time = kwargs.get('expire_time', 3600)
         self.start_delay = kwargs.get('start_delay', 0.1)
         self.headers = {'Content-Type': ['application/json']}
         self.created_at = timeit.default_timer()
@@ -94,9 +95,10 @@ class JobManager(object):
                    model_name=self.model_name,
                    model_version=self.model_version,
                    postprocess=self.postprocess,
-                   update_interval=self.update_interval,
                    upload_prefix=self.upload_prefix,
                    original_name=original_name,
+                   update_interval=self.update_interval,
+                   expire_time=self.expire_time,
                    pool=self.pool)
 
     def get_completed_job_count(self):
