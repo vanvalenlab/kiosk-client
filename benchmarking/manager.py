@@ -79,7 +79,7 @@ class JobManager(object):
     def upload_file(self, filepath, acl='publicRead'):
         storage_client = google_storage.Client()
 
-        self.logger.debug('Uploading %s', filepath)
+        self.logger.debug('Uploading %s.', filepath)
         _, ext = os.path.splitext(filepath)
         dest = '{}{}'.format(uuid.uuid4().hex, ext)
 
@@ -131,7 +131,7 @@ class JobManager(object):
         yield reactor.stop()  # pylint: disable=E1101
 
     def summarize(self):
-        self.logger.info('Finished %s jobs in %s seconds', len(self.all_jobs),
+        self.logger.info('Finished %s jobs in %s seconds.', len(self.all_jobs),
                          timeit.default_timer() - self.created_at)
         jsondata = [j.json() for j in self.all_jobs]
 
@@ -142,7 +142,7 @@ class JobManager(object):
         with open(output_filepath, 'w') as jsonfile:
             json.dump(jsondata, jsonfile, indent=4)
 
-            self.logger.info('Wrote job data as JSON to %s', output_filepath)
+            self.logger.info('Wrote job data as JSON to %s.', output_filepath)
 
     def run(self, *args, **kwargs):
         raise NotImplementedError
