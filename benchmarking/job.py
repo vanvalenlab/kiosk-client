@@ -242,15 +242,7 @@ class Job(object):
         ]
 
         for name in attributes:
-            retry = False
-            value = None  # retry each request if the field is still null
-            while value is None:
-                if retry:
-                    yield self.sleep(self.update_interval)  # prevent 429s
-
-                value = yield self.get_redis_value(name)
-                retry = value is None
-
+            value = yield self.get_redis_value(name)
             setattr(self, name, value)  # save the valid value to self
 
         defer.returnValue(True)  # "return" the value
