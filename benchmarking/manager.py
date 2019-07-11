@@ -69,7 +69,7 @@ class JobManager(object):
         self.created_at = timeit.default_timer()
 
         self.pool = HTTPConnectionPool(reactor, persistent=True)
-        self.pool.maxPersistentPerHost = settings.CONCURRENT_REQUESTS_PER_DOMAIN
+        self.pool.maxPersistentPerHost = settings.CONCURRENT_REQUESTS_PER_HOST
         self.pool.retryAutomatically = False
 
     def sleep(self, seconds):

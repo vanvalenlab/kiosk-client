@@ -74,8 +74,8 @@ EXPIRE_TIME = config('EXPIRE_TIME', default=600, cast=int)
 UPLOAD_PREFIX = _strip(config('UPLOAD_PREFIX', default='uploads', cast=str))
 
 # HTTP Settings
-CONCURRENT_REQUESTS_PER_DOMAIN = config('CONCURRENT_REQUESTS_PER_DOMAIN',
-                                        default=64, cast=int)
+CONCURRENT_REQUESTS_PER_HOST = config('CONCURRENT_REQUESTS_PER_HOST',
+                                      default=64, cast=int)
 
 # Application directories
 ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
