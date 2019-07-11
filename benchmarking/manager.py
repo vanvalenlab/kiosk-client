@@ -37,6 +37,7 @@ import uuid
 from google.cloud import storage as google_storage
 from twisted.internet import defer, reactor
 from twisted.internet.task import deferLater
+from twisted.web.client import HTTPConnectionPool
 
 from benchmarking.job import Job
 from benchmarking.utils import iter_image_files
@@ -66,6 +67,10 @@ class JobManager(object):
         self.headers = {'Content-Type': ['application/json']}
         self.created_at = timeit.default_timer()
 
+        self.pool = HTTPConnectionPool(reactor, persistent=True)
+        self.pool.maxPersistentPerHost = settings.CONCURRENT_REQUESTS_PER_DOMAIN
+        self.pool.retryAutomatically = False
+
     def sleep(self, seconds):
         """Simple helper to delay asynchronously for some number of seconds."""
         return deferLater(reactor, seconds, lambda: None)
@@ -91,7 +96,8 @@ class JobManager(object):
                    postprocess=self.postprocess,
                    update_interval=self.update_interval,
                    upload_prefix=self.upload_prefix,
-                   original_name=original_name)
+                   original_name=original_name,
+                   pool=self.pool)
 
     def get_completed_job_count(self):
         created, complete, failed = 0, 0, 0

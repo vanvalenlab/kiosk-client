@@ -75,6 +75,8 @@ class Job(object):
         self.output_url = None
         self._finished_statuses = {'done', 'failed'}
 
+        self.pool = kwargs.get('pool')
+
         self._http_errors = (
             twisted_client.ResponseNeverReceived,
             twisted_client.RequestTransmissionFailed,
@@ -137,7 +139,9 @@ class Job(object):
         while retrying:
 
             try:
-                request = treq.post(host, json=payload, headers=self.headers)
+                request = treq.post(host, json=payload, headers=self.headers,
+                                    pool=self.pool)
+
                 response = yield request  # Wait for the deferred request
             except self._http_errors as err:
                 self.logger.error('Job `%s` encountered error while getting '
@@ -177,7 +181,9 @@ class Job(object):
         while retrying:
 
             try:
-                request = treq.post(host, json=job_data, headers=self.headers)
+                request = treq.post(host, json=job_data, headers=self.headers,
+                                    pool=self.pool)
+
                 response = yield request  # Wait for the deferred request
             except self._http_errors as err:
                 self.logger.error('Encountered error in create(): %s,', err)
@@ -261,7 +267,9 @@ class Job(object):
         while retrying:
 
             try:
-                request = treq.post(host, json=payload, headers=self.headers)
+                request = treq.post(host, json=payload, headers=self.headers,
+                                    pool=self.pool)
+
                 response = yield request  # Wait for the deferred request
             except self._http_errors as err:
                 self.logger.error('Job `%s` encountered error while trying to '

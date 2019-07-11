@@ -73,6 +73,10 @@ EXPIRE_TIME = config('EXPIRE_TIME', default=600, cast=int)
 # Name of upload folder in storage bucket.
 UPLOAD_PREFIX = _strip(config('UPLOAD_PREFIX', default='uploads', cast=str))
 
+# HTTP Settings
+CONCURRENT_REQUESTS_PER_DOMAIN = config('CONCURRENT_REQUESTS_PER_DOMAIN',
+                                        default=64, cast=int)
+
 # Application directories
 ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DOWNLOAD_DIR = os.path.join(ROOT_DIR, 'download')
