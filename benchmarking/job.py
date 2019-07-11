@@ -84,6 +84,7 @@ class Job(object):
             twisted_client.RequestTransmissionFailed,
             twisted_errors.ConnectBindError,
             twisted_errors.TimeoutError,
+            twisted_errors.ConnectError,
             twisted_errors.ConnectionRefusedError,
         )
 
