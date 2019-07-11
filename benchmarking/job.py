@@ -64,6 +64,8 @@ class Job(object):
         self.failed = False  # for error handling
 
         self.headers = {'Content-Type': ['application/json']}
+
+        # summary data
         self.status = None
         self.job_id = None
         self.created_at = None
@@ -144,8 +146,8 @@ class Job(object):
 
                 response = yield request  # Wait for the deferred request
             except self._http_errors as err:
-                self.logger.error('Job `%s` encountered error while getting '
-                                  'redis field %s: %s', self.job_id, field, err)
+                self.logger.error('[%s]: Encountered error getting REDIS_VALUE'
+                                  ' %s: %s', self.job_id, field, err)
                 yield self.sleep(self.update_interval)
                 continue  # return to top of retry loop
 
@@ -153,8 +155,8 @@ class Job(object):
                 self._log_http_response(response)
                 json_content = yield response.json()  # parse the JSON data
             except (json.decoder.JSONDecodeError, AttributeError) as err:
-                self.logger.error('Job `%s` failed to parse JSON data from the'
-                                  ' request: %s', self.job_id, err)
+                self.logger.error('[%s]: Failed to parse REDIS_VALUE response '
+                                  'as JSON: %s', self.job_id, err)
                 yield self.sleep(self.update_interval)
                 continue  # return to top of retry loop
 
@@ -186,7 +188,8 @@ class Job(object):
 
                 response = yield request  # Wait for the deferred request
             except self._http_errors as err:
-                self.logger.error('Encountered error in create(): %s,', err)
+                self.logger.error('[%s]: Encountered error during CREATE: %s',
+                                  self.job_id, err)
                 yield self.sleep(self.update_interval)
                 continue  # return to top of retry loop
 
@@ -194,13 +197,13 @@ class Job(object):
                 self._log_http_response(response)
                 json_content = yield response.json()  # parse the JSON data
             except (json.decoder.JSONDecodeError, AttributeError) as err:
-                self.logger.error('Job `%s` failed to parse JSON data from the'
-                                  ' request: %s', self.job_id, err)
+                self.logger.error('[%s]: Failed to parse CREATE response as '
+                                  'JSON: %s', self.job_id, err)
                 yield self.sleep(self.update_interval)
                 continue  # return to top of retry loop
 
             job_id = json_content.get('hash')
-            self.logger.info('Job created with ID `%s`', job_id)
+            self.logger.debug('[%s]: Successfully created.', job_id)
             retrying = False  # success
 
         defer.returnValue(job_id)  # "return" the value
@@ -215,11 +218,11 @@ class Job(object):
 
             if self.status != status:
                 self.status = status
-                self.logger.info('Job `%s` has new status `%s`',
+                self.logger.info('[%s]: Found new status `%s`.',
                                  self.job_id, self.status)
 
         # job is_done, log and summarize
-        self.logger.info('Job `%s` is finished with status `%s`.',
+        self.logger.info('[%s]: is finished with status `%s`.',
                          self.job_id, self.status)
 
         defer.returnValue(True)  # "return" the value
@@ -244,14 +247,8 @@ class Job(object):
                 if retry:
                     yield self.sleep(self.update_interval)  # prevent 429s
 
-                try:
-                    value = yield self.get_redis_value(name)
-                    retry = value is None
-                except self._http_errors as err:
-                    self.logger.error('Job `%s` encountered error while '
-                                      'summarizing %s: %s',
-                                      self.job_id, name, err)
-                    retry = True
+                value = yield self.get_redis_value(name)
+                retry = value is None
 
             setattr(self, name, value)  # save the valid value to self
 
@@ -272,8 +269,8 @@ class Job(object):
 
                 response = yield request  # Wait for the deferred request
             except self._http_errors as err:
-                self.logger.error('Job `%s` encountered error while trying to '
-                                  'calling expire: %s', self.job_id, err)
+                self.logger.error('[%s]: Encountered error during EXPIRE: %s',
+                                  self.job_id, err)
                 yield self.sleep(self.update_interval)
                 continue  # return to top of retry loop
 
@@ -281,19 +278,15 @@ class Job(object):
                 self._log_http_response(response)
                 json_content = yield response.json()  # parse the JSON data
             except (json.decoder.JSONDecodeError, AttributeError) as err:
-                self.logger.error('Job `%s` failed to parse JSON data from the'
-                                  ' request: %s', self.job_id, err)
+                self.logger.error('[%s]: Failed to parse EXPIRE response as '
+                                  'JSON: %s', self.job_id, err)
                 yield self.sleep(self.update_interval)
                 continue  # return to top of retry loop
 
             value = json_content.get('value')
 
-            if int(value) == 1:
-                self.logger.info('Job `%s` will expire in %s seconds.',
-                                 self.job_id, self.expire_time)
-            else:
-                self.logger.warning('Unexpected response from '
-                                    '`EXPIRE %s`: `%s`', self.job_id, value)
+            self.logger.debug('[%s]: EXPIRE response: `%s`. Expires in %ss.',
+                              self.job_id, value, self.expire_time)
 
             retrying = False  # success
 
@@ -302,15 +295,14 @@ class Job(object):
     @defer.inlineCallbacks
     def restart(self, delay=0):
         if not self.failed:
-            self.logger.warning('Job `%s` was restarted but is not failed.',
-                                self.job_id)
+            self.logger.warning('[%s]: Restarting but not failed.', self.job_id)
 
         self.failed = False  # reset failure mode to prevent further restarts
 
         if delay:
             yield self.sleep(delay)
 
-        self.logger.info('Restarting failed job `%s`.', self.job_id)
+        self.logger.debug('[%s]: Restarting failed job.', self.job_id)
 
         if self.job_id is None:  # never got started in the first place
             yield self.start()
@@ -343,10 +335,14 @@ class Job(object):
                 created_at = dateutil.parser.parse(self.created_at)
                 finished_at = dateutil.parser.parse(self.finished_at)
                 diff = finished_at - created_at
-                self.logger.info('Job `%s` has final status `%s` and was '
-                                 'completed in %s seconds. Download at `%s`.',
-                                 self.job_id, self.status,
-                                 diff.total_seconds(), self.output_url)
+                self.logger.info('[%s]: Finished in %s seconds with status '
+                                 '`%s`. Download at `%s`.',
+                                 self.job_id, diff.total_seconds(),
+                                 self.status, self.output_url)
+
+            elif self.status == 'failed':
+                self.logger.warning('[%s]: Found final status `%s`',
+                                    self.job_id, self.status)
 
             yield self.sleep(self.update_interval)
             value = yield self.expire()
@@ -355,6 +351,6 @@ class Job(object):
 
         except Exception as err:
             self.failed = True
-            self.logger.error('Job `%s` encountered unexpected error in '
+            self.logger.error('[%s]: Encountered unexpected error in '
                               'job.start(): %s', self.job_id, err)
             defer.returnValue(False)

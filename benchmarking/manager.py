@@ -112,8 +112,8 @@ class JobManager(object):
             if j.failed:
                 j.restart(delay=self.start_delay * failed)
 
-        self.logger.warning('%s created, %s complete, %s failed of %s jobs total',
-                            created, complete, failed, len(self.all_jobs))
+        self.logger.info('%s created, %s complete, %s failed of %s jobs total',
+                         created, complete, failed, len(self.all_jobs))
 
         return complete
 
@@ -124,10 +124,9 @@ class JobManager(object):
         while complete != len(self.all_jobs):
             yield self.sleep(self.refresh_rate)
 
-            complete = self.get_completed_job_count()
+            complete = self.get_completed_job_count()  # synchronous
 
-        self.logger.critical('after while loop!')
-        self.summarize()
+        self.summarize()  # synchronous
 
         yield reactor.stop()  # pylint: disable=E1101
 
