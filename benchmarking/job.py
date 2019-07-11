@@ -324,8 +324,8 @@ class Job(object):
     @defer.inlineCallbacks
     def start(self, delay=0):
 
-        if delay:
-            yield self.sleep(delay) # delay the start if required
+        if delay:  # delay the start if required
+            yield self.sleep(delay)
 
         try:
             self.job_id = yield self.create()
