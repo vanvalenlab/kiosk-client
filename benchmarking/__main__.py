@@ -55,7 +55,7 @@ def get_arg_parser():
     parser.add_argument('-c', '--count', default=10, type=int,
                         help='Number of times to process the given file.')
 
-    parser.add_argument('-L', '--log-level', default='DEBUG',
+    parser.add_argument('-L', '--log-level', default=settings.LOG_LEVEL,
                         choices=('DEBUG', 'INFO', 'WARN', 'ERROR', 'CRITICAL'),
                         help='log level (default: DEBUG)')
 
@@ -66,7 +66,8 @@ def initialize_logger(log_level):
     logger = logging.getLogger()
     logger.setLevel(logging.DEBUG)
 
-    formatter = logging.Formatter('[%(asctime)s]:[%(levelname)s]:[%(name)s]: %(message)s')
+    formatter = logging.Formatter(fmt=settings.LOG_FORMAT)
+
     console = logging.StreamHandler(stream=sys.stdout)
     console.setFormatter(formatter)
 
@@ -77,7 +78,7 @@ def initialize_logger(log_level):
     fh.setFormatter(formatter)
 
     console.setLevel(getattr(logging, log_level))
-    fh.setLevel(logging.DEBUG)
+    fh.setLevel(getattr(logging, log_level))
 
     logger.addHandler(console)
     logger.addHandler(fh)
@@ -86,7 +87,8 @@ def initialize_logger(log_level):
 if __name__ == '__main__':
     args = get_arg_parser().parse_args()
 
-    initialize_logger(log_level=args.log_level)
+    if settings.LOG_ENABLED:
+        initialize_logger(log_level=args.log_level)
 
     mgr_kwargs = {
         'host': settings.HOST,
