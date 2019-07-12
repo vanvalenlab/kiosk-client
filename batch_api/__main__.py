@@ -43,6 +43,7 @@ from batch_api.batch_requests import create_jobs_multi
 from batch_api.batch_requests import get_completed_jobs_multi
 from batch_api.batch_requests import expire_job_multi
 
+from cost_estimation.grafana.cost_estimator import CostGetter
 
 def initialize_logger(debug_mode=True):
     logger = logging.getLogger()
@@ -97,10 +98,13 @@ def get_arg_parser():
 
 
 def main():
-    # create the request objects
     logger = logging.getLogger('benchmark')
     _ = timeit.default_timer()
 
+    # compute costs of cloud resources while we benchmark
+    cost_getter = CostGetter()
+
+    # upload request objects to Redis
     all_jobs = []
     model_name, model_version = ARGS.model.split(':')
     for _ in range(ARGS.count):
@@ -143,8 +147,13 @@ def main():
         except Exception as err:
             logger.error('Encountered %s: %s', type(err).__name__, err)
 
+    # compute total cost
+    cost_getter.compute_costs()
+
     logger.info('All %s jobs are completed in %s seconds.',
                 len(completed_hashes), timeit.default_timer() - _)
+    logger.info('%s dollars worth of cloud hardware was used in the process.',
+                cost_getter.total_node_costs)
 
     # expire all the keys we added.
     all_expired = expire_job_multi(POOL, all_job_ids)

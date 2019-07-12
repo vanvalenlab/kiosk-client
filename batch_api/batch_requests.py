@@ -52,13 +52,19 @@ def _retry_post_wrapper(endpoint, payload):
     for i in range(1, HTTP_RETRIES + 1):
         try:
             response = requests.post(endpoint, json=payload)
-            break
         except requests.exceptions.ConnectionError as err:
             if i == HTTP_RETRIES:
                 raise err
             logger.warning('Encountered %s. Retrying %s/%s in %s seconds.',
                            err, i, HTTP_RETRIES, HTTP_RETRY_BACKOFF)
             time.sleep(HTTP_RETRY_BACKOFF)
+            continue
+        if response.status_code==504:
+            logger.warning("504 error.")
+            time.sleep(HTTP_RETRY_BACKOFF)
+            continue
+        elif response.status_code==200:
+            break
     return response
 
 

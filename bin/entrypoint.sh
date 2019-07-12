@@ -5,3 +5,5 @@ python -m benchmarking \
   --file $FILE \
   --count $COUNT \
   --log-level ${LOG_LEVEL:="DEBUG"}
+
+sleep 10000
