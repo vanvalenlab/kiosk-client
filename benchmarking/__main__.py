@@ -59,6 +59,10 @@ def get_arg_parser():
                         choices=('DEBUG', 'INFO', 'WARN', 'ERROR', 'CRITICAL'),
                         help='log level (default: DEBUG)')
 
+    parser.add_argument('--upload', action='store_true',
+                        help='If provided, uploads the file before creating '
+                             'a new job.')
+
     return parser
 
 
@@ -103,6 +107,7 @@ if __name__ == '__main__':
     }
 
     if args.mode == 'benchmark':
+        mgr_kwargs['upload'] = args.upload
         mgr = manager.BenchmarkingJobManager(**mgr_kwargs)
         mgr.run(filepath=args.file, count=args.count)
 
