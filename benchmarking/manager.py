@@ -76,12 +76,15 @@ class JobManager(object):
         """Simple helper to delay asynchronously for some number of seconds."""
         return deferLater(reactor, seconds, lambda: None)
 
-    def upload_file(self, filepath, acl='publicRead'):
+    def upload_file(self, filepath, acl='publicRead', hash_filename=True):
         storage_client = google_storage.Client()
 
         self.logger.debug('Uploading %s.', filepath)
-        _, ext = os.path.splitext(filepath)
-        dest = '{}{}'.format(uuid.uuid4().hex, ext)
+        if hash_filename:
+            _, ext = os.path.splitext(filepath)
+            dest = '{}{}'.format(uuid.uuid4().hex, ext)
+        else:
+            dest = os.path.basename(filepath)
 
         bucket = storage_client.get_bucket(settings.GCLOUD_STORAGE_BUCKET)
         blob = bucket.blob(os.path.join(self.upload_prefix, dest))
@@ -165,7 +168,7 @@ class BenchmarkingJobManager(JobManager):
         for i in range(count):
 
             if upload:
-                dest = self.upload_file(filepath)
+                dest = self.upload_file(filepath, hash_filename=False)
                 job = self.make_job(dest, original_name=filepath)
             else:
                 job = self.make_job(filepath)
@@ -185,7 +188,7 @@ class BatchProcessingJobManager(JobManager):
 
         for i, f in enumerate(iter_image_files(filepath)):
 
-            dest = self.upload_file(f)
+            dest = self.upload_file(f, hash_filename=True)
 
             job = self.make_job(dest, original_name=f)
             self.all_jobs.append(job)
