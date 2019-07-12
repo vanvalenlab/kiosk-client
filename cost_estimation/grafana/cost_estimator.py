@@ -32,6 +32,7 @@ class CostGetter:
         self.parse_http_response_data()
         self.compute_costs()
         #self.output_cost_data()
+        return str(self.total_node_costs)
 
     def compose_http_requests(self):
         # This function assembles the HTTP request strings that will be sent
