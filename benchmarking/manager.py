@@ -119,7 +119,7 @@ class JobManager(object):
             if j.failed:
                 j.restart(delay=self.start_delay * failed)
 
-        self.logger.info('%s created; %s complete; %s; of %s jobs total',
+        self.logger.info('%s created; %s finished; %s; %s jobs total',
                          created, complete,
                          '; '.join('%s %s' % (k, v) for k, v in statuses.items()),
                          len(self.all_jobs))
@@ -142,14 +142,13 @@ class JobManager(object):
     def summarize(self):
         self.logger.info('Finished %s jobs in %s seconds.', len(self.all_jobs),
                          timeit.default_timer() - self.created_at)
-        jsondata = [j.json() for j in self.all_jobs]
 
         output_filepath = os.path.join(
             settings.OUTPUT_DIR,
             '{}.json'.format(uuid.uuid4().hex))
 
         with open(output_filepath, 'w') as jsonfile:
-            json.dump(jsondata, jsonfile, indent=4)
+            json.dump([j.json() for j in self.all_jobs], jsonfile, indent=4)
 
             self.logger.info('Wrote job data as JSON to %s.', output_filepath)
 
