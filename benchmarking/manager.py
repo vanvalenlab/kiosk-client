@@ -104,16 +104,25 @@ class JobManager(object):
     def get_completed_job_count(self):
         created, complete, failed = 0, 0, 0
 
+        statuses = {}
+
         for j in self.all_jobs:
             complete += int(j.is_summarized)
             created += int(j.job_id is not None)
-            failed += int(j.failed)
+
+            if j.status is not None:
+                if j.status not in statuses:
+                    statuses[j.status] = 1
+                else:
+                    statuses[j.status] += 1
 
             if j.failed:
                 j.restart(delay=self.start_delay * failed)
 
-        self.logger.info('%s created, %s complete, %s failed of %s jobs total',
-                         created, complete, failed, len(self.all_jobs))
+        self.logger.info('%s created; %s complete; %s; of %s jobs total',
+                         created, complete,
+                         '; '.join('%s %s' % (k, v) for k, v in statuses.items()),
+                         len(self.all_jobs))
 
         return complete
 
