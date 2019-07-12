@@ -1,43 +1,33 @@
 # Tests for the file cost_estimator.py
 
-import cost_estimation.grafana.cost_estimator as ce
+from cost_estimation.grafana.cost_estimator import CostGetter
 
-import os
-import glob
-import math
-import getpass
-import shutil
-
+import pytest
+import requests.exceptions
 import time
 
-
-def test_generate_images_and_zips():
-    # Set parameters
-    images_to_create = 10
-    images_per_zip = 10
-    number_of_zips = math.ceil(images_to_create / images_per_zip)
-    home_directory = "/home/travis"  # for Travis CI tests
-
-    # Make necessary directories
-    os.chmod(home_directory, 0o771)
-    big.create_directories(home_directory)
-
-    # Execute relevant function
-    big.generate_images_and_zips(images_to_create, images_per_zip,
-                                 home_directory)
-
-    # Check for existence of files
-    list_of_images = glob.glob(home_directory + "/image_*.png")
-    assert len(list_of_images) == images_to_create
-    for img_num in range(images_to_create):
-        image_name = home_directory + "/image_" + str(img_num) + ".png"
-        assert image_name in list_of_images
-    list_of_zips = glob.glob(home_directory + "/zips/zip_files*.zip")
-    for zip_number in range(number_of_zips):
-        zip_name = home_directory + "/zips/zip_files" + str(zip_number) + ".zip"
-        assert zip_name in list_of_zips
-
 def test_get_time():
-    old_time = time.time()
-    new_time = ce.get_time()
-    assert old_time < new_time
+    cg = CostGetter()
+    
+    old_time = int(time.time())
+    new_time = cg.get_time()
+    assert old_time <= new_time
+
+def test_compose_http_requests():
+    cg = CostGetter()
+    cg.benchmarking_end_time = cg.get_time()
+    cg.compose_http_requests()
+    assert cg.node_creation_request == "http://admin:admin@127.0.0.1/api/datasources/proxy/1/api/v1/query_range?query=kube_node_created&start=" + str(cg.benchmarking_start_time) + "&end="+ str(cg.benchmarking_end_time) + "&step=15"
+    assert cg.node_label_request == "http://admin:admin@127.0.0.1/api/datasources/proxy/1/api/v1/query_range?query=kube_node_labels&start=" + str(cg.benchmarking_start_time) + "&end="+ str(cg.benchmarking_end_time) + "&step=15"
+
+def test_send_http_requests():
+    cg = CostGetter()
+    cg.benchmarking_end_time = cg.get_time()
+    cg.compose_http_requests()
+    with pytest.raises(requests.exceptions.ConnectionError) as requests_node_creation_error:
+        cg.send_http_requests(cg.node_creation_request).status == 200
+    print(requests_node_creation_error.value)
+    assert "/api/datasources/proxy/1/api" in str(requests_node_creation_error.value)
+    with pytest.raises(requests.exceptions.ConnectionError) as requests_error:
+        cg.send_http_requests(cg.node_label_request).status == 200
+    assert "/api/datasources/proxy/1/api" in str(requests_node_creation_error.value)
