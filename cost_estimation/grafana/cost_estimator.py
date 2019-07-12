@@ -19,8 +19,8 @@ class CostGetter:
         # to establish the beginning or end of cost accrual.
         return int(time.time())
 
-    def compute_costs(self):
-        # This should be the wrapper function for all the functionality
+    def finish(self):
+        # This is the wrapper function for all the functionality
         # that will executed immediately once benchmarking is finished.
         self.benchmarking_end_time = self.get_time()
         self.http_request = self.compose_http_requests()
@@ -80,11 +80,9 @@ class CostGetter:
                     label_set["metric"]\
                     ["label_beta_kubernetes_io_instance_type"]
             if "label_cloud_google_com_gke_preemptible" in label_set["metric"]:
-                preemptible = \
-                        label_set["metric"]\
-                        ["label_cloud_google_com_gke_preemptible"]
+                preemptible = True
             else:
-                preemptible = "no"
+                preemptible = False
             if "label_cloud_google_com_gke_accelerator" in label_set["metric"]:
                 gpu = label_set["metric"]\
                         ["label_cloud_google_com_gke_accelerator"]
@@ -92,7 +90,7 @@ class CostGetter:
                 gpu = "none"
             for node in self.node_info.keys():
                 if node == label_set["metric"]\
-                        ["gke-dylan-benchmarking-prediction-gpu-bf9b9dc6-2s70"]:
+                        ["label_kubernetes_io_hostname"]:
                     self.node_info[node]["instance_type"] = instance_type
                     self.node_info[node]["preemptible"] = preemptible
                     self.node_info[node]["gpu"] = gpu
@@ -100,9 +98,9 @@ class CostGetter:
 
     def compute_costs(self):
         total_node_costs = 0
-        for node in self.node_info:
-            node_hourly_cost = self.compute_hourly_cost(node)
-            node_cost = node_hourly_cost * (node["lifetime"]/60/60)
+        for _, node_dict in self.node_info.items():
+            node_hourly_cost = self.compute_hourly_cost(node_dict)
+            node_cost = node_hourly_cost * (node_dict["lifetime"]/60/60)
             total_node_costs = total_node_costs + node_cost
         self.total_node_costs = total_node_costs
 
@@ -121,18 +119,18 @@ class CostGetter:
         # initialize cost
         hourly_cost = 0
         # add in instnace cost
-        if preemptible == "no":
+        if not preemptible:
             hourly_cost = hourly_cost + \
                     self.cost_table[instance_type]["ondemand"]
-        elif preemptible == "true":
+        else:
             hourly_cost = hourly_cost + \
                     self.cost_table[instance_type]["preemptible"]
         # add in GPU cost
         if gpu != "none":
-            if preemptible == "no":
+            if not preemptible:
                 hourly_cost = hourly_cost + \
                         self.gpu_table[gpu]["ondemand"]
-            elif preemptible == "true":
+            else:
                 hourly_cost = hourly_cost + \
                         self.gpu_table[gpu]["preemptible"]
         return hourly_cost
