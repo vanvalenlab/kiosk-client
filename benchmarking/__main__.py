@@ -110,9 +110,8 @@ if __name__ == '__main__':
         raise FileNotFoundError('%s could not be found.' % args.file)
 
     if args.mode == 'benchmark':
-        mgr_kwargs['upload'] = args.upload
         mgr = manager.BenchmarkingJobManager(**mgr_kwargs)
-        mgr.run(filepath=args.file, count=args.count)
+        mgr.run(filepath=args.file, count=args.count, upload=args.upload)
 
     elif args.mode == 'upload':
         mgr = manager.BatchProcessingJobManager(**mgr_kwargs)
