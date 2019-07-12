@@ -1,3 +1,4 @@
+from decouple import config
 import os
 import time
 import requests
@@ -8,9 +9,9 @@ class CostGetter:
         self.benchmarking_start_time = self.get_time()
         self.generate_instance_cost_table()
         self.generate_gpu_cost_table()
-        self.GRAFANA_USER = os.environ["GRAFANA_USER"]
-        self.GRAFANA_PASSWORD = os.environ["GRAFANA_PASSWORD"]
-        self.GRAFANA_IP = os.environ["GRAFANA_IP"]
+        self.GRAFANA_USER = config("GRAFANA_USER", cast=str, default="admin")
+        self.GRAFANA_PASSWORD = config("GRAFANA_PASSWORD", cast=str, default="admin")
+        self.GRAFANA_IP = config("GRAFANA_IP", cast=str, default="127.0.0.1")
 
     def get_time(self):
         # Get current time in epoch seconds.
@@ -25,9 +26,9 @@ class CostGetter:
         self.http_request = self.compose_http_requests()
         self.compose_http_requests()
         self.node_creation_data = \
-                self.send_http_requests(self.node_creation_request)
+                self.send_http_requests(self.node_creation_request).json()
         self.node_label_data = \
-                self.send_http_requests(self.node_label_request)
+                self.send_http_requests(self.node_label_request).json()
         self.parse_http_response_data()
         self.compute_costs()
         #self.output_cost_data()
@@ -39,18 +40,18 @@ class CostGetter:
                 self.GRAFANA_PASSWORD + "@" + self.GRAFANA_IP + \
                 "/api/datasources/proxy/1/api/v1/query_range?"
         node_creation_appendix = "query=kube_node_created&start=" + \
-                self.benchmarking_start_time + "&end=" + \
-                self.benchmarking_end_time + "&step=15"
+                str(self.benchmarking_start_time) + "&end=" + \
+                str(self.benchmarking_end_time) + "&step=15"
         node_label_appendix = "query=kube_node_labels&start=" + \
-                self.benchmarking_start_time + "&end=" + \
-                self.benchmarking_end_time + "&step=15"
+                str(self.benchmarking_start_time) + "&end=" + \
+                str(self.benchmarking_end_time) + "&step=15"
         self.node_creation_request = request_backbone + node_creation_appendix
         self.node_label_request = request_backbone + node_label_appendix
 
     def send_http_requests(self, request):
         # This function sends a HTTP request to Grafana and returns the output.
         response = requests.get(request)
-        return response.json()
+        return response
 
     def parse_http_response_data(self):
         self.node_info = {}
