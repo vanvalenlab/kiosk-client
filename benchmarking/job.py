@@ -76,6 +76,8 @@ class Job(object):
         self.download_time = None
         self.upload_time = None
         self.output_url = None
+        self.total_jobs = None
+        self.total_time = None
         self._finished_statuses = {'done', 'failed'}
 
         self.pool = kwargs.get('pool')
@@ -238,7 +240,8 @@ class Job(object):
             'postprocess_time',
             'upload_time',
             'download_time',
-            # 'total_jobs',
+            'total_jobs',
+            'total_time',
             'output_url',
         ]
 
