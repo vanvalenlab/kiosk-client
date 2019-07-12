@@ -62,6 +62,7 @@ class Job(object):
         self.original_name = kwargs.get('original_name', self.filepath)
 
         self.failed = False  # for error handling
+        self.is_expired = False
 
         self.headers = {'Content-Type': ['application/json']}
 
@@ -98,7 +99,7 @@ class Job(object):
             return True
         summaries = (self.created_at, self.finished_at, self.output_url)
         is_summarized = all(x is not None for x in summaries)
-        return is_summarized and self.is_done
+        return is_summarized and self.is_done and self.is_expired
 
     def sleep(self, seconds):
         """Simple helper to delay asynchronously for some number of seconds."""
@@ -339,6 +340,7 @@ class Job(object):
 
             yield self.sleep(self.update_interval)
             value = yield self.expire()
+            self.is_expired = True
 
             defer.returnValue(value)
 
