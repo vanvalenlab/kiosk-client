@@ -222,12 +222,8 @@ class Job(object):
 
             if self.status != status:
                 self.status = status
-                self.logger.info('[%s]: Found new status `%s`.',
-                                 self.job_id, self.status)
-
-        # job is_done, log and summarize
-        self.logger.info('[%s]: is finished with status `%s`.',
-                         self.job_id, self.status)
+                self.logger.info('[%s]: Found new %sstatus `%s`.', self.job_id,
+                                 'final ' if self.is_done else '', self.status)
 
         defer.returnValue(True)  # "return" the value
 
