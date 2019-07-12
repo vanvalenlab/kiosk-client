@@ -121,7 +121,7 @@ class JobManager(object):
 
         self.logger.info('%s created; %s finished; %s; %s jobs total',
                          created, complete,
-                         '; '.join('%s %s' % (k, v) for k, v in statuses.items()),
+                         '; '.join('%s %s' % (v, k) for k, v in statuses.items()),
                          len(self.all_jobs))
 
         return complete
