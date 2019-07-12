@@ -106,6 +106,9 @@ if __name__ == '__main__':
         'upload_prefix': settings.UPLOAD_PREFIX,
     }
 
+    if not os.path.exists(args.file) and (args.mode == 'upload' or args.upload):
+        raise FileNotFoundError('%s could not be found.' % args.file)
+
     if args.mode == 'benchmark':
         mgr_kwargs['upload'] = args.upload
         mgr = manager.BenchmarkingJobManager(**mgr_kwargs)
@@ -113,8 +116,6 @@ if __name__ == '__main__':
 
     elif args.mode == 'upload':
         mgr = manager.BatchProcessingJobManager(**mgr_kwargs)
-        if not os.path.exists(args.file):
-            raise FileNotFoundError('%s could not be found.' % args.file)
         mgr.run(filepath=args.file)
 
     reactor.run()  # pylint: disable=E1101

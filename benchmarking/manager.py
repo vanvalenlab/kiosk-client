@@ -162,10 +162,6 @@ class BenchmarkingJobManager(JobManager):
     def run(self, filepath, count, upload=False):  # pylint: disable=W0221
         self.logger.info('Benchmarking %s jobs of file `%s`', count, filepath)
 
-        if upload and not os.path.isfile(filepath):
-            raise FileNotFoundError('When benchmarking a file with --upload, '
-                                    'the --file argument must be valid file.')
-
         for i in range(count):
 
             if upload:
