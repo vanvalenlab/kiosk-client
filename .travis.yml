@@ -18,7 +18,7 @@ install:
 
 script:
   - whoami
-  - python -m pytest --pep8 tests
+  - python -m pytest --pep8 cost_estimator/grafana/tests
   - ls -l /home/travis
   - ls /home/travis/current_images
   - ls /home/travis/zips
