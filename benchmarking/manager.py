@@ -77,6 +77,7 @@ class JobManager(object):
         return deferLater(reactor, seconds, lambda: None)
 
     def upload_file(self, filepath, acl='publicRead', hash_filename=True):
+        start = timeit.default_timer()
         storage_client = google_storage.Client()
 
         self.logger.debug('Uploading %s.', filepath)
@@ -89,6 +90,8 @@ class JobManager(object):
         bucket = storage_client.get_bucket(settings.GCLOUD_STORAGE_BUCKET)
         blob = bucket.blob(os.path.join(self.upload_prefix, dest))
         blob.upload_from_filename(filepath, predefined_acl=acl)
+        self.logger.debug('Uploaded %s to %s in %s seconds.',
+                          filepath, dest, timeit.default_timer() - start)
         return dest
 
     def make_job(self, filepath, original_name=None):
