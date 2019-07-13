@@ -45,6 +45,7 @@ from benchmarking import settings
 
 from cost_estimation.grafana.cost_estimator import CostGetter
 
+
 class JobManager(object):
 
     def __init__(self, host, model_name, model_version, **kwargs):
@@ -72,7 +73,7 @@ class JobManager(object):
         self.pool = HTTPConnectionPool(reactor, persistent=True)
         self.pool.maxPersistentPerHost = settings.CONCURRENT_REQUESTS_PER_HOST
         self.pool.retryAutomatically = False
-        
+
         # initializing cost estimation workflow
         self.cost_getter = CostGetter()
 
@@ -132,7 +133,7 @@ class JobManager(object):
 
         # finish cost estimation
         self.total_node_costs = self.cost_getter.finish()
-        
+
         self.summarize()  # synchronous
 
         yield reactor.stop()  # pylint: disable=E1101
@@ -144,9 +145,9 @@ class JobManager(object):
 
         # add cost and timing data to json output
         time_elapsed = timeit.default_timer() - self.created_at
-        jsondata = {"cost": self.total_node_costs, \
-                "time_elapsed": time_elapsed, \
-                "job_data": jsondata}
+        jsondata = {"cost": self.total_node_costs,
+                    "time_elapsed": time_elapsed,
+                    "job_data": jsondata}
 
         output_filepath = os.path.join(
             settings.OUTPUT_DIR,
