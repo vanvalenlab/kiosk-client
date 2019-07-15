@@ -178,7 +178,12 @@ class BenchmarkingJobManager(JobManager):
 
             self.all_jobs.append(job)
 
-            job.start(delay=self.start_delay * i)  # stagger the delay seconds
+            # stagger the delay seconds; if upload it will be staggered already
+            job.start(delay=self.start_delay * i * int(not upload))
+
+            yield self.sleep(self.start_delay * upload)
+
+            self.get_completed_job_count()  # log during uploading
 
         yield self.check_job_status()
 
