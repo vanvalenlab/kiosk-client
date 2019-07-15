@@ -146,9 +146,6 @@ class JobManager(object):
 
             complete = self.get_completed_job_count()  # synchronous
 
-        # finish cost estimation
-        self.total_node_costs = self.cost_getter.finish()
-
         self.summarize()  # synchronous
 
         yield reactor.stop()  # pylint: disable=E1101
@@ -159,9 +156,15 @@ class JobManager(object):
 
         # add cost and timing data to json output
         time_elapsed = timeit.default_timer() - self.created_at
-        jsondata = {"cost": self.total_node_costs,
-                    "time_elapsed": time_elapsed,
-                    "job_data": [j.json() for j in self.all_jobs]}
+        try:
+            cost_data = self.cost_getter.finish()
+        except Exception as err:
+            self.logger.error('Encountered error %s while getting cost data', err)
+            cost_data = ''
+
+        jsondata = {'cost': cost_data,
+                    'time_elapsed': time_elapsed,
+                    'job_data': [j.json() for j in self.all_jobs]}
 
         output_filepath = os.path.join(
             settings.OUTPUT_DIR,
