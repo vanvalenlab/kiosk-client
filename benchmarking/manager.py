@@ -146,29 +146,28 @@ class JobManager(object):
 
             complete = self.get_completed_job_count()  # synchronous
 
-        # finish cost estimation
-        self.total_node_costs = self.cost_getter.finish()
-
         self.summarize()  # synchronous
 
         yield reactor.stop()  # pylint: disable=E1101
 
     def summarize(self):
-        self.logger.info('Finished %s jobs in %s seconds.', len(self.all_jobs),
-                         timeit.default_timer() - self.created_at)
+        time_elapsed = timeit.default_timer() - self.created_at
+        self.logger.info('Finished %s jobs in %s seconds.',
+                         len(self.all_jobs), time_elapsed)
 
         # add cost and timing data to json output
-        time_elapsed = timeit.default_timer() - self.created_at
-        jsondata = {"cost": self.total_node_costs,
-                    "time_elapsed": time_elapsed,
-                    "job_data": jsondata}
+        json_data = {
+            'cost': self.cost_getter.finish(),
+            'time_elapsed': time_elapsed,
+            'job_data': [j.json() for j in self.all_jobs]
+        }
 
         output_filepath = os.path.join(
             settings.OUTPUT_DIR,
             '{}.json'.format(uuid.uuid4().hex))
 
         with open(output_filepath, 'w') as jsonfile:
-            json.dump([j.json() for j in self.all_jobs], jsonfile, indent=4)
+            json.dump(json_data, jsonfile, indent=4)
 
             self.logger.info('Wrote job data as JSON to %s.', output_filepath)
 
