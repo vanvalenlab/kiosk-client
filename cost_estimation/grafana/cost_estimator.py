@@ -151,11 +151,6 @@ class CostGetter(object):
             route='/api/datasources/proxy/1/api/v1/query_range',
             querystring=urllib.parse.urlencode(data))
 
-    def send_http_requests(self, request):
-        # This function sends a HTTP request to Grafana and returns the output.
-        response = requests.get(request)
-        return response
-
     def parse_http_response_data(self, create_response, label_response):
         node_info = {}
 
