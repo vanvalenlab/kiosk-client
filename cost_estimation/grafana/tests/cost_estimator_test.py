@@ -20,49 +20,6 @@ class TestCostGetter(object):
         new_time = cg.get_time()
         assert old_time <= new_time
 
-    def test_send_http_requests(self):
-        # object creation
-        cg = CostGetter()
-
-        # patch for finish()
-        cg.benchmarking_end_time = cg.get_time()
-
-        # patch for compose_http_requests()
-        request_backbone = "{}{}{}{}{}{}{}".format("http://", "admin", ":",
-                                                   "admin", "@", "127.0.0.1",
-                                                   "/api/datasources/proxy/1/api/v1/query_range?")
-        node_creation_http_parameters = {
-            'query': 'kube_node_created',
-            'start': str(cg.benchmarking_start_time),
-            'end': str(cg.benchmarking_end_time),
-            'step': 15
-        }
-        cg.node_creation_request = '{}{}'.format(
-            request_backbone,
-            urllib.parse.urlencode(node_creation_http_parameters))
-
-        node_label_http_parameters = {
-            'query': 'kube_node_labels',
-            'start': str(cg.benchmarking_start_time),
-            'end': str(cg.benchmarking_end_time),
-            'step': 15
-        }
-        cg.node_label_request = '{}{}'.format(
-            request_backbone,
-            urllib.parse.urlencode(node_label_http_parameters))
-
-        with pytest.raises(requests.exceptions.ConnectionError) \
-                as requests_node_creation_error:
-            cg.send_http_requests(cg.node_creation_request).status == 200
-        assert '/api/datasources/proxy/1/api' in str(
-            requests_node_creation_error.value)
-
-        with pytest.raises(requests.exceptions.ConnectionError) as err:
-            cg.send_http_requests(cg.node_label_request).status == 200
-
-        assert '/api/datasources/proxy/1/api' in str(
-            requests_node_creation_error.value)
-
     def test_parse_http_response_data(self):
         # object creation
         cg = CostGetter()
