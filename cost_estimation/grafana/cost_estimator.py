@@ -1,6 +1,8 @@
 from decouple import config
+import logging
 import os
 import requests
+import sys
 import time
 import urllib.parse
 
@@ -53,41 +55,54 @@ class CostGetter:
         global cost_table
         global gpu_table
 
+        # Initialize logger
+        self.logger = logging.getLogger(str(self.__class__.__name__))
+        logger_formatter = \
+            logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        stderr_handler = logging.StreamHandler(sys.stderr)
+        stderr_handler.setLevel(logging.ERROR)
+        stderr_handler.setFormatter(logger_formatter)
+        self.logger.addHandler(stderr_handler)
+        file_handler = logging.FileHandler("cost_estimation_logging.txt")
+        file_handler.setLevel(logging.DEBUG)
+        file_handler.setFormatter(logger_formatter)
+        self.logger.addHandler(file_handler)
+
         # validate user input
         if benchmarking_start_time and not benchmarking_end_time:
             try:
                 benchmarking_start_time = int(benchmarking_start_time)
             except ValueError:
-                print("{}{}{}{}".format("You need to provide either an integer",
-                                        " string (e.g., "12345") or a decimal",
-                                        " or integer number (e.g., 123.45) for",
-                                        " benchmarking_start_time.")
+                self.logger.error("{}{}{}{}".format("You need to provide either an integer",
+                                                    " string (e.g., '12345') or a decimal",
+                                                    " or integer number (e.g., 123.45) for",
+                                                    " benchmarking_start_time."))
             now = int(time.time())
             assert benchmarking_start_time <= now
         if benchmarking_start_time and benchmarking_end_time:
             try:
                 benchmarking_start_time = int(benchmarking_start_time)
             except ValueError:
-                print("{}{}{}{}".format("You need to provide either an integer",
-                                        " string (e.g., "12345") or a decimal",
-                                        " or integer number (e.g., 123.45) for",
-                                        " benchmarking_start_time.")
+                self.logger.error("{}{}{}{}".format("You need to provide either an integer",
+                                                    " string (e.g., '12345') or a decimal",
+                                                    " or integer number (e.g., 123.45) for",
+                                                    " benchmarking_start_time."))
             try:
                 benchmarking_end_time = int(benchmarking_end_time)
             except ValueError:
-                print("{}{}{}{}".format("You need to provide either an integer",
-                                        " string (e.g., "12345") or a decimal",
-                                        " or integer number (e.g., 123.45) for",
-                                        " benchmarking_end_time.")
+                self.logger.error("{}{}{}{}".format("You need to provide either an integer",
+                                                    " string (e.g., '12345') or a decimal",
+                                                    " or integer number (e.g., 123.45) for",
+                                                    " benchmarking_end_time."))
             assert benchmarking_start_time <= benchmarking_end_time
         if not benchmarking_start_time and benchmarking_end_time:
             try:
                 benchmarking_end_time = int(benchmarking_end_time)
             except ValueError:
-                print("{}{}{}{}".format("You need to provide either an integer",
-                                        " string (e.g., "12345") or a decimal",
-                                        " or integer number (e.g., 123.45) for",
-                                        " benchmarking_end_time.")
+                self.logger.error("{}{}{}{}".format("You need to provide either an integer",
+                                                    " string (e.g., '12345') or a decimal",
+                                                    " or integer number (e.g., 123.45) for",
+                                                    " benchmarking_end_time."))
             now = int(time.time())
             assert benchmarking_end_time >= now
 
