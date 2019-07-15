@@ -156,18 +156,23 @@ class JobManager(object):
                          len(self.all_jobs), time_elapsed)
 
         # add cost and timing data to json output
-        json_data = {
-            'cost': self.cost_getter.finish(),
-            'time_elapsed': time_elapsed,
-            'job_data': [j.json() for j in self.all_jobs]
-        }
+        time_elapsed = timeit.default_timer() - self.created_at
+        try:
+            cost_data = self.cost_getter.finish()
+        except Exception as err:
+            self.logger.error('Encountered error %s while getting cost data', err)
+            cost_data = ''
+
+        jsondata = {'cost': cost_data,
+                    'time_elapsed': time_elapsed,
+                    'job_data': [j.json() for j in self.all_jobs]}
 
         output_filepath = os.path.join(
             settings.OUTPUT_DIR,
             '{}.json'.format(uuid.uuid4().hex))
 
         with open(output_filepath, 'w') as jsonfile:
-            json.dump(json_data, jsonfile, indent=4)
+            json.dump(jsondata, jsonfile, indent=4)
 
             self.logger.info('Wrote job data as JSON to %s.', output_filepath)
 
