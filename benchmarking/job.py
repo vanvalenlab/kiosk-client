@@ -78,6 +78,7 @@ class Job(object):
         self.output_url = None
         self.total_jobs = None
         self.total_time = None
+        self.reason = None
         self._finished_statuses = {'done', 'failed'}
 
         self.pool = kwargs.get('pool')
@@ -241,6 +242,9 @@ class Job(object):
             'output_url',
         ]
 
+        if self.status == 'failed':
+            attributes.append('reason')
+
         for name in attributes:
             value = yield self.get_redis_value(name)
             setattr(self, name, value)  # save the valid value to self
@@ -334,8 +338,9 @@ class Job(object):
                                  self.status, self.output_url)
 
             elif self.status == 'failed':
-                self.logger.warning('[%s]: Found final status `%s`',
-                                    self.job_id, self.status)
+                reason = yield self.get_redis_value('reason')
+                self.logger.warning('[%s]: Found final status `%s`: %s',
+                                    self.job_id, self.status, reason)
 
             yield self.sleep(self.update_interval)
             value = yield self.expire()
