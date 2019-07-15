@@ -151,8 +151,9 @@ class JobManager(object):
         yield reactor.stop()  # pylint: disable=E1101
 
     def summarize(self):
-        self.logger.info('Finished %s jobs in %s seconds.', len(self.all_jobs),
-                         timeit.default_timer() - self.created_at)
+        time_elapsed = timeit.default_timer() - self.created_at
+        self.logger.info('Finished %s jobs in %s seconds.',
+                         len(self.all_jobs), time_elapsed)
 
         # add cost and timing data to json output
         time_elapsed = timeit.default_timer() - self.created_at
