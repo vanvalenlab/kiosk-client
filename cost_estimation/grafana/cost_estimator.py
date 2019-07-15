@@ -46,11 +46,60 @@ gpu_table = {
 
 class CostGetter:
 
-    def __init__(self):
+    def __init__(self,
+                 benchmarking_start_time=None,
+                 benchmarking_end_time=None):
+        # bring globals into scope
         global cost_table
         global gpu_table
 
-        self.benchmarking_start_time = self.get_time()
+        # validate user input
+        if benchmarking_start_time and not benchmarking_end_time:
+            try:
+                benchmarking_start_time = int(benchmarking_start_time)
+            except ValueError:
+                print("{}{}{}{}".format("You need to provide either an integer",
+                                        " string (e.g., "12345") or a decimal",
+                                        " or integer number (e.g., 123.45) for",
+                                        " benchmarking_start_time.")
+            now = int(time.time())
+            assert benchmarking_start_time <= now
+        if benchmarking_start_time and benchmarking_end_time:
+            try:
+                benchmarking_start_time = int(benchmarking_start_time)
+            except ValueError:
+                print("{}{}{}{}".format("You need to provide either an integer",
+                                        " string (e.g., "12345") or a decimal",
+                                        " or integer number (e.g., 123.45) for",
+                                        " benchmarking_start_time.")
+            try:
+                benchmarking_end_time = int(benchmarking_end_time)
+            except ValueError:
+                print("{}{}{}{}".format("You need to provide either an integer",
+                                        " string (e.g., "12345") or a decimal",
+                                        " or integer number (e.g., 123.45) for",
+                                        " benchmarking_end_time.")
+            assert benchmarking_start_time <= benchmarking_end_time
+        if not benchmarking_start_time and benchmarking_end_time:
+            try:
+                benchmarking_end_time = int(benchmarking_end_time)
+            except ValueError:
+                print("{}{}{}{}".format("You need to provide either an integer",
+                                        " string (e.g., "12345") or a decimal",
+                                        " or integer number (e.g., 123.45) for",
+                                        " benchmarking_end_time.")
+            now = int(time.time())
+            assert benchmarking_end_time >= now
+
+        # parse user input
+        if benchmarking_start_time:
+            self.benchmarking_start_time = benchmarking_start_time
+        else:
+            self.benchmarking_start_time = self.get_time()
+        if benchmarking_end_time:
+            self.benchmarking_end_time = benchmarking_end_time
+
+        # initialize other necessary variables
         self.cost_table = cost_table
         self.gpu_table = gpu_table
         self.GRAFANA_USER = config("GRAFANA_USER", cast=str, default="admin")
@@ -66,7 +115,8 @@ class CostGetter:
     def finish(self):
         # This is the wrapper function for all the functionality
         # that will executed immediately once benchmarking is finished.
-        self.benchmarking_end_time = self.get_time()
+        if not self.benchmarking_end_time:
+            self.benchmarking_end_time = self.get_time()
         self.http_request = self.compose_http_requests()
         self.compose_http_requests()
         self.node_creation_data = self.send_http_requests(self.node_creation_request).json()
