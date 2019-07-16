@@ -164,8 +164,7 @@ class CostGetter(object):
         node_info = {}
 
         # parse node liveness data
-        creation_data = create_response['data']['result']
-        for time_series in creation_data:
+        for time_series in create_response['data']['result']:
             # get node name and create dictionary entry
             node_name = time_series['metric']['node']
             node_info[node_name] = {}
@@ -181,8 +180,7 @@ class CostGetter(object):
             node_info[node_name]['lifetime'] = node_benchmarking_time
 
         # parse node label data
-        label_data = label_response['data']['result']
-        for label_set in label_data:
+        for label_set in label_response['data']['result']:
             metric = label_set['metric']
 
             instance_type = metric['label_beta_kubernetes_io_instance_type']
