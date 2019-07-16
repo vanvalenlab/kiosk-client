@@ -43,7 +43,7 @@ from benchmarking.job import Job
 from benchmarking.utils import iter_image_files
 from benchmarking import settings
 
-from cost_estimation.grafana.cost_estimator import CostGetter
+from benchmarking.cost import CostGetter
 
 
 class JobManager(object):

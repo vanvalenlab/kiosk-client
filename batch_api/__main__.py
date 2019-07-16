@@ -43,7 +43,7 @@ from batch_api.batch_requests import create_jobs_multi
 from batch_api.batch_requests import get_completed_jobs_multi
 from batch_api.batch_requests import expire_job_multi
 
-from cost_estimation.grafana.cost_estimator import CostGetter
+from benchmarking.cost import CostGetter
 
 def initialize_logger(debug_mode=True):
     logger = logging.getLogger()
