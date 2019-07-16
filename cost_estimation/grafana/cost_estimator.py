@@ -35,6 +35,7 @@ import urllib.parse
 from decouple import config
 import requests
 
+
 # defining tables of Google Cloud prices
 # current, as of 6/17/19
 COST_TABLE = {
@@ -83,53 +84,31 @@ class CostGetter(object):
                  **kwargs):
         self.logger = logging.getLogger(str(self.__class__.__name__))
 
-        # validate user input
-        if benchmarking_start_time and not benchmarking_end_time:
-            try:
-                benchmarking_start_time = int(benchmarking_start_time)
-            except ValueError:
-                self.logger.error('You need to provide either an integer '
-                                  'string (e.g., "12345") or a decimal or '
-                                  'integer number (e.g., 123.45) for '
-                                  ' benchmarking_start_time.')
-            now = int(time.time())
-            assert benchmarking_start_time <= now
+        # validate benchmarking_start_time
+        if benchmarking_start_time is None:
+            benchmarking_start_time = self.get_time()
 
-        if benchmarking_start_time and benchmarking_end_time:
-            try:
-                benchmarking_start_time = int(benchmarking_start_time)
-            except ValueError:
-                self.logger.error('You need to provide either an integer '
-                                  'string (e.g., "12345") or a decimal or '
-                                  'integer number (e.g., 123.45) for '
-                                  ' benchmarking_start_time.')
+        try:
+            benchmarking_start_time = int(benchmarking_start_time)
+            assert benchmarking_start_time <= int(time.time())
+        except ValueError:
+            self.logger.error('You need to provide either an integer '
+                              'string (e.g., "12345") or a decimal or '
+                              'integer number (e.g., 123.45) for '
+                              ' benchmarking_start_time.')
+
+        if benchmarking_end_time is not None:
             try:
                 benchmarking_end_time = int(benchmarking_end_time)
+                assert benchmarking_start_time <= benchmarking_end_time
             except ValueError:
                 self.logger.error('You need to provide either an integer '
                                   'string (e.g., "12345") or a decimal or '
                                   'integer number (e.g., 123.45) for '
                                   ' benchmarking_end_time.')
-            assert benchmarking_start_time <= benchmarking_end_time
 
-        if not benchmarking_start_time and benchmarking_end_time:
-            try:
-                benchmarking_end_time = int(benchmarking_end_time)
-            except ValueError:
-                self.logger.error('You need to provide either an integer '
-                                  'string (e.g., "12345") or a decimal or '
-                                  'integer number (e.g., 123.45) for '
-                                  ' benchmarking_end_time.')
-            now = int(time.time())
-            assert benchmarking_end_time >= now
-
-        # parse user input
-        if benchmarking_start_time:
-            self.benchmarking_start_time = benchmarking_start_time
-        else:
-            self.benchmarking_start_time = self.get_time()
-        if benchmarking_end_time:
-            self.benchmarking_end_time = benchmarking_end_time
+        self.benchmarking_start_time = benchmarking_start_time
+        self.benchmarking_end_time = benchmarking_end_time
 
         # initialize other necessary variables
         self.cost_table = kwargs.get('cost_table', COST_TABLE)
