@@ -201,7 +201,8 @@ class BenchmarkingJobManager(JobManager):
 
             yield self.sleep(self.start_delay * upload)
 
-            self.get_completed_job_count()  # log during uploading
+            if upload:
+                self.get_completed_job_count()  # log during uploading
 
         yield self.check_job_status()
 
