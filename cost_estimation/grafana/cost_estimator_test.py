@@ -113,7 +113,6 @@ class TestCostGetter(object):
         "status": "success"
     }
 
-
     def test_get_time(self):
         # object creation
         cg = CostGetter()
