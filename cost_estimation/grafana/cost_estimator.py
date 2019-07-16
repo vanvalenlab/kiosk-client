@@ -119,7 +119,7 @@ class CostGetter(object):
         self.GRAFANA_IP = config('GRAFANA_IP', default='127.0.0.1')
 
     def get_time(self):
-        # Get current time in epoch seconds.
+        """Get current time in epoch seconds."""
         # Meant to be called at the beginning and end of a benchmarking run
         # to establish the beginning or end of cost accrual.
         return int(time.time())
@@ -152,6 +152,7 @@ class CostGetter(object):
         return str(total_node_costs)
 
     def get_http_request(self, data):
+        """Return a formatted URL for the grafana API"""
         return 'http://{user}:{passwd}@{host}{route}?{querystring}'.format(
             user=self.GRAFANA_USER,
             passwd=self.GRAFANA_PASSWORD,
@@ -197,6 +198,7 @@ class CostGetter(object):
         return node_info
 
     def compute_costs(self, node_data):
+        """Get cost for all nodes"""
         total_node_costs = 0
         for _, node_dict in node_data.items():
             node_hourly_cost = self.compute_hourly_cost(node_dict)
@@ -204,18 +206,11 @@ class CostGetter(object):
             total_node_costs = total_node_costs + node_cost
         return total_node_costs
 
-    def output_cost_data(self):
-        data = 'Total cost of all nodes during benchmarking: {}'.format(
-            self.total_node_costs)
-
-        with open('cost_data.txt', 'w') as cost_output_file:
-            cost_output_file.write(data)
-
-    # return hourly cost of a given node
-    def compute_hourly_cost(self, node_dict):
-        instance_type = node_dict['instance_type']
-        gpu = node_dict['gpu']
-        preemptible = node_dict['preemptible']
+    def compute_hourly_cost(self, node_data):
+        """Get the hourly cost of a given node"""
+        instance_type = node_data['instance_type']
+        gpu = node_data['gpu']
+        preemptible = node_data['preemptible']
 
         # which types of nodes
         key = 'ondemand' if not preemptible else 'preemptible'
