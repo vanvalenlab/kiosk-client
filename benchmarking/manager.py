@@ -179,6 +179,15 @@ class JobManager(object):
 
             self.logger.info('Wrote job data as JSON to %s.', output_filepath)
 
+        try:
+            _ = self.upload_file(output_filepath,
+                                 hash_filename=False,
+                                 prefix='output')
+        except Exception as err:
+            self.logger.error('Could not upload output file to bucket. '
+                              'Copy this file from the docker container to '
+                              'keep the data.')
+
     def run(self, *args, **kwargs):
         raise NotImplementedError
 
