@@ -1,19 +1,22 @@
-FROM ubuntu:18.04
+FROM python:3.6
 
-RUN apt-get update && apt-get install -y \
-    chromium-browser \
-    chromium-chromedriver \
-    python3 \
-    python3-pip \
-    wget
+WORKDIR /usr/src/app
 
-RUN ln -s /usr/bin/python3 /usr/bin/python && ln -s /usr/bin/pip3 /usr/bin/pip
+ENV FILE \
+    COUNT \
+    MODEL \
+    API_HOST="frontend:8080" \
+    PREPROCESS="" \
+    POSTPROCESS="" \
+    UPLOAD_PREFIX="uploads" \
+    EXPIRE_TIME="3600" \
+    LOG_LEVEL="DEBUG"
 
-RUN pip install \
-    numpy \
-    pillow \
-    selenium
+COPY requirements.txt .
 
-COPY benchmarking.sh benchmarking_images_generation.py file_upload.py /
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
 
-CMD /benchmarking.sh
+COPY . .
+
+ENTRYPOINT ["./bin/entrypoint.sh"]

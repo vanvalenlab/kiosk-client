@@ -28,24 +28,22 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-import argparse
+import os
+import sys
 import copy
-import json
+import time
+import timeit
 import logging
 import logging.handlers
 import multiprocessing
-import os
-import time
-import timeit
-import sys
+import argparse
 
-from batching import settings
-from batching import storage
-from batching.jobs import create_jobs_multi
-from batching.jobs import get_completed_jobs_multi
-from batching.jobs import expire_job_multi
-from batching.utils import iter_image_files
+from batch_api import settings
+from batch_api.batch_requests import create_jobs_multi
+from batch_api.batch_requests import get_completed_jobs_multi
+from batch_api.batch_requests import expire_job_multi
 
+from benchmarking.cost import CostGetter
 
 def initialize_logger(debug_mode=True):
     logger = logging.getLogger()
@@ -56,7 +54,7 @@ def initialize_logger(debug_mode=True):
     console.setFormatter(formatter)
 
     fh = logging.handlers.RotatingFileHandler(
-        filename='batch_process.log',
+        filename='benchmark.log',
         maxBytes=10000000,
         backupCount=10)
     fh.setFormatter(formatter)
@@ -75,14 +73,18 @@ def get_arg_parser():
     parser = argparse.ArgumentParser()
 
     parser.add_argument('-f', '--file', required=True,
-                        help='Path to file/directory to upload and process.')
+                        help='File to process in many duplicated jobs. '
+                             '(Must exist in the cloud storage bucket.)')
+
+    parser.add_argument('-m', '--model', required=True,
+                        help='model name and version (e.g. inception:0).')
 
     parser.add_argument('-s', '--host', required=True,
                         help='Hostname of the Frontend/Batch API (e.g. '
                              'localhost:1234).')
 
-    parser.add_argument('-m', '--model', required=True,
-                        help='model name and version (e.g. inception:0).')
+    parser.add_argument('-c', '--count', default='1', type=int,
+                        help='number of times to enter file as a job.')
 
     parser.add_argument('--pre', default='',
                         help='Name of pre-processing function, applied to the'
@@ -95,54 +97,39 @@ def get_arg_parser():
     return parser
 
 
-def prepare_jobs(filename, model, pre='', post=''):
-    logger = logging.getLogger('benchmark.prepare_jobs')
-    start = timeit.default_timer()
-    storage_client = storage.get_client(settings.CLOUD_PROVIDER)
-    model_name, model_version = model.split(':')
+def main():
+    logger = logging.getLogger('benchmark')
+    _ = timeit.default_timer()
 
+    # compute costs of cloud resources while we benchmark
+    cost_getter = CostGetter()
+
+    # upload request objects to Redis
     all_jobs = []
-    for f in iter_image_files(filename):
-        # upload file
-        relpath = os.path.relpath(f, filename)
-        subdir = os.path.dirname(relpath)
-
-        uploaded_name, _ = storage_client.upload(f, subdir)
-
-        job = {
-            'uploadedName': uploaded_name,
+    model_name, model_version = ARGS.model.split(':')
+    for _ in range(ARGS.count):
+        all_jobs.append({
+            'uploadedName': os.path.join(settings.UPLOAD_PREFIX, ARGS.file),
             'modelName': model_name,
             'modelVersion': model_version,
-            'imageName': relpath,
-            'postprocessFunction':  post,
-            'preprocessFunction':  pre,
-        }
-        all_jobs.append(job)
+            'imageName': ARGS.file,
+            'postprocessFunction':  ARGS.post,
+            'preprocessFunction':  ARGS.pre,
+        })
 
-    logger.info('Uploaded %s files and created JSON payloads in %s seconds.',
-                len(all_jobs), timeit.default_timer() - start)
-    logger.debug('JSON Payload: %s', json.dumps(all_jobs, indent=4))
-    return all_jobs
+    logger.info('Created JSON payloads for %s jobs in %s seconds.',
+                len(all_jobs), timeit.default_timer() - _)
 
-
-def main():
-    start = timeit.default_timer()
-    logger = logging.getLogger('benchmark')
-    pool = multiprocessing.Pool()  # Create the shared pool
-
-    # create the request objects
-    all_jobs = prepare_jobs(ARGS.file, ARGS.model, ARGS.pre, ARGS.post)
-
-    # send the requests to the batch create API
-    all_job_ids = create_jobs_multi(pool, all_jobs, settings.MAX_JOBS)
+    all_job_ids = create_jobs_multi(POOL, all_jobs, settings.MAX_JOBS)
 
     # monitor job_ids until they all have a `done` or `failed` status.
+    _ = timeit.default_timer()
     completed_hashes = {}
     remaining_job_ids = copy.copy(all_job_ids)
     while len(completed_hashes) != len(all_jobs):
         try:
             new_hashes = get_completed_jobs_multi(
-                pool, remaining_job_ids, settings.MAX_JOBS)
+                POOL, remaining_job_ids, settings.MAX_JOBS)
 
             # update the `completed_hashes` with results newly completed jobs
             completed_hashes.update(new_hashes)
@@ -160,18 +147,23 @@ def main():
         except Exception as err:
             logger.error('Encountered %s: %s', type(err).__name__, err)
 
+    # compute total cost
+    cost_getter.compute_costs()
+
     logger.info('All %s jobs are completed in %s seconds.',
-                len(completed_hashes), timeit.default_timer() - start)
+                len(completed_hashes), timeit.default_timer() - _)
+    logger.info('%s dollars worth of cloud hardware was used in the process.',
+                cost_getter.total_node_costs)
 
     # expire all the keys we added.
-    all_expired = expire_job_multi(pool, all_job_ids)
+    all_expired = expire_job_multi(POOL, all_job_ids)
 
     logger.info('%s of %s jobs will expire in %s seconds.',
                 sum(all_expired), len(all_job_ids), settings.EXPIRE_TIME)
 
     # analyze results
     logger.info('Benchmarking completed in %s seconds.',
-                timeit.default_timer() - start)
+                timeit.default_timer() - _)
 
 
 if __name__ == '__main__':
@@ -182,5 +174,6 @@ if __name__ == '__main__':
 
     # declare shared pool before calling main()
     # so each process has the same context
+    POOL = multiprocessing.Pool()
 
     main()

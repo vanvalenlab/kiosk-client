@@ -1,5 +1,5 @@
 sudo: true
-dist: trusty
+dist: xenial
 
 git:
   depth: false
@@ -9,20 +9,21 @@ language: python
 python:
   - 3.5
   - 3.6
+  - 3.7
 
 cache: pip
 
 install:
-  - pip install numpy pillow selenium
+  - pip install -r requirements.txt
   - pip install pytest pytest-cov==2.5.1 pytest-pep8 coveralls
 
 script:
   - whoami
-  - python -m pytest --pep8 tests
+  - python -m pytest --pep8
   - ls -l /home/travis
-  - ls /home/travis/current_images
-  - ls /home/travis/zips
-  - ls /home/travis/uncooked_zips
+  # - ls /home/travis/current_images
+  # - ls /home/travis/zips
+  # - ls /home/travis/uncooked_zips
 
 jobs:
   include:

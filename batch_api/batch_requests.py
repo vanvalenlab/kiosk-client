@@ -35,7 +35,7 @@ import timeit
 
 import requests
 
-from batching.settings import HOST, EXPIRE_TIME, HTTP_RETRY_BACKOFF, HTTP_RETRIES
+from batch_api.settings import HOST, EXPIRE_TIME, HTTP_RETRY_BACKOFF, HTTP_RETRIES
 
 
 def chunk(lst, chunk_size):
@@ -52,13 +52,19 @@ def _retry_post_wrapper(endpoint, payload):
     for i in range(1, HTTP_RETRIES + 1):
         try:
             response = requests.post(endpoint, json=payload)
-            break
         except requests.exceptions.ConnectionError as err:
             if i == HTTP_RETRIES:
                 raise err
             logger.warning('Encountered %s. Retrying %s/%s in %s seconds.',
                            err, i, HTTP_RETRIES, HTTP_RETRY_BACKOFF)
             time.sleep(HTTP_RETRY_BACKOFF)
+            continue
+        if response.status_code==504:
+            logger.warning("504 error.")
+            time.sleep(HTTP_RETRY_BACKOFF)
+            continue
+        elif response.status_code==200:
+            break
     return response
 
 
@@ -69,7 +75,12 @@ def create_jobs(jobs):
 
     response = _retry_post_wrapper(endpoint, {'jobs': jobs})
 
-    job_ids = response.json()['hashes']
+    try:
+        job_ids = response.json()['hashes']
+    except (json.decoder.JSONDecodeError, KeyError) as err:
+        logger.warning('Failed to create %s jobs with status %s: %s.',
+                       len(jobs), response.status_code, err)
+        job_ids = []
     if len(job_ids) != len(jobs):
         logger.warning('Tried to create %s jobs but only got back %s'
                        ' job IDs', len(jobs), len(job_ids))
@@ -104,9 +115,9 @@ def get_completed_jobs(job_ids):
     response = _retry_post_wrapper(endpoint, {'hashes': job_ids})
     try:
         statuses = response.json()['statuses']
-    except json.decoder.JSONDecodeError as err:
-        logger.warning('Failed to parse JSON response with status %s',
-                       response.status_code)
+    except (json.decoder.JSONDecodeError, KeyError) as err:
+        logger.warning('Failed to parse JSON response with status %s: %s.',
+                       response.status_code, err)
         statuses = []
 
     for job_id, status in zip(job_ids, statuses):
@@ -134,6 +145,56 @@ def get_completed_jobs_multi(pool, job_ids, chunk_size):
     return newly_completed
 
 
+def get_job_output_paths(job_ids):
+    """Get the status of all job_ids"""
+    logger = logging.getLogger('benchmark.get_completed_jobs')
+    start = timeit.default_timer()
+
+    completed_jobs = {}  # to match the job_id and the output path.
+
+    endpoint = HOST + '/api/batch/redis'
+    response = _retry_post_wrapper(endpoint, {
+        'hashes': job_ids,
+        'key': 'output_file_name'
+    })
+
+    try:
+        outputs = response.json()['values']
+    except (json.decoder.JSONDecodeError, KeyError) as err:
+        logger.warning('Failed to parse JSON response with status %s: %s',
+                       response.status_code, err)
+        outputs = []
+
+    for job_id, output in zip(job_ids, outputs):
+        try:
+            if output:
+                completed_jobs[job_id] = {'output': output}
+            else:
+                logger.warning('`output_path` for job `%s` is `%s`',
+                               job_id, output)
+        except KeyError:
+            logger.error('Job %s not found in completed jobs.', job_id)
+
+    logger.debug('Found %s job output paths %s seconds.',
+                 len(completed_jobs), timeit.default_timer() - start)
+
+    return completed_jobs
+
+
+def get_job_output_paths_multi(pool, job_ids, chunk_size):
+    """Use a multiprocessing.Pool to call many get_job_output_paths in parallel"""
+    logger = logging.getLogger('benchmark.get_job_output_paths_multi')
+    start = timeit.default_timer()
+
+    # chunk requests for output path, then flatten results
+    outputs = pool.map(get_job_output_paths, chunk(job_ids, chunk_size))
+    outputs = dict(j for i in outputs for j in i.items())
+    logger.debug('Found %s job output paths in %s seconds.',
+                 len(outputs), timeit.default_timer() - start)
+
+    return outputs
+
+
 def expire_job(job_id):
     """Expire the Redis key `job_id` in `expire_seconds`"""
     logger = logging.getLogger('benchmark.expire_job')
@@ -150,7 +211,8 @@ def expire_job(job_id):
                      job_id, timeit.default_timer() - start)
     try:
         value = int(response.json()['value'])
-    except json.decoder.JSONDecodeError:
+    except (json.decoder.JSONDecodeError, KeyError) as err:
+        logger.warning('Failed to expire job `%s`: %s', job_id, err)
         value = 0
 
     return value

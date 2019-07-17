@@ -1,8 +1,7 @@
 #!/bin/sh
 
-python benchmark.py \
+python -m benchmarking \
+  benchmark \
   --file $FILE \
   --count $COUNT \
-  --model $MODEL \
-  --host $API_HOST \
-  --post $POSTPROCESS
+  --log-level ${LOG_LEVEL:="DEBUG"}
