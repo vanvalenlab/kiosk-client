@@ -81,7 +81,10 @@ class JobManager(object):
         """Simple helper to delay asynchronously for some number of seconds."""
         return deferLater(reactor, seconds, lambda: None)
 
-    def upload_file(self, filepath, acl='publicRead', hash_filename=True):
+    def upload_file(self, filepath, acl='publicRead',
+                    hash_filename=True, prefix=None):
+        if prefix is None:
+            prefix = self.upload_prefix
         start = timeit.default_timer()
         storage_client = google_storage.Client()
 
@@ -93,7 +96,7 @@ class JobManager(object):
             dest = os.path.basename(filepath)
 
         bucket = storage_client.get_bucket(settings.GCLOUD_STORAGE_BUCKET)
-        blob = bucket.blob(os.path.join(self.upload_prefix, dest))
+        blob = bucket.blob(os.path.join(prefix, dest))
         blob.upload_from_filename(filepath, predefined_acl=acl)
         self.logger.debug('Uploaded %s to %s in %s seconds.',
                           filepath, dest, timeit.default_timer() - start)
