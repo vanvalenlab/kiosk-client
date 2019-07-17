@@ -35,7 +35,7 @@ import urllib.parse
 import pytest
 import requests.exceptions
 
-from cost_estimation.grafana.cost_estimator import CostGetter
+from benchmarking.cost import CostGetter
 
 
 class TestCostGetter(object):
