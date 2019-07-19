@@ -172,7 +172,8 @@ class JobManager(object):
 
         output_filepath = os.path.join(
             settings.OUTPUT_DIR,
-            '{}.json'.format(uuid.uuid4().hex))
+            '{}delay_{}jobs_{}.json'.format(
+                self.start_delay, len(self.all_jobs), uuid.uuid4().hex))
 
         with open(output_filepath, 'w') as jsonfile:
             json.dump(jsondata, jsonfile, indent=4)
