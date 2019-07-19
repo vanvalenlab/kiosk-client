@@ -167,6 +167,8 @@ class JobManager(object):
             cost_data = ''
 
         jsondata = {'cost': cost_data,
+                    'start_delay': self.start_delay,
+                    'num_jobs': len(self.all_jobs),
                     'time_elapsed': time_elapsed,
                     'job_data': [j.json() for j in self.all_jobs]}
 
