@@ -158,12 +158,16 @@ class JobManager(object):
         # add cost and timing data to json output
         time_elapsed = timeit.default_timer() - self.created_at
         try:
-            cost_data = self.cost_getter.finish()
+            (cpu_cost, gpu_cost, total_cost) = self.cost_getter.finish()
         except Exception as err:
             self.logger.error('Encountered error %s while getting cost data', err)
-            cost_data = ''
+            cpu_cost = ''
+            gpu_cost = ''
+            total_cost = ''
 
-        jsondata = {'cost': cost_data,
+        jsondata = {'cpu_node_cost': cpu_cost,
+                    'gpu_node_cost': gpu_cost,
+                    'total_node_and_networking_costs': total_cost,
                     'time_elapsed': time_elapsed,
                     'job_data': [j.json() for j in self.all_jobs]}
 
