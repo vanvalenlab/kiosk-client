@@ -36,7 +36,11 @@ from decouple import config
 import requests
 
 
-# defining tables of Google Cloud prices
+# defining Google Cloud prices
+
+# computed networking costs for 1,000,000 image run:
+NETWORKING_COSTS = 7.00
+
 # current, as of 6/17/19
 COST_TABLE = {
     'n1-standard-1': {'ondemand': 0.0475, 'preemptible': 0.0100},
@@ -91,21 +95,21 @@ class CostGetter(object):
         try:
             benchmarking_start_time = int(benchmarking_start_time)
             assert benchmarking_start_time <= int(time.time())
-        except ValueError:
-            self.logger.error('You need to provide either an integer '
-                              'string (e.g., "12345") or a decimal or '
-                              'integer number (e.g., 123.45) for '
-                              ' benchmarking_start_time.')
+        except AssertionError:
+            raise ValueError('You need to provide either an integer '
+                             'string (e.g., "12345") or a decimal or '
+                             'integer number (e.g., 123.45) for '
+                             'benchmarking_start_time.')
 
         if benchmarking_end_time is not None:
             try:
                 benchmarking_end_time = int(benchmarking_end_time)
                 assert benchmarking_start_time <= benchmarking_end_time
-            except ValueError:
-                self.logger.error('You need to provide either an integer '
-                                  'string (e.g., "12345") or a decimal or '
-                                  'integer number (e.g., 123.45) for '
-                                  ' benchmarking_end_time.')
+            except AssertionError:
+                raise ValueError('You need to provide either an integer '
+                                 'string (e.g., "12345") or a decimal or '
+                                 'integer number (e.g., 123.45) for '
+                                 'benchmarking_end_time.')
 
         self.benchmarking_start_time = benchmarking_start_time
         self.benchmarking_end_time = benchmarking_end_time
@@ -113,6 +117,7 @@ class CostGetter(object):
         # initialize other necessary variables
         self.cost_table = kwargs.get('cost_table', COST_TABLE)
         self.gpu_table = kwargs.get('gpu_table', GPU_TABLE)
+        self.networking_costs = kwargs.get('networking_costs', NETWORKING_COSTS)
 
         self.GRAFANA_USER = config('GRAFANA_USER', default='admin')
         self.GRAFANA_PASSWORD = config('GRAFANA_PASSWORD', default='admin')
@@ -146,10 +151,14 @@ class CostGetter(object):
 
         creation_data = requests.get(create_request).json()
         label_data = requests.get(label_request).json()
+        self.creation_data = creation_data
+        self.label_data = label_data
 
         node_data = self.parse_http_response_data(creation_data, label_data)
-        total_node_costs = self.compute_costs(node_data)
-        return str(total_node_costs)
+        (cpu_node_costs, gpu_node_costs, total_node_costs) = \
+            self.compute_costs(node_data)
+        total_costs = total_node_costs + self.networking_costs
+        return (str(cpu_node_costs), str(gpu_node_costs), str(total_costs))
 
     def get_http_request(self, data):
         """Return a formatted URL for the grafana API"""
@@ -197,12 +206,18 @@ class CostGetter(object):
 
     def compute_costs(self, node_data):
         """Get cost for all nodes"""
+        gpu_node_costs = 0
+        cpu_node_costs = 0
         total_node_costs = 0
         for _, node_dict in node_data.items():
             node_hourly_cost = self.compute_hourly_cost(node_dict)
             node_cost = node_hourly_cost * (node_dict['lifetime'] / 60 / 60)
+            if node_dict['gpu'] == "none":
+                cpu_node_costs = cpu_node_costs + node_cost
+            else:
+                gpu_node_costs = gpu_node_costs + node_cost
             total_node_costs = total_node_costs + node_cost
-        return total_node_costs
+        return (cpu_node_costs, gpu_node_costs, total_node_costs)
 
     def compute_hourly_cost(self, node_data):
         """Get the hourly cost of a given node"""

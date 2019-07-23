@@ -38,80 +38,170 @@ import requests.exceptions
 from benchmarking.cost import CostGetter
 
 
+class FakeCreationData:
+    @staticmethod
+    def json():
+        return \
+            {
+                'data': {
+                    'result': [
+                        {
+                            "metric": {
+                                "__name__": "kube_node_created",
+                                "endpoint": "http",
+                                "instance": "10.48.5.8:8080",
+                                "job": "kube-state-metrics",
+                                "namespace": "test",
+                                "node": "test_node_1",
+                                "pod": "prometheus-operator-kube-state-metrics-1234",
+                                "service": "prometheus-operator-kube-state-metrics"
+                            },
+                            "values": [
+                                [
+                                    1562872560,
+                                    "1562872553"
+                                ],
+                                [
+                                    1562873595,
+                                    "1562872553"
+                                ]
+                            ]
+                        },
+                        {
+                            "metric": {
+                                "__name__": "kube_node_created",
+                                "endpoint": "http",
+                                "instance": "10.48.5.9:8080",
+                                "job": "kube-state-metrics",
+                                "namespace": "test",
+                                "node": "test_node_2",
+                                "pod": "prometheus-operator-kube-state-metrics-1235",
+                                "service": "prometheus-operator-kube-state-metrics"
+                            },
+                            "values": [
+                                [
+                                    1562872560,
+                                    "1562872553"
+                                ],
+                                [
+                                    1562873595,
+                                    "1562872553"
+                                ]
+                            ]
+                        },
+                    ],
+                    'resultType': 'matrix',
+                },
+                'status': 'success',
+            }
+
+
+class FakeLabelData:
+    @staticmethod
+    def json():
+        return \
+            {
+                "data": {
+                    "result": [
+                        {
+                            "metric": {
+                                "__name__": "kube_node_labels",
+                                "endpoint": "http",
+                                "instance": "10.48.5.8:8080",
+                                "job": "kube-state-metrics",
+                                "label_beta_kubernetes_io_arch": "amd64",
+                                "label_beta_kubernetes_io_fluentd_ds_ready": "true",
+                                "label_beta_kubernetes_io_instance_type": "n1-highmem-2",
+                                "label_beta_kubernetes_io_os": "linux",
+                                "label_cloud_google_com_gke_accelerator": "nvidia-tesla-v100",
+                                "label_cloud_google_com_gke_nodepool": "prediction-gpu",
+                                "label_cloud_google_com_gke_os_distribution": "cos",
+                                "label_cloud_google_com_gke_preemptible": "true",
+                                "label_failure_domain_beta_kubernetes_io_region": "us-west1",
+                                "label_failure_domain_beta_kubernetes_io_zone": "us-west1-a",
+                                "label_kubernetes_io_hostname": "test_node_1",
+                                "namespace": "monitoring",
+                                "node": "test_node_1",
+                                "pod": "prometheus-operator-kube-state-metrics-1234",
+                                "service": "prometheus-operator-kube-state-metrics"
+                            },
+                            "values": [
+                                [
+                                    1562872560,
+                                    "1"
+                                ],
+                                [
+                                    1562873595,
+                                    "1"
+                                ]
+                            ]
+                        },
+                        {
+                            "metric": {
+                                "__name__": "kube_node_labels",
+                                "endpoint": "http",
+                                "instance": "10.48.5.9:8080",
+                                "job": "kube-state-metrics",
+                                "label_beta_kubernetes_io_arch": "amd64",
+                                "label_beta_kubernetes_io_fluentd_ds_ready": "true",
+                                "label_beta_kubernetes_io_instance_type": "n1-highmem-2",
+                                "label_beta_kubernetes_io_os": "linux",
+                                "label_cloud_google_com_gke_nodepool": "logstash-cpu",
+                                "label_cloud_google_com_gke_os_distribution": "cos",
+                                "label_failure_domain_beta_kubernetes_io_region": "us-west1",
+                                "label_failure_domain_beta_kubernetes_io_zone": "us-west1-a",
+                                "label_kubernetes_io_hostname": "test_node_2",
+                                "namespace": "monitoring",
+                                "node": "test_node_1",
+                                "pod": "prometheus-operator-kube-state-metrics-1235",
+                                "service": "prometheus-operator-kube-state-metrics"
+                            },
+                            "values": [
+                                [
+                                    1562872560,
+                                    "1"
+                                ],
+                                [
+                                    1562873595,
+                                    "1"
+                                ]
+                            ]
+                        },
+                    ],
+                    "resultType": "matrix"
+                },
+                "status": "success"
+            }
+
+
 class TestCostGetter(object):
 
-    _creation_data = {
-        'data': {
-            'result': [
-                {
-                    "metric": {
-                        "__name__": "kube_node_created",
-                        "endpoint": "http",
-                        "instance": "10.48.5.8:8080",
-                        "job": "kube-state-metrics",
-                        "namespace": "test",
-                        "node": "test_node_1",
-                        "pod": "prometheus-operator-kube-state-metrics-1234",
-                        "service": "prometheus-operator-kube-state-metrics"
-                    },
-                    "values": [
-                        [
-                            1562872560,
-                            "1562872553"
-                        ],
-                        [
-                            1562873595,
-                            "1562872553"
-                        ]
-                    ]
-                },
-            ],
-            'resultType': 'matrix',
-        },
-        'status': 'success',
-    }
+    def fake_requests_get(self, http_request, **kwargs):
+        if "kube_node_created" in http_request:
+            return FakeCreationData()
+        elif "kube_node_labels" in http_request:
+            return FakeLabelData()
+        else:
+            raise ValueError("{}{}".format("Your http_request doesn't ",
+                                           "contain a recognized Grafana metric."))
 
-    _label_data = {
-        "data": {
-            "result": [
-                {
-                    "metric": {
-                        "__name__": "kube_node_labels",
-                        "endpoint": "http",
-                        "instance": "10.48.5.8:8080",
-                        "job": "kube-state-metrics",
-                        "label_beta_kubernetes_io_arch": "amd64",
-                        "label_beta_kubernetes_io_fluentd_ds_ready": "true",
-                        "label_beta_kubernetes_io_instance_type": "n1-highmem-2",
-                        "label_beta_kubernetes_io_os": "linux",
-                        "label_cloud_google_com_gke_accelerator": "nvidia-tesla-v100",
-                        "label_cloud_google_com_gke_nodepool": "prediction-gpu",
-                        "label_cloud_google_com_gke_os_distribution": "cos",
-                        "label_cloud_google_com_gke_preemptible": "true",
-                        "label_failure_domain_beta_kubernetes_io_region": "us-west1",
-                        "label_failure_domain_beta_kubernetes_io_zone": "us-west1-a",
-                        "label_kubernetes_io_hostname": "test_node_1",
-                        "namespace": "monitoring",
-                        "node": "test_node_1",
-                        "pod": "prometheus-operator-kube-state-metrics-1234",
-                        "service": "prometheus-operator-kube-state-metrics"
-                    },
-                    "values": [
-                        [
-                            1562872560,
-                            "1"
-                        ],
-                        [
-                            1562873595,
-                            "1"
-                        ]
-                    ]
-                },
-            ],
-            "resultType": "matrix"
-        },
-        "status": "success"
-    }
+    @pytest.fixture(autouse=True)
+    def monkeypatch(self, monkeypatch):
+        monkeypatch.setattr(requests, "get", self.fake_requests_get)
+
+    def test___init__(self):
+        # times are intentionally not being cast to ints
+        now = time.time()
+        nower = now * 2
+        # passing start but not end time
+        with pytest.raises(ValueError):
+            cg1 = CostGetter(benchmarking_start_time=nower)
+        # passing end but not start time
+        with pytest.raises(ValueError):
+            cg2 = CostGetter(benchmarking_end_time=0)
+        # passing both start and end times
+        cg3 = CostGetter(benchmarking_start_time=now,
+                         benchmarking_end_time=now)
 
     def test_get_time(self):
         # object creation
@@ -122,16 +212,40 @@ class TestCostGetter(object):
         new_time = cg.get_time()
         assert old_time <= new_time
 
-    def test_parse_http_response_data(self):
+    def test_finish(self):
+        cg = CostGetter()
+        # benchmarking_end_time shouldn't be auto-generated until finish() is called
+        assert not cg.benchmarking_end_time
+
+        # needed patch for testing
+        cg.benchmarking_start_time = 1562872553
+
+        (cpu_node_costs, gpu_node_costs, total_node_costs) = \
+            cg.finish()
+        # did benchmarking_end_time get auto-generated?
+        assert cg.benchmarking_end_time
+        # did patch work?
+        assert cg.creation_data == FakeCreationData.json()
+        assert cg.label_data == FakeLabelData.json()
+        # did entire pipeline process correctly?
+        cpu_node_costs = float(cpu_node_costs)
+        total_node_costs = float(total_node_costs)
+        assert "%.9f" % (cpu_node_costs) == "0.034270222"
+        assert gpu_node_costs == "0.221425"
+        assert "%.9f" % (total_node_costs) == "7.255695222"
+
+    def test_parse_http_response_data_fresh_node(self):
         # object creation
         cg = CostGetter()
 
         # needed patch for testing
-        cg.benchmarking_start_time = 0
+        cg.benchmarking_start_time = 1562872552
 
-        # patch for finish()
-        node_info = cg.parse_http_response_data(
-            self._creation_data, self._label_data)
+        # patching HTTP request responses
+        creation_data = FakeCreationData.json()
+        label_data = FakeLabelData.json()
+
+        node_info = cg.parse_http_response_data(creation_data, label_data)
         name = 'test_node_1'
         assert node_info[name]['lifetime'] == 1042
         assert node_info[name]['instance_type'] == 'n1-highmem-2'
@@ -142,7 +256,46 @@ class TestCostGetter(object):
             assert isinstance(node_info[key]['lifetime'], int)
             assert isinstance(node_info[key]['preemptible'], bool)
 
-    def test_compute_costs(self):
+    def test_parse_http_response_data_old_node(self):
+        # object creation
+        cg = CostGetter()
+
+        # needed patch for testing
+        cg.benchmarking_start_time = 1562872554
+
+        # patching HTTP request responses
+        creation_data = FakeCreationData.json()
+        label_data = FakeLabelData.json()
+
+        node_info = cg.parse_http_response_data(creation_data, label_data)
+        name = 'test_node_1'
+        assert node_info[name]['lifetime'] == 1041
+        assert node_info[name]['instance_type'] == 'n1-highmem-2'
+        assert node_info[name]['preemptible']
+        assert node_info[name]['gpu'] == 'nvidia-tesla-v100'
+
+        for key in node_info:
+            assert isinstance(node_info[key]['lifetime'], int)
+            assert isinstance(node_info[key]['preemptible'], bool)
+
+    def test_compute_costs_with_patched_function(self):
+        cg = CostGetter()
+
+        # needed patch for testing
+        cg.benchmarking_start_time = 1562872553
+
+        # patching HTTP request responses
+        creation_data = FakeCreationData.json()
+        label_data = FakeLabelData.json()
+
+        node_info = cg.parse_http_response_data(creation_data, label_data)
+
+        (cpu_node_costs, gpu_node_costs, total_node_costs) = cg.compute_costs(node_info)
+        assert float("%.9f" % (cpu_node_costs)) == 0.034270222
+        assert gpu_node_costs == 0.221425
+        assert float("%.9f" % (total_node_costs)) == 0.255695222
+
+    def test_compute_costs_without_patched_function(self):
         cg = CostGetter()
         node_info = {
             'node1': {
@@ -158,7 +311,9 @@ class TestCostGetter(object):
                 'preemptible': False
             }
         }
-        total_node_costs = cg.compute_costs(node_info)
+        (cpu_node_costs, gpu_node_costs, total_node_costs) = cg.compute_costs(node_info)
+        assert cpu_node_costs == 0
+        assert gpu_node_costs == 5.1968
         assert total_node_costs == 5.1968
 
     def test_compute_hourly_cost(self):
