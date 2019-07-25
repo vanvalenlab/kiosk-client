@@ -138,6 +138,11 @@ class JobManager(object):
                          '; '.join('%s %s' % (v, k) for k, v in statuses.items()),
                          len(self.all_jobs))
 
+        if len(self.all_jobs) - complete <= 25:
+            for j in self.all_jobs:
+                self.logger.info('Waiting on key `%s` with status %s',
+                                 j.job_id, j.status)
+
         return complete
 
     @defer.inlineCallbacks
