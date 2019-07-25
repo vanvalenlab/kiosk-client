@@ -140,8 +140,9 @@ class JobManager(object):
 
         if len(self.all_jobs) - complete <= 25:
             for j in self.all_jobs:
-                self.logger.info('Waiting on key `%s` with status %s',
-                                 j.job_id, j.status)
+                if not j.is_summarized:
+                    self.logger.info('Waiting on key `%s` with status %s',
+                                     j.job_id, j.status)
 
         return complete
 
