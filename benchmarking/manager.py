@@ -157,7 +157,7 @@ class JobManager(object):
 
         self.summarize()  # synchronous
 
-        yield reactor.stop()  # pylint: disable=E1101
+        yield reactor.stop()  # pylint: disable=no-member
 
     def summarize(self):
         time_elapsed = timeit.default_timer() - self.created_at
@@ -196,7 +196,7 @@ class JobManager(object):
             _ = self.upload_file(output_filepath,
                                  hash_filename=False,
                                  prefix='output')
-        except Exception as err:
+        except Exception as err:  # pylint: disable=broad-except
             self.logger.error('Could not upload output file to bucket. '
                               'Copy this file from the docker container to '
                               'keep the data.')

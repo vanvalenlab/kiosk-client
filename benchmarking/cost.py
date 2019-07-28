@@ -123,7 +123,8 @@ class CostGetter(object):
         self.GRAFANA_PASSWORD = config('GRAFANA_PASSWORD', default='admin')
         self.GRAFANA_IP = config('GRAFANA_IP', default='127.0.0.1')
 
-    def get_time(self):
+    @classmethod
+    def get_time(cls):
         """Get current time in epoch seconds."""
         # Meant to be called at the beginning and end of a benchmarking run
         # to establish the beginning or end of cost accrual.
