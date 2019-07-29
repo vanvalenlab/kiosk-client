@@ -208,7 +208,7 @@ class JobManager(object):
 class BenchmarkingJobManager(JobManager):
 
     @defer.inlineCallbacks
-    def run(self, filepath, count, upload=False):  # pylint: disable=W0221
+    def run(self, filepath, count, upload=False):  # pylint: disable=arguments-differ
         self.logger.info('Benchmarking %s jobs of file `%s`', count, filepath)
 
         for i in range(count):
@@ -235,7 +235,7 @@ class BenchmarkingJobManager(JobManager):
 class BatchProcessingJobManager(JobManager):
 
     @defer.inlineCallbacks
-    def run(self, filepath):  # pylint: disable=W0221
+    def run(self, filepath):  # pylint: disable=arguments-differ
         self.logger.info('Benchmarking all image/zip files in `%s`', filepath)
 
         for i, f in enumerate(iter_image_files(filepath)):
