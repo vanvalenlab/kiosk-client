@@ -41,12 +41,17 @@ _strip = lambda x: '/'.join(y for y in x.split('/') if y)
 DEBUG = config('DEBUG', cast=bool, default=False)
 
 # Google credentials
-GCLOUD_STORAGE_BUCKET = config('GCLOUD_STORAGE_BUCKET', default='')
+STORAGE_BUCKET = config('STORAGE_BUCKET', default='')
 
 # Batch API Host (IP Address or FQDN)
 HOST = config('API_HOST', cast=str, default='')
 if not any(HOST.lower().startswith(x) for x in ('http://', 'https://')):
     HOST = 'http://{}'.format(HOST)
+
+# Grafana resources for cost estimation
+GRAFANA_HOST = config('GRAFANA_HOST', default='prometheus-operator-grafana')
+GRAFANA_USER = config('GRAFANA_USER', default='admin')
+GRAFANA_PASSWORD = config('GRAFANA_PASSWORD', default='admin')
 
 # TensorFlow Servable
 MODEL_NAME, MODEL_VERSION = config('MODEL', default='HeLaS3watershed:2').split(':')
