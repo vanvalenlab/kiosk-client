@@ -92,9 +92,8 @@ LOG_DIR = os.path.join(ROOT_DIR, 'logs')
 LOG_ENABLED = config('LOG_ENABLED', default=True, cast=bool)
 LOG_FORMAT = '[%(asctime)s]:[%(levelname)s]:[%(name)s]: %(message)s'
 LOG_LEVEL = config('LOG_LEVEL', cast=str, default='DEBUG')
-LOG_FILE = config('LOG_FILE', default=None)
-if LOG_FILE is not None and not LOG_FILE.startswith('/'):
-    LOG_FILE = os.path.join(LOG_DIR, LOG_FILE)
+LOG_FILE = config('LOG_FILE', default='benchmark.log')
+LOG_FILE = os.path.join(LOG_DIR, LOG_FILE)
 
 # Overwrite directories with environment variabls
 DOWNLOAD_DIR = config('DOWNLOAD_DIR', default=DOWNLOAD_DIR)
