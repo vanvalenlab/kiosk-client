@@ -1,6 +1,7 @@
 # kiosk-benchmarking
 
 [![Build Status](https://travis-ci.com/vanvalenlab/kiosk-benchmarking.svg?branch=master)](https://travis-ci.com/vanvalenlab/kiosk-benchmarking)
+[![Coverage Status](https://coveralls.io/repos/github/vanvalenlab/kiosk-benchmarking/badge.svg?branch=master)](https://coveralls.io/github/vanvalenlab/kiosk-benchmarking?branch=master)
 
 Benchmarking utility for the Van Valen Lab Kiosk. Uses the asynchronous HTTP client `treq` to create and monitor many jobs at once. Once all jobs are completed, [costs are estimated](./docs/cost_computation_notes.md) by using the cluster's Grafana API.
 
