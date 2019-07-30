@@ -102,8 +102,4 @@ OUTPUT_DIR = config('OUTPUT_DIR', default=OUTPUT_DIR)
 LOG_DIR = config('LOG_DIR', default=LOG_DIR)
 
 for d in (DOWNLOAD_DIR, OUTPUT_DIR, LOG_DIR):
-    try:
-        os.makedirs(d)
-    except OSError as exc:  # Guard against race condition
-        if exc.errno != errno.EEXIST:
-            raise
+    os.makedirs(d, exist_ok=True)  # python 3.2+
