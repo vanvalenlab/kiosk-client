@@ -95,7 +95,7 @@ class JobManager(object):
         else:
             dest = os.path.basename(filepath)
 
-        bucket = storage_client.get_bucket(settings.GCLOUD_STORAGE_BUCKET)
+        bucket = storage_client.get_bucket(settings.STORAGE_BUCKET)
         blob = bucket.blob(os.path.join(prefix, dest))
         blob.upload_from_filename(filepath, predefined_acl=acl)
         self.logger.debug('Uploaded %s to %s in %s seconds.',
