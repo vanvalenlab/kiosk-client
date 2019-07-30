@@ -29,7 +29,9 @@ from __future__ import division
 from __future__ import print_function
 
 import os
+import random
 import tempfile
+import zipfile
 
 from PIL import Image
 import pytest
@@ -58,4 +60,39 @@ class TestUtils(object):
             assert not utils.is_image_file(missing_image)
 
     def test_iter_image_files(self):
-        pass
+        # test image files
+        with tempfile.TemporaryDirectory() as tempdir:
+            num = random.randint(1, 5)
+            imagename = lambda x: 'image%s.png' % x
+
+            valid_images = []
+            for i in range(num):
+                valid_image = os.path.join(tempdir, imagename(i))
+                img = Image.new('RGB', (800, 1280), (255, 255, 255))
+                img.save(valid_image, 'PNG')
+                valid_images.append(valid_image)
+
+            # only image files exist
+            results = utils.iter_image_files(tempdir, include_archives=True)
+            assert set(list(results)) == set(valid_images)
+
+            # create a new zip file of all the valid images
+            zippath = os.path.join(tempdir, 'test.zip')
+            z = zipfile.ZipFile(zippath, 'w', zipfile.ZIP_DEFLATED)
+            z.close()
+
+            # turn off include_archives, should not see the zip file
+            results = utils.iter_image_files(tempdir, include_archives=False)
+            assert set(list(results)) == set(valid_images)
+
+            # with include_archives, zipfile should be in results
+            results = utils.iter_image_files(tempdir, include_archives=True)
+            assert set(list(results)) == set(valid_images).union({zippath})
+
+            # test single file paths
+            results = utils.iter_image_files(zippath, include_archives=True)
+            assert set(list(results)) == set((zippath,))
+            results = utils.iter_image_files(zippath, include_archives=False)
+            assert set(list(results)) == set()
+            results = utils.iter_image_files(valid_images[0])
+            assert set(list(results)) == set((valid_images[0],))
