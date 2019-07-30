@@ -18,12 +18,7 @@ install:
   - pip install pytest pytest-cov==2.5.1 pytest-pep8 coveralls
 
 script:
-  - whoami
-  - python -m pytest --pep8
-  - ls -l /home/travis
-  # - ls /home/travis/current_images
-  # - ls /home/travis/zips
-  # - ls /home/travis/uncooked_zips
+  - pytest --cov=benchmarking --pep8 benchmarking
 
 jobs:
   include:
@@ -38,4 +33,4 @@ jobs:
       - docker push "$TRAVIS_REPO_SLUG"
 
 after_success:
-- coveralls
+  - coveralls
