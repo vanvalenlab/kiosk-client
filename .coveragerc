@@ -16,3 +16,4 @@ omit =
     **/*_test.py
     bash_benchmarking/*
     batch_api/*
+    benchmarking/__main__.py
