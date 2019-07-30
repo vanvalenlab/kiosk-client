@@ -81,7 +81,10 @@ class JobManager(object):
         """Simple helper to delay asynchronously for some number of seconds."""
         return deferLater(reactor, seconds, lambda: None)
 
-    def upload_file(self, filepath, acl='publicRead', hash_filename=True):
+    def upload_file(self, filepath, acl='publicRead',
+                    hash_filename=True, prefix=None):
+        if prefix is None:
+            prefix = self.upload_prefix
         start = timeit.default_timer()
         storage_client = google_storage.Client()
 
@@ -92,8 +95,8 @@ class JobManager(object):
         else:
             dest = os.path.basename(filepath)
 
-        bucket = storage_client.get_bucket(settings.GCLOUD_STORAGE_BUCKET)
-        blob = bucket.blob(os.path.join(self.upload_prefix, dest))
+        bucket = storage_client.get_bucket(settings.STORAGE_BUCKET)
+        blob = bucket.blob(os.path.join(prefix, dest))
         blob.upload_from_filename(filepath, predefined_acl=acl)
         self.logger.debug('Uploaded %s to %s in %s seconds.',
                           filepath, dest, timeit.default_timer() - start)
@@ -135,6 +138,12 @@ class JobManager(object):
                          '; '.join('%s %s' % (v, k) for k, v in statuses.items()),
                          len(self.all_jobs))
 
+        if len(self.all_jobs) - complete <= 25:
+            for j in self.all_jobs:
+                if not j.is_summarized:
+                    self.logger.info('Waiting on key `%s` with status %s',
+                                     j.job_id, j.status)
+
         return complete
 
     @defer.inlineCallbacks
@@ -148,7 +157,7 @@ class JobManager(object):
 
         self.summarize()  # synchronous
 
-        yield reactor.stop()  # pylint: disable=E1101
+        yield reactor.stop()  # pylint: disable=no-member
 
     def summarize(self):
         time_elapsed = timeit.default_timer() - self.created_at
@@ -168,17 +177,29 @@ class JobManager(object):
         jsondata = {'cpu_node_cost': cpu_cost,
                     'gpu_node_cost': gpu_cost,
                     'total_node_and_networking_costs': total_cost,
+                    'start_delay': self.start_delay,
+                    'num_jobs': len(self.all_jobs),
                     'time_elapsed': time_elapsed,
                     'job_data': [j.json() for j in self.all_jobs]}
 
         output_filepath = os.path.join(
             settings.OUTPUT_DIR,
-            '{}.json'.format(uuid.uuid4().hex))
+            '{}delay_{}jobs_{}.json'.format(
+                self.start_delay, len(self.all_jobs), uuid.uuid4().hex))
 
         with open(output_filepath, 'w') as jsonfile:
             json.dump(jsondata, jsonfile, indent=4)
 
             self.logger.info('Wrote job data as JSON to %s.', output_filepath)
+
+        try:
+            _ = self.upload_file(output_filepath,
+                                 hash_filename=False,
+                                 prefix='output')
+        except Exception as err:  # pylint: disable=broad-except
+            self.logger.error('Could not upload output file to bucket. '
+                              'Copy this file from the docker container to '
+                              'keep the data.')
 
     def run(self, *args, **kwargs):
         raise NotImplementedError
@@ -187,7 +208,7 @@ class JobManager(object):
 class BenchmarkingJobManager(JobManager):
 
     @defer.inlineCallbacks
-    def run(self, filepath, count, upload=False):  # pylint: disable=W0221
+    def run(self, filepath, count, upload=False):  # pylint: disable=arguments-differ
         self.logger.info('Benchmarking %s jobs of file `%s`', count, filepath)
 
         for i in range(count):
@@ -214,7 +235,7 @@ class BenchmarkingJobManager(JobManager):
 class BatchProcessingJobManager(JobManager):
 
     @defer.inlineCallbacks
-    def run(self, filepath):  # pylint: disable=W0221
+    def run(self, filepath):  # pylint: disable=arguments-differ
         self.logger.info('Benchmarking all image/zip files in `%s`', filepath)
 
         for i, f in enumerate(iter_image_files(filepath)):

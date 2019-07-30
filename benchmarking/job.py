@@ -79,6 +79,7 @@ class Job(object):
         self.total_jobs = None
         self.total_time = None
         self.reason = None
+        self.predict_retries = None
         self._finished_statuses = {'done', 'failed'}
 
         self.pool = kwargs.get('pool')
@@ -119,6 +120,7 @@ class Job(object):
             'postprocess_time': self.postprocess_time,
             'upload_time': self.upload_time,
             'download_time': self.download_time,
+            'predict_retries': self.predict_retries,
             'model': '{}:{}'.format(self.model_name, self.model_version),
             'postprocess': self.postprocess,
             'preprocess': self.preprocess,
@@ -234,6 +236,7 @@ class Job(object):
             'created_at',
             'finished_at',
             'prediction_time',
+            'predict_retries',
             'postprocess_time',
             'upload_time',
             'download_time',

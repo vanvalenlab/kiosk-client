@@ -32,8 +32,9 @@ import logging
 import time
 import urllib.parse
 
-from decouple import config
 import requests
+
+from benchmarking import settings
 
 
 # defining Google Cloud prices
@@ -119,11 +120,12 @@ class CostGetter(object):
         self.gpu_table = kwargs.get('gpu_table', GPU_TABLE)
         self.networking_costs = kwargs.get('networking_costs', NETWORKING_COSTS)
 
-        self.GRAFANA_USER = config('GRAFANA_USER', default='admin')
-        self.GRAFANA_PASSWORD = config('GRAFANA_PASSWORD', default='admin')
-        self.GRAFANA_IP = config('GRAFANA_IP', default='127.0.0.1')
+        self.grafana_user = settings.GRAFANA_USER
+        self.grafana_password = settings.GRAFANA_PASSWORD
+        self.grafana_host = settings.GRAFANA_HOST
 
-    def get_time(self):
+    @classmethod
+    def get_time(cls):
         """Get current time in epoch seconds."""
         # Meant to be called at the beginning and end of a benchmarking run
         # to establish the beginning or end of cost accrual.
@@ -163,9 +165,9 @@ class CostGetter(object):
     def get_http_request(self, data):
         """Return a formatted URL for the grafana API"""
         return 'http://{user}:{passwd}@{host}{route}?{querystring}'.format(
-            user=self.GRAFANA_USER,
-            passwd=self.GRAFANA_PASSWORD,
-            host=self.GRAFANA_IP,
+            user=self.grafana_user,
+            passwd=self.grafana_password,
+            host=self.grafana_host,
             route='/api/datasources/proxy/1/api/v1/query_range',
             querystring=urllib.parse.urlencode(data))
 

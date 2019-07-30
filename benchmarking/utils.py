@@ -39,7 +39,7 @@ def is_image_file(filepath):
         with Image.open(filepath) as im:
             im.verify()
         return True
-    except:  # pylint: disable=W0702
+    except:  # pylint: disable=bare-except
         return False
 
 
