@@ -22,14 +22,15 @@ script:
 
 jobs:
   include:
-    - stage: deploy
-      if: (branch = master OR branch =~ ^r[0-9]+.[0-9]+) AND type != pull_request
+    - stage: deploy tagged release
+      if: tag IS present AND branch = master AND type = push
+      python: 3.6
       script:
       - echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
       - docker build -t "$TRAVIS_REPO_SLUG" .
       - docker images
       - docker tag "$TRAVIS_REPO_SLUG" "$TRAVIS_REPO_SLUG":latest
-      - if [[ "$TRAVIS_BRANCH" != "master" ]] ; then docker tag "$TRAVIS_REPO_SLUG" "$TRAVIS_REPO_SLUG":"${TRAVIS_BRANCH#r}" ; fi
+      - docker tag "$TRAVIS_REPO_SLUG" "$TRAVIS_REPO_SLUG":"${TRAVIS_TAG}"
       - docker push "$TRAVIS_REPO_SLUG"
 
 after_success:
