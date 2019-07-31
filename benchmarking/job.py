@@ -110,7 +110,7 @@ class Job(object):
         return deferLater(reactor, seconds, lambda: None)
 
     def json(self):
-        jsondata = {
+        return {
             'input_file': self.original_name,
             'status': self.status,
             'download_url': self.output_url,
@@ -126,11 +126,6 @@ class Job(object):
             'preprocess': self.preprocess,
             'job_id': self.job_id,
         }
-        # make sure each value is a string.
-        for x in jsondata:
-            if x is None:
-                jsondata[x] = ''
-        return jsondata
 
     def _log_http_response(self, response):
         log = self.logger.debug if response.code == 200 else self.logger.warning

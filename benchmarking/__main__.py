@@ -76,7 +76,7 @@ def initialize_logger(log_level):
     console.setFormatter(formatter)
 
     fh = logging.handlers.RotatingFileHandler(
-        filename=os.path.join(settings.LOG_DIR, 'benchmarking.log'),
+        filename=settings.LOG_FILE,
         maxBytes=10000000,
         backupCount=1)
     fh.setFormatter(formatter)
