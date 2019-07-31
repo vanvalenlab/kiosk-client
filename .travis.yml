@@ -22,8 +22,8 @@ script:
 
 jobs:
   include:
-    - stage: deploy tagged release
-      if: tag IS present AND branch = master AND type = push
+    - stage: deploy
+      if: tag IS present
       python: 3.6
       script:
       - echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
