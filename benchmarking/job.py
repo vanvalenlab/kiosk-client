@@ -223,7 +223,7 @@ class Job(object):
                 self.logger.info('[%s]: Found new %sstatus `%s`.', self.job_id,
                                  'final ' if self.is_done else '', self.status)
 
-        defer.returnValue(True)  # "return" the value
+        defer.returnValue(self.is_done)  # "return" the value
 
     @defer.inlineCallbacks
     def summarize(self):
@@ -247,7 +247,7 @@ class Job(object):
             value = yield self.get_redis_value(name)
             setattr(self, name, value)  # save the valid value to self
 
-        defer.returnValue(True)  # "return" the value
+        defer.returnValue(self.is_summarized)  # "return" the value
 
     @defer.inlineCallbacks
     def expire(self):
