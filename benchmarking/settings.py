@@ -39,6 +39,7 @@ _strip = lambda x: '/'.join(y for y in x.split('/') if y)
 
 # Debug Mode
 DEBUG = config('DEBUG', cast=bool, default=False)
+NUM_GPUS = config('NUM_GPUS', cast=int, default=-1)
 
 # Google credentials
 STORAGE_BUCKET = config('STORAGE_BUCKET', default='')
