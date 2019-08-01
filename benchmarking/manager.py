@@ -121,7 +121,7 @@ class JobManager(object):
         statuses = {}
 
         for j in self.all_jobs:
-            complete += int(j.is_summarized)
+            complete += int(j.is_summarized and j.is_expired)
             created += int(j.job_id is not None)
 
             if j.status is not None:

@@ -103,7 +103,7 @@ class Job(object):
             return True
         summaries = (self.created_at, self.finished_at, self.output_url)
         is_summarized = all(x is not None for x in summaries)
-        return is_summarized and self.is_done and self.is_expired
+        return is_summarized and self.is_done
 
     def sleep(self, seconds):
         """Simple helper to delay asynchronously for some number of seconds."""
