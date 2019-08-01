@@ -346,6 +346,8 @@ class Job(object):
 
             yield self.sleep(self.update_interval)
             value = yield self.expire()
+
+            assert value == 1, 'Failed to expire key %s' % self.job_id
             self.is_expired = True
 
             defer.returnValue(value)
