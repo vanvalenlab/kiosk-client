@@ -116,12 +116,13 @@ class JobManager(object):
                    pool=self.pool)
 
     def get_completed_job_count(self):
-        created, complete, failed = 0, 0, 0
+        created, complete, failed, expired = 0, 0, 0, 0
 
         statuses = {}
 
         for j in self.all_jobs:
-            complete += int(j.is_summarized and j.is_expired)
+            expired += int(j.is_expired)  # true mark of being done
+            complete += int(j.is_summarized)
             created += int(j.job_id is not None)
 
             if j.status is not None:
@@ -133,18 +134,18 @@ class JobManager(object):
             if j.failed:
                 j.restart(delay=self.start_delay * failed)
 
-        self.logger.info('%s created; %s finished; %s; %s jobs total',
-                         created, complete,
+        self.logger.info('%s created; %s finished; %s summarized; '
+                         '%s; %s jobs total', created, expired, complete,
                          '; '.join('%s %s' % (v, k) for k, v in statuses.items()),
                          len(self.all_jobs))
 
-        if len(self.all_jobs) - complete <= 25:
+        if len(self.all_jobs) - expired <= 25:
             for j in self.all_jobs:
                 if not j.is_summarized:
                     self.logger.info('Waiting on key `%s` with status %s',
                                      j.job_id, j.status)
 
-        return complete
+        return expired
 
     @defer.inlineCallbacks
     def check_job_status(self):
