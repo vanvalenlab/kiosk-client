@@ -340,6 +340,10 @@ class Job(object):
                 self.logger.warning('[%s]: Found final status `%s`: %s',
                                     self.job_id, self.status, reason)
 
+            else:
+                raise ValueError('Job %s was about to expire with status %s' %
+                                 (self.job_id, self.status))
+
             yield self.sleep(self.update_interval)
             value = yield self.expire()
             self.is_expired = True
