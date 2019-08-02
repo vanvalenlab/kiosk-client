@@ -205,8 +205,13 @@ class Job(object):
                 continue  # return to top of retry loop
 
             job_id = json_content.get('hash')
-            self.logger.debug('[%s]: Successfully created.', job_id)
-            retrying = False  # success
+            if job_id is not None:
+                self.logger.debug('[%s]: Successfully created.', job_id)
+            else:
+                self.logger.warning('Create response JSON is invalid: %s',
+                                    json_content)
+
+            retrying = job_id is None  # success if not None
 
         defer.returnValue(job_id)  # "return" the value
 
@@ -316,6 +321,7 @@ class Job(object):
 
         try:
             self.job_id = yield self.create()
+            assert self.job_id is not None, 'Create did not return a job ID'
 
             success = yield self.monitor()
             assert success, 'Monitor did not have a successful return vaue'
