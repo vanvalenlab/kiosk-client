@@ -29,6 +29,7 @@ from __future__ import division
 from __future__ import print_function
 
 import pytest
+import pytest_twisted
 
 from benchmarking import job
 
@@ -46,7 +47,8 @@ class TestJob(object):
             filepath='filepath.png',
             host='localhost',
             model_name='model_name',
-            model_version='0')
+            model_version='0',
+            refresh_rate=0)
 
         # properties should be Fals as job has not yet been started
         assert not j.is_done
@@ -87,3 +89,18 @@ class TestJob(object):
 
         j._log_http_response(dummy_response_success)
         j._log_http_response(dummy_response_fail)
+
+    @pytest_twisted.inlineCallbacks
+    def test_summarize(self):
+        j = job.Job(
+            filepath='filepath.png',
+            host='localhost',
+            model_name='model_name',
+            model_version='0',
+            refresh_rate=0)
+
+        j.status = 'failed'
+        j.get_redis_value = lambda x: True
+
+        value = yield j.summarize()
+        assert value
