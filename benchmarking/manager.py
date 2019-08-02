@@ -169,7 +169,8 @@ class JobManager(object):
         try:
             cpu_cost, gpu_cost, total_cost = self.cost_getter.finish()
         except Exception as err:
-            self.logger.error('Encountered error %s while getting cost data', err)
+            self.logger.error('Encountered %s while getting cost data: %s',
+                              type(err).__name__, err)
             cpu_cost, gpu_cost, total_cost = '', '', ''
 
         jsondata = {
