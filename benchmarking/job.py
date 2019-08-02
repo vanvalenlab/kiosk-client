@@ -34,10 +34,11 @@ import os
 
 import dateutil.parser
 import treq
-from twisted.internet import defer, reactor
+from twisted.internet import defer
 from twisted.internet import error as twisted_errors
 from twisted.web import _newclient as twisted_client
-from twisted.internet.task import deferLater
+
+from benchmarking.utils import sleep
 
 
 class Job(object):
@@ -84,6 +85,8 @@ class Job(object):
 
         self.pool = kwargs.get('pool')
 
+        self.sleep = sleep  # allow monkey-patch
+
         self._http_errors = (
             twisted_client.ResponseNeverReceived,
             twisted_client.RequestTransmissionFailed,
@@ -104,10 +107,6 @@ class Job(object):
         summaries = (self.created_at, self.finished_at, self.output_url)
         is_summarized = all(x is not None for x in summaries)
         return is_summarized and self.is_done
-
-    def sleep(self, seconds):
-        """Simple helper to delay asynchronously for some number of seconds."""
-        return deferLater(reactor, seconds, lambda: None)
 
     def json(self):
         return {

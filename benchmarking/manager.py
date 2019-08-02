@@ -40,7 +40,7 @@ from twisted.internet.task import deferLater
 from twisted.web.client import HTTPConnectionPool
 
 from benchmarking.job import Job
-from benchmarking.utils import iter_image_files
+from benchmarking.utils import iter_image_files, sleep
 from benchmarking import settings
 
 from benchmarking.cost import CostGetter
@@ -77,9 +77,7 @@ class JobManager(object):
         # initializing cost estimation workflow
         self.cost_getter = CostGetter()
 
-    def sleep(self, seconds):
-        """Simple helper to delay asynchronously for some number of seconds."""
-        return deferLater(reactor, seconds, lambda: None)
+        self.sleep = sleep  # allow monkey-patch
 
     def upload_file(self, filepath, acl='publicRead',
                     hash_filename=True, prefix=None):
