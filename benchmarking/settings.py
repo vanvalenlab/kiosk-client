@@ -54,7 +54,8 @@ GRAFANA_USER = config('GRAFANA_USER', default='admin')
 GRAFANA_PASSWORD = config('GRAFANA_PASSWORD', default='admin')
 
 # TensorFlow Servable
-MODEL_NAME, MODEL_VERSION = config('MODEL', default='HeLaS3watershed:2').split(':')
+MODEL = config('MODEL', default='HeLaS3watershed:2')
+MODEL_NAME, MODEL_VERSION = MODEL.split(':')
 
 # Pre- and Post-Processing functions
 PREPROCESS = config('PREPROCESS', default='')

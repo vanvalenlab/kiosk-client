@@ -134,7 +134,8 @@ class JobManager(object):
 
         self.logger.info('%s created; %s finished; %s summarized; '
                          '%s; %s jobs total', created, expired, complete,
-                         '; '.join('%s %s' % (v, k) for k, v in statuses.items()),
+                         '; '.join('%s %s' % (v, k)
+                                   for k, v in statuses.items()),
                          len(self.all_jobs))
 
         if len(self.all_jobs) - expired <= 25:
@@ -206,9 +207,10 @@ class JobManager(object):
 
 
 class BenchmarkingJobManager(JobManager):
+    # pylint: disable=arguments-differ
 
     @defer.inlineCallbacks
-    def run(self, filepath, count, upload=False):  # pylint: disable=arguments-differ
+    def run(self, filepath, count, upload=False):
         self.logger.info('Benchmarking %s jobs of file `%s`', count, filepath)
 
         for i in range(count):
@@ -233,9 +235,10 @@ class BenchmarkingJobManager(JobManager):
 
 
 class BatchProcessingJobManager(JobManager):
+    # pylint: disable=arguments-differ
 
     @defer.inlineCallbacks
-    def run(self, filepath):  # pylint: disable=arguments-differ
+    def run(self, filepath):
         self.logger.info('Benchmarking all image/zip files in `%s`', filepath)
 
         for i, f in enumerate(iter_image_files(filepath)):
