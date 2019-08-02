@@ -81,8 +81,7 @@ class JobManager(object):
 
     def upload_file(self, filepath, acl='publicRead',
                     hash_filename=True, prefix=None):
-        if prefix is None:
-            prefix = self.upload_prefix
+        prefix = self.upload_prefix if prefix is None else prefix
         start = timeit.default_timer()
         storage_client = google_storage.Client()
 
