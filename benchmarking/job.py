@@ -133,6 +133,13 @@ class Job(object):
             response.request.absoluteURI.decode(),
             response.code, response.phrase.decode())
 
+    def _send_post_request(self, host, data, **kwargs):
+        req_kwargs = {
+            'headers': kwargs.get('headers', self.headers),
+            'pool': kwargs.get('pool', self.pool)
+        }
+        return treq.post(host, json=data, **req_kwargs)
+
     @defer.inlineCallbacks
     def get_redis_value(self, field):
         host = '{}/api/redis'.format(self.host)
@@ -142,9 +149,7 @@ class Job(object):
         while retrying:
 
             try:
-                request = treq.post(host, json=payload, headers=self.headers,
-                                    pool=self.pool)
-
+                request = self._send_post_request(host, payload)
                 response = yield request  # Wait for the deferred request
             except self._http_errors as err:
                 self.logger.error('[%s]: Encountered error getting REDIS_VALUE'
@@ -184,9 +189,7 @@ class Job(object):
         while retrying:
 
             try:
-                request = treq.post(host, json=job_data, headers=self.headers,
-                                    pool=self.pool)
-
+                request = self._send_post_request(host, job_data)
                 response = yield request  # Wait for the deferred request
             except self._http_errors as err:
                 self.logger.error('[%s]: Encountered error during CREATE: %s',
@@ -263,9 +266,7 @@ class Job(object):
         while retrying:
 
             try:
-                request = treq.post(host, json=payload, headers=self.headers,
-                                    pool=self.pool)
-
+                request = self._send_post_request(host, payload)
                 response = yield request  # Wait for the deferred request
             except self._http_errors as err:
                 self.logger.error('[%s]: Encountered error during EXPIRE: %s',
