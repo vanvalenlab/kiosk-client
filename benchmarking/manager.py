@@ -40,7 +40,7 @@ from twisted.internet.task import deferLater
 from twisted.web.client import HTTPConnectionPool
 
 from benchmarking.job import Job
-from benchmarking.utils import iter_image_files
+from benchmarking.utils import iter_image_files, sleep
 from benchmarking import settings
 
 from benchmarking.cost import CostGetter
@@ -77,14 +77,11 @@ class JobManager(object):
         # initializing cost estimation workflow
         self.cost_getter = CostGetter()
 
-    def sleep(self, seconds):
-        """Simple helper to delay asynchronously for some number of seconds."""
-        return deferLater(reactor, seconds, lambda: None)
+        self.sleep = sleep  # allow monkey-patch
 
     def upload_file(self, filepath, acl='publicRead',
                     hash_filename=True, prefix=None):
-        if prefix is None:
-            prefix = self.upload_prefix
+        prefix = self.upload_prefix if prefix is None else prefix
         start = timeit.default_timer()
         storage_client = google_storage.Client()
 
@@ -116,11 +113,12 @@ class JobManager(object):
                    pool=self.pool)
 
     def get_completed_job_count(self):
-        created, complete, failed = 0, 0, 0
+        created, complete, failed, expired = 0, 0, 0, 0
 
         statuses = {}
 
         for j in self.all_jobs:
+            expired += int(j.is_expired)  # true mark of being done
             complete += int(j.is_summarized)
             created += int(j.job_id is not None)
 
@@ -133,18 +131,23 @@ class JobManager(object):
             if j.failed:
                 j.restart(delay=self.start_delay * failed)
 
-        self.logger.info('%s created; %s finished; %s; %s jobs total',
-                         created, complete,
-                         '; '.join('%s %s' % (v, k) for k, v in statuses.items()),
+        self.logger.info('%s created; %s finished; %s summarized; '
+                         '%s; %s jobs total', created, expired, complete,
+                         '; '.join('%s %s' % (v, k)
+                                   for k, v in statuses.items()),
                          len(self.all_jobs))
 
-        if len(self.all_jobs) - complete <= 25:
+        if len(self.all_jobs) - expired <= 25:
             for j in self.all_jobs:
                 if not j.is_summarized:
                     self.logger.info('Waiting on key `%s` with status %s',
                                      j.job_id, j.status)
 
-        return complete
+        return expired
+
+    @defer.inlineCallbacks
+    def _stop(self):
+        yield reactor.stop()  # pylint: disable=no-member
 
     @defer.inlineCallbacks
     def check_job_status(self):
@@ -157,7 +160,7 @@ class JobManager(object):
 
         self.summarize()  # synchronous
 
-        yield reactor.stop()  # pylint: disable=no-member
+        yield self._stop()
 
     def summarize(self):
         time_elapsed = timeit.default_timer() - self.created_at
@@ -165,27 +168,28 @@ class JobManager(object):
                          len(self.all_jobs), time_elapsed)
 
         # add cost and timing data to json output
-        time_elapsed = timeit.default_timer() - self.created_at
         try:
-            (cpu_cost, gpu_cost, total_cost) = self.cost_getter.finish()
+            cpu_cost, gpu_cost, total_cost = self.cost_getter.finish()
         except Exception as err:
-            self.logger.error('Encountered error %s while getting cost data', err)
-            cpu_cost = ''
-            gpu_cost = ''
-            total_cost = ''
+            self.logger.error('Encountered %s while getting cost data: %s',
+                              type(err).__name__, err)
+            cpu_cost, gpu_cost, total_cost = '', '', ''
 
-        jsondata = {'cpu_node_cost': cpu_cost,
-                    'gpu_node_cost': gpu_cost,
-                    'total_node_and_networking_costs': total_cost,
-                    'start_delay': self.start_delay,
-                    'num_jobs': len(self.all_jobs),
-                    'time_elapsed': time_elapsed,
-                    'job_data': [j.json() for j in self.all_jobs]}
+        jsondata = {
+            'cpu_node_cost': cpu_cost,
+            'gpu_node_cost': gpu_cost,
+            'total_node_and_networking_costs': total_cost,
+            'start_delay': self.start_delay,
+            'num_jobs': len(self.all_jobs),
+            'time_elapsed': time_elapsed,
+            'job_data': [j.json() for j in self.all_jobs]
+        }
 
         output_filepath = os.path.join(
             settings.OUTPUT_DIR,
-            '{}delay_{}jobs_{}.json'.format(
-                self.start_delay, len(self.all_jobs), uuid.uuid4().hex))
+            '{}gpu_{}delay_{}jobs_{}.json'.format(
+                settings.NUM_GPUS, self.start_delay,
+                len(self.all_jobs), uuid.uuid4().hex))
 
         with open(output_filepath, 'w') as jsonfile:
             json.dump(jsondata, jsonfile, indent=4)
@@ -206,9 +210,10 @@ class JobManager(object):
 
 
 class BenchmarkingJobManager(JobManager):
+    # pylint: disable=arguments-differ
 
     @defer.inlineCallbacks
-    def run(self, filepath, count, upload=False):  # pylint: disable=arguments-differ
+    def run(self, filepath, count, upload=False):
         self.logger.info('Benchmarking %s jobs of file `%s`', count, filepath)
 
         for i in range(count):
@@ -233,9 +238,10 @@ class BenchmarkingJobManager(JobManager):
 
 
 class BatchProcessingJobManager(JobManager):
+    # pylint: disable=arguments-differ
 
     @defer.inlineCallbacks
-    def run(self, filepath):  # pylint: disable=arguments-differ
+    def run(self, filepath):
         self.logger.info('Benchmarking all image/zip files in `%s`', filepath)
 
         for i, f in enumerate(iter_image_files(filepath)):

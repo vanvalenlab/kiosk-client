@@ -10,7 +10,8 @@ ENV FILE \
     POSTPROCESS="" \
     UPLOAD_PREFIX="uploads" \
     EXPIRE_TIME="3600" \
-    LOG_LEVEL="DEBUG"
+    LOG_LEVEL="DEBUG" \
+    NUM_CYCLES="1"
 
 COPY requirements.txt .
 

@@ -28,7 +28,6 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-import errno
 import os
 
 from decouple import config
@@ -39,6 +38,7 @@ _strip = lambda x: '/'.join(y for y in x.split('/') if y)
 
 # Debug Mode
 DEBUG = config('DEBUG', cast=bool, default=False)
+NUM_GPUS = config('NUM_GPUS', cast=int, default=-1)
 
 # Google credentials
 STORAGE_BUCKET = config('STORAGE_BUCKET', default='')
@@ -54,7 +54,8 @@ GRAFANA_USER = config('GRAFANA_USER', default='admin')
 GRAFANA_PASSWORD = config('GRAFANA_PASSWORD', default='admin')
 
 # TensorFlow Servable
-MODEL_NAME, MODEL_VERSION = config('MODEL', default='HeLaS3watershed:2').split(':')
+MODEL = config('MODEL', default='HeLaS3watershed:2')
+MODEL_NAME, MODEL_VERSION = MODEL.split(':')
 
 # Pre- and Post-Processing functions
 PREPROCESS = config('PREPROCESS', default='')

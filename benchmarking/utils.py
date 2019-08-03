@@ -32,6 +32,14 @@ import os
 
 from PIL import Image
 
+from twisted.internet import reactor
+from twisted.internet.task import deferLater
+
+
+def sleep(seconds):
+    """Simple helper to delay asynchronously for some number of seconds."""
+    return deferLater(reactor, seconds, lambda: None)
+
 
 def is_image_file(filepath):
     """Returns True if the file is an image file, otherwise False"""

@@ -34,10 +34,11 @@ import os
 
 import dateutil.parser
 import treq
-from twisted.internet import defer, reactor
+from twisted.internet import defer
 from twisted.internet import error as twisted_errors
 from twisted.web import _newclient as twisted_client
-from twisted.internet.task import deferLater
+
+from benchmarking.utils import sleep
 
 
 class Job(object):
@@ -84,6 +85,8 @@ class Job(object):
 
         self.pool = kwargs.get('pool')
 
+        self.sleep = sleep  # allow monkey-patch
+
         self._http_errors = (
             twisted_client.ResponseNeverReceived,
             twisted_client.RequestTransmissionFailed,
@@ -103,11 +106,7 @@ class Job(object):
             return True
         summaries = (self.created_at, self.finished_at, self.output_url)
         is_summarized = all(x is not None for x in summaries)
-        return is_summarized and self.is_done and self.is_expired
-
-    def sleep(self, seconds):
-        """Simple helper to delay asynchronously for some number of seconds."""
-        return deferLater(reactor, seconds, lambda: None)
+        return is_summarized and self.is_done
 
     def json(self):
         return {
@@ -134,22 +133,24 @@ class Job(object):
             response.request.absoluteURI.decode(),
             response.code, response.phrase.decode())
 
-    @defer.inlineCallbacks
-    def get_redis_value(self, field):
-        host = '{}/api/redis'.format(self.host)
-        payload = {'hash': self.job_id, 'key': field}
+    def _make_post_request(self, host, data, **kwargs):
+        req_kwargs = {
+            'headers': kwargs.get('headers', self.headers),
+            'pool': kwargs.get('pool', self.pool)
+        }
+        return treq.post(host, json=data, **req_kwargs)
 
+    @defer.inlineCallbacks
+    def _retry_post_request_wrapper(self, host, data, name='REDIS', **kwargs):
         retrying = True  # retry  loop to prevent stackoverflow
         while retrying:
 
             try:
-                request = treq.post(host, json=payload, headers=self.headers,
-                                    pool=self.pool)
-
+                request = self._make_post_request(host, data, **kwargs)
                 response = yield request  # Wait for the deferred request
             except self._http_errors as err:
-                self.logger.error('[%s]: Encountered error getting REDIS_VALUE'
-                                  ' %s: %s', self.job_id, field, err)
+                self.logger.warning('[%s]: Encountered %s during %s: %s',
+                                    self.job_id, type(err).__name__, name, err)
                 yield self.sleep(self.update_interval)
                 continue  # return to top of retry loop
 
@@ -157,15 +158,23 @@ class Job(object):
                 self._log_http_response(response)
                 json_content = yield response.json()  # parse the JSON data
             except (json.decoder.JSONDecodeError, AttributeError) as err:
-                self.logger.error('[%s]: Failed to parse REDIS_VALUE response '
-                                  'as JSON: %s', self.job_id, err)
+                self.logger.error('[%s]: Failed to parse %s response as JSON '
+                                  'due to %s: %s', self.job_id, name,
+                                  type(err).__name__, err)
                 yield self.sleep(self.update_interval)
                 continue  # return to top of retry loop
 
-            value = json_content.get('value')
-
             retrying = False  # success
 
+        defer.returnValue(json_content)  # "return" the value
+
+    @defer.inlineCallbacks
+    def get_redis_value(self, field):
+        host = '{}/api/redis'.format(self.host)
+        payload = {'hash': self.job_id, 'key': field}
+        name = 'REDIS HGET {}'.format(field)
+        response = yield self._retry_post_request_wrapper(host, payload, name)
+        value = response.get('value')
         defer.returnValue(value)  # "return" the value
 
     @defer.inlineCallbacks
@@ -180,33 +189,15 @@ class Job(object):
             'uploadedName': os.path.join(self.upload_prefix, self.filepath),
         }
         host = '{}/api/predict'.format(self.host)
+        name = 'REDIS CREATE'
+        response = yield self._retry_post_request_wrapper(host, job_data, name)
 
-        retrying = True  # retry  loop to prevent stackoverflow
-        while retrying:
+        job_id = response.get('hash')
 
-            try:
-                request = treq.post(host, json=job_data, headers=self.headers,
-                                    pool=self.pool)
-
-                response = yield request  # Wait for the deferred request
-            except self._http_errors as err:
-                self.logger.error('[%s]: Encountered error during CREATE: %s',
-                                  self.job_id, err)
-                yield self.sleep(self.update_interval)
-                continue  # return to top of retry loop
-
-            try:
-                self._log_http_response(response)
-                json_content = yield response.json()  # parse the JSON data
-            except (json.decoder.JSONDecodeError, AttributeError) as err:
-                self.logger.error('[%s]: Failed to parse CREATE response as '
-                                  'JSON: %s', self.job_id, err)
-                yield self.sleep(self.update_interval)
-                continue  # return to top of retry loop
-
-            job_id = json_content.get('hash')
+        if job_id is not None:
             self.logger.debug('[%s]: Successfully created.', job_id)
-            retrying = False  # success
+        else:
+            self.logger.error('Create response JSON is invalid: %s', response)
 
         defer.returnValue(job_id)  # "return" the value
 
@@ -223,7 +214,7 @@ class Job(object):
                 self.logger.info('[%s]: Found new %sstatus `%s`.', self.job_id,
                                  'final ' if self.is_done else '', self.status)
 
-        defer.returnValue(True)  # "return" the value
+        defer.returnValue(self.is_done)  # "return" the value
 
     @defer.inlineCallbacks
     def summarize(self):
@@ -247,44 +238,15 @@ class Job(object):
             value = yield self.get_redis_value(name)
             setattr(self, name, value)  # save the valid value to self
 
-        defer.returnValue(True)  # "return" the value
+        defer.returnValue(self.is_summarized)  # "return" the value
 
     @defer.inlineCallbacks
     def expire(self):
-        # build the expire API request
         host = '{}/api/redis/expire'.format(self.host)
         payload = {'hash': self.job_id, 'expireIn': self.expire_time}
-
-        retrying = True  # retry  loop to prevent stackoverflow
-        while retrying:
-
-            try:
-                request = treq.post(host, json=payload, headers=self.headers,
-                                    pool=self.pool)
-
-                response = yield request  # Wait for the deferred request
-            except self._http_errors as err:
-                self.logger.error('[%s]: Encountered error during EXPIRE: %s',
-                                  self.job_id, err)
-                yield self.sleep(self.update_interval)
-                continue  # return to top of retry loop
-
-            try:
-                self._log_http_response(response)
-                json_content = yield response.json()  # parse the JSON data
-            except (json.decoder.JSONDecodeError, AttributeError) as err:
-                self.logger.error('[%s]: Failed to parse EXPIRE response as '
-                                  'JSON: %s', self.job_id, err)
-                yield self.sleep(self.update_interval)
-                continue  # return to top of retry loop
-
-            value = json_content.get('value')
-
-            self.logger.debug('[%s]: EXPIRE response: `%s`. Expires in %ss.',
-                              self.job_id, value, self.expire_time)
-
-            retrying = False  # success
-
+        name = 'REDIS EXPIRE'
+        response = yield self._retry_post_request_wrapper(host, payload, name)
+        value = response.get('value')
         defer.returnValue(value)  # "return" the value
 
     @defer.inlineCallbacks
@@ -300,13 +262,16 @@ class Job(object):
         self.logger.debug('[%s]: Restarting failed job.', self.job_id)
 
         if self.job_id is None:  # never got started in the first place
-            yield self.start()
+            result = yield self.start()
+            return result
 
         elif self.is_done:  # no need to monitor, skip straight to summarize
-            yield self.summarize()
+            result = yield self.summarize()
+            return result
 
         else:  # job has begun but was not finished, monitor status
-            yield self.monitor()
+            result = yield self.monitor()
+            return result
 
     @defer.inlineCallbacks
     def start(self, delay=0):
@@ -316,6 +281,7 @@ class Job(object):
 
         try:
             self.job_id = yield self.create()
+            assert self.job_id is not None, 'Create did not return a job ID'
 
             success = yield self.monitor()
             assert success, 'Monitor did not have a successful return vaue'
@@ -340,8 +306,14 @@ class Job(object):
                 self.logger.warning('[%s]: Found final status `%s`: %s',
                                     self.job_id, self.status, reason)
 
+            else:
+                raise ValueError('Job %s was about to expire with status %s' %
+                                 (self.job_id, self.status))
+
             yield self.sleep(self.update_interval)
             value = yield self.expire()
+
+            assert value == 1, 'Failed to expire key %s' % self.job_id
             self.is_expired = True
 
             defer.returnValue(value)
