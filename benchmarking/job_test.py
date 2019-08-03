@@ -39,16 +39,20 @@ class Bunch(object):
         self.__dict__.update(kwds)
 
 
+def _get_default_job():
+    return job.Job(
+        filepath='filepath.png',
+        host='localhost',
+        model_name='model_name',
+        model_version='0',
+        update_interval=0.0001)
+
+
 class TestJob(object):
 
     def test_basic(self):
         # create basic job
-        j = job.Job(
-            filepath='filepath.png',
-            host='localhost',
-            model_name='model_name',
-            model_version='0',
-            refresh_rate=0)
+        j = _get_default_job()
 
         # properties should be Fals as job has not yet been started
         assert not j.is_done
@@ -73,11 +77,7 @@ class TestJob(object):
                     model_version='version')
 
     def test__log_http_response(self):
-        j = job.Job(
-            filepath='filepath.png',
-            host='localhost',
-            model_name='model_name',
-            model_version='0')
+        j = _get_default_job()
 
         dummy_response_success = Bunch(
             code=200, phrase=b'OK',
@@ -92,12 +92,7 @@ class TestJob(object):
 
     @pytest_twisted.inlineCallbacks
     def test_summarize(self):
-        j = job.Job(
-            filepath='filepath.png',
-            host='localhost',
-            model_name='model_name',
-            model_version='0',
-            refresh_rate=0)
+        j = _get_default_job()
 
         j.status = 'failed'
         j.get_redis_value = lambda x: True
