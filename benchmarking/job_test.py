@@ -28,6 +28,9 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import datetime
+import random
+
 import pytest
 import pytest_twisted
 
@@ -35,10 +38,37 @@ from twisted.internet import defer
 
 from benchmarking import job
 
+global FAILED
+FAILED = False  # global toggle for failed responses
+
 
 class Bunch(object):
     def __init__(self, **kwds):
         self.__dict__.update(kwds)
+
+
+class DummyResponse(object):
+
+    def __init__(self):
+        self.phrase = b'PHRASE'
+        self.request = Bunch(method=b'POST', absoluteURI=b'localhost')
+
+    @property
+    def code(self):
+        global FAILED
+        if FAILED:
+            return 500
+        return 200
+
+    @pytest_twisted.inlineCallbacks
+    def json(self):
+        global FAILED
+        if FAILED:
+            FAILED = False
+            yield defer.returnValue(dict({'success': True}))
+        else:
+            FAILED = True
+            raise AttributeError('on purpose')
 
 
 def _get_default_job():
@@ -81,16 +111,15 @@ class TestJob(object):
     def test__log_http_response(self):
         j = _get_default_job()
 
-        dummy_response_success = Bunch(
-            code=200, phrase=b'OK',
-            request=Bunch(method=b'GET', absoluteURI=b'localhost'))
+        dummy_response = DummyResponse()
+        j._log_http_response(dummy_response)
+        dummy_response.failed = True
+        j._log_http_response(dummy_response)
 
-        dummy_response_fail = Bunch(
-            code=500, phrase=b'FAIL',
-            request=Bunch(method=b'GET', absoluteURI=b'localhost'))
-
-        j._log_http_response(dummy_response_success)
-        j._log_http_response(dummy_response_fail)
+    def test__make_post_request(self):
+        j = _get_default_job()
+        req = j._make_post_request('localhost', {})
+        assert isinstance(req, defer.Deferred)
 
     @pytest_twisted.inlineCallbacks
     def test_summarize(self):
@@ -103,6 +132,28 @@ class TestJob(object):
         assert value
 
     @pytest_twisted.inlineCallbacks
+    def test_monitor(self):
+        j = _get_default_job()
+
+        global _monitor_counter
+        _monitor_counter = 0
+
+        @pytest_twisted.inlineCallbacks
+        def get_redis_value(_):
+            global _monitor_counter
+            _monitor_counter += 1
+
+            if _monitor_counter > 3:
+                yield defer.returnValue('done')
+            else:
+                yield defer.returnValue(_monitor_counter)
+
+        j.get_redis_value = get_redis_value
+        results = yield j.monitor()
+        assert results
+        assert results == j.is_done
+
+    @pytest_twisted.inlineCallbacks
     def test_restart(self):
 
         @pytest_twisted.inlineCallbacks
@@ -112,7 +163,7 @@ class TestJob(object):
         # test no job_id
         j = _get_default_job()
         j.start = _dummy
-        result = yield j.restart(0)
+        result = yield j.restart(0.00001)
         assert result
 
         # test is_done
@@ -120,7 +171,7 @@ class TestJob(object):
         j.job_id = 1
         j.status = 'done'
         j.summarize = _dummy
-        result = yield j.restart(0)
+        result = yield j.restart(0.000001)
         assert result
 
         # test not is_done
@@ -128,5 +179,136 @@ class TestJob(object):
         j.job_id = 1
         j.status = 'in-progress'
         j.monitor = _dummy
-        result = yield j.restart(0)
+        result = yield j.restart(0.000001)
         assert result
+
+    @pytest_twisted.inlineCallbacks
+    def test_create(self):
+
+        @pytest_twisted.inlineCallbacks
+        def dummy_request_success(*_, **__):
+            yield defer.returnValue({'hash': 'dummy_hash'})
+
+        @pytest_twisted.inlineCallbacks
+        def dummy_request_fail(*_, **__):
+            yield defer.returnValue(dict())
+
+        j = _get_default_job()
+        j._retry_post_request_wrapper = dummy_request_success
+        job_id = yield j.create()
+        assert job_id == 'dummy_hash'
+
+        j = _get_default_job()
+        j._retry_post_request_wrapper = dummy_request_fail
+        job_id = yield j.create()
+        assert job_id is None
+
+    @pytest_twisted.inlineCallbacks
+    def test_get_redis_value(self):
+
+        @pytest_twisted.inlineCallbacks
+        def dummy_request_success(*_, **__):
+            yield defer.returnValue({'value': 'done'})
+
+        @pytest_twisted.inlineCallbacks
+        def dummy_request_fail(*_, **__):
+            yield defer.returnValue(dict())
+
+        j = _get_default_job()
+        j._retry_post_request_wrapper = dummy_request_success
+        job_id = yield j.get_redis_value('status')
+        assert job_id == 'done'
+
+        j = _get_default_job()
+        j._retry_post_request_wrapper = dummy_request_fail
+        job_id = yield j.get_redis_value('status')
+        assert job_id is None
+
+    @pytest_twisted.inlineCallbacks
+    def test_expire(self):
+
+        @pytest_twisted.inlineCallbacks
+        def dummy_request_success(*_, **__):
+            yield defer.returnValue({'value': 'done'})
+
+        @pytest_twisted.inlineCallbacks
+        def dummy_request_fail(*_, **__):
+            yield defer.returnValue(dict())
+
+        j = _get_default_job()
+        j._retry_post_request_wrapper = dummy_request_success
+        job_id = yield j.expire()
+        assert job_id == 'done'
+
+        j = _get_default_job()
+        j._retry_post_request_wrapper = dummy_request_fail
+        job_id = yield j.expire()
+        assert job_id is None
+
+    @pytest_twisted.inlineCallbacks
+    def test_start(self):
+
+        @pytest_twisted.inlineCallbacks
+        def dummy_request_success(*_, **__):
+            yield defer.returnValue(True)
+
+        @pytest_twisted.inlineCallbacks
+        def dummy_request_fail(*_, **__):
+            yield defer.returnValue(None)
+
+        # test successful path
+        j = _get_default_job()
+        j.create = dummy_request_success
+        j.summarize = dummy_request_success
+        j.monitor = dummy_request_success
+        j.get_redis_value = dummy_request_success
+        j.expire = dummy_request_success
+
+        # is_done and is_summarized
+        j.status = 'done'
+        j.output_url = ''
+        j.created_at = datetime.datetime.now().isoformat()
+        j.finished_at = datetime.datetime.now().isoformat()
+
+        value = yield j.start(.000001)
+        assert value
+
+        # test status is done but not summarized
+        j.output_url = None
+        value = yield j.start(.000001)
+        assert value is False  # raise exception which is caught
+
+        # test status is failed
+        j.status = 'failed'
+        value = yield j.start(.000001)
+        assert value
+
+        # test bad results
+        j.create = dummy_request_fail
+        value = yield j.start(.000001)
+        assert value is False  # failed
+
+    @pytest_twisted.inlineCallbacks
+    def test__retry_post_request_wrapper(self):
+
+        global _make_request_failed
+        _make_request_failed = False
+
+        @pytest_twisted.inlineCallbacks
+        def _make_post_request(*_, **__):
+            _j = _get_default_job()
+            global _make_request_failed
+            if _make_request_failed:
+                _make_request_failed = False
+                yield defer.returnValue(DummyResponse())
+            else:
+                _make_request_failed = True
+                errs = _get_default_job()._http_errors
+                err = errs[random.randint(0, len(errs) - 1)]
+                raise err('on purpose')
+
+        j = _get_default_job()
+        j._make_post_request = _make_post_request
+
+        result = yield j._retry_post_request_wrapper('host', {})
+        assert result.get('success')

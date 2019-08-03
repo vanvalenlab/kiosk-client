@@ -33,7 +33,10 @@ import random
 import tempfile
 
 from PIL import Image
+from twisted.internet import defer
+
 import pytest
+import pytest_twisted
 
 from benchmarking import manager
 from benchmarking import settings
@@ -105,6 +108,41 @@ class TestJobManager(object):
             mgr.cost_getter.finish = lambda: 0 / 1
             mgr.upload_file = fake_upload_file_bad
             mgr.summarize()
+
+    @pytest_twisted.inlineCallbacks
+    def test_check_job_status(self):
+        mgr = manager.JobManager(
+            host='localhost',
+            model_name='m',
+            model_version='0',
+            refresh_rate=0)
+
+        mgr.all_jobs = list(range(5))
+
+        global _is_stopped
+        _is_stopped = False
+
+        @pytest_twisted.inlineCallbacks
+        def dummy_stop():
+            global _is_stopped
+            _is_stopped = True
+            yield defer.returnValue(_is_stopped)
+
+        global _status_counter
+        _status_counter = 0
+
+        def get_completed_job_count():
+            global _status_counter
+            _status_counter += 1
+            return _status_counter
+
+        mgr.get_completed_job_count = get_completed_job_count
+        mgr._stop = dummy_stop
+        mgr.summarize = lambda: True
+
+        _ = yield mgr.check_job_status()
+        assert _status_counter == len(mgr.all_jobs)
+        assert _is_stopped
 
 
 class TestBenchmarkingJobManager(object):

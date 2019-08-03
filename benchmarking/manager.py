@@ -146,6 +146,10 @@ class JobManager(object):
         return expired
 
     @defer.inlineCallbacks
+    def _stop(self):
+        yield reactor.stop()  # pylint: disable=no-member
+
+    @defer.inlineCallbacks
     def check_job_status(self):
         complete = -1  # initialize comparison value
 
@@ -156,7 +160,7 @@ class JobManager(object):
 
         self.summarize()  # synchronous
 
-        yield reactor.stop()  # pylint: disable=no-member
+        yield self._stop()
 
     def summarize(self):
         time_elapsed = timeit.default_timer() - self.created_at
