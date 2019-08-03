@@ -305,13 +305,16 @@ class Job(object):
         self.logger.debug('[%s]: Restarting failed job.', self.job_id)
 
         if self.job_id is None:  # never got started in the first place
-            yield self.start()
+            result = yield self.start()
+            return result
 
         elif self.is_done:  # no need to monitor, skip straight to summarize
-            yield self.summarize()
+            result = yield self.summarize()
+            return result
 
         else:  # job has begun but was not finished, monitor status
-            yield self.monitor()
+            result = yield self.monitor()
+            return result
 
     @defer.inlineCallbacks
     def start(self, delay=0):

@@ -31,6 +31,8 @@ from __future__ import print_function
 import pytest
 import pytest_twisted
 
+from twisted.internet import defer
+
 from benchmarking import job
 
 
@@ -99,3 +101,32 @@ class TestJob(object):
 
         value = yield j.summarize()
         assert value
+
+    @pytest_twisted.inlineCallbacks
+    def test_restart(self):
+
+        @pytest_twisted.inlineCallbacks
+        def _dummy():
+            yield defer.returnValue(True)
+
+        # test no job_id
+        j = _get_default_job()
+        j.start = _dummy
+        result = yield j.restart(0)
+        assert result
+
+        # test is_done
+        j = _get_default_job()
+        j.job_id = 1
+        j.status = 'done'
+        j.summarize = _dummy
+        result = yield j.restart(0)
+        assert result
+
+        # test not is_done
+        j = _get_default_job()
+        j.job_id = 1
+        j.status = 'in-progress'
+        j.monitor = _dummy
+        result = yield j.restart(0)
+        assert result
