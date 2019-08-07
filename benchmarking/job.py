@@ -112,6 +112,8 @@ class Job(object):
         return {
             'input_file': self.original_name,
             'status': self.status,
+            'total_time': self.total_time,
+            'total_jobs': self.total_jobs,
             'download_url': self.output_url,
             'created_at': self.created_at,
             'finished_at': self.finished_at,
@@ -123,6 +125,7 @@ class Job(object):
             'model': '{}:{}'.format(self.model_name, self.model_version),
             'postprocess': self.postprocess,
             'preprocess': self.preprocess,
+            'reason': self.reason,
             'job_id': self.job_id,
         }
 
