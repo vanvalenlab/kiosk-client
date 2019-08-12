@@ -80,6 +80,8 @@ class Job(object):
         self.total_jobs = None
         self.total_time = None
         self.reason = None
+        self.children_upload_time = None
+        self.cleanup_time = None
         self.predict_retries = None
         self._finished_statuses = {'done', 'failed'}
 
@@ -109,19 +111,30 @@ class Job(object):
         return is_summarized and self.is_done
 
     def json(self):
+
+        def _float(x):
+            if isinstance(x, list):
+                return [_float(y) for y in x]
+            try:
+                return float(x)
+            except:  # pylint: disable=bare-except
+                return x
+
         return {
             'input_file': self.original_name,
             'status': self.status,
-            'total_time': self.total_time,
-            'total_jobs': self.total_jobs,
+            'total_time': _float(self.total_time),
+            'total_jobs': _float(self.total_jobs),
             'download_url': self.output_url,
             'created_at': self.created_at,
             'finished_at': self.finished_at,
-            'prediction_time': self.prediction_time,
-            'postprocess_time': self.postprocess_time,
-            'upload_time': self.upload_time,
-            'download_time': self.download_time,
-            'predict_retries': self.predict_retries,
+            'prediction_time': _float(self.prediction_time),
+            'postprocess_time': _float(self.postprocess_time),
+            'upload_time': _float(self.upload_time),
+            'download_time': _float(self.download_time),
+            'predict_retries': _float(self.predict_retries),
+            'cleanup_time': _float(self.cleanup_time),
+            'children_upload_time': _float(self.children_upload_time),
             'model': '{}:{}'.format(self.model_name, self.model_version),
             'postprocess': self.postprocess,
             'preprocess': self.preprocess,
@@ -221,24 +234,34 @@ class Job(object):
 
     @defer.inlineCallbacks
     def summarize(self):
-        attributes = [
+        summary_attributes = (
             'created_at',
             'finished_at',
+            'reason',
+            'output_url',
+        )
+        attributes = (
             'prediction_time',
             'predict_retries',
             'postprocess_time',
             'upload_time',
             'download_time',
+            'children_upload_time',
+            'cleanup_time',
             'total_jobs',
             'total_time',
-            'output_url',
-        ]
+        )
+        # get the string values
+        for name in summary_attributes:
+            value = yield self.get_redis_value(name)
+            setattr(self, name, value)  # save the valid value to self
 
-        if self.status == 'failed':
-            attributes.append('reason')
-
+        # get the numerical values and parse into list if required
         for name in attributes:
             value = yield self.get_redis_value(name)
+            value = str(value).split(',')
+            if len(value) == 1:
+                value = value[0]
             setattr(self, name, value)  # save the valid value to self
 
         defer.returnValue(self.is_summarized)  # "return" the value

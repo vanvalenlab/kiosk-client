@@ -89,6 +89,9 @@ class TestJob(object):
         # properties should be Fals as job has not yet been started
         assert not j.is_done
         assert not j.is_summarized
+        # for JSON formatting list values
+        j.prediction_time = list(str(x) for x in range(5))
+        j.predict_retries = list(str(x) for x in range(5))
         assert isinstance(j.json(), dict)
 
         # set the status to failed
