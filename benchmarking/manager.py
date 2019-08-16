@@ -139,7 +139,7 @@ class JobManager(object):
 
         if len(self.all_jobs) - expired <= 25:
             for j in self.all_jobs:
-                if not j.is_summarized:
+                if not j.is_expired:
                     self.logger.info('Waiting on key `%s` with status %s',
                                      j.job_id, j.status)
 
