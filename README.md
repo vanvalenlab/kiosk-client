@@ -16,3 +16,7 @@ Benchmarking can be run in 2 different modes: `benchmark` and `upload`.
 ### Upload Mode
 
 `upload` mode is designed for batch processing local files.  The `FILE` path is checked for any zip or image files, each is uploaded and monitored.  When all jobs are finished, the stats are summarized, cost is estimated, and the output file is uploaded to the `STORAGE_BUCKET`.
+
+#### Google Cloud Authentication
+
+When uploading to Google Cloud, you will need to [authenticate](https://cloud.google.com/docs/authentication/production) using the `GOOGLE_APPLICATION_CREDENTIALS` set to your service account JSON file.
