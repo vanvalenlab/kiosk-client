@@ -3,7 +3,7 @@
 [![Build Status](https://travis-ci.com/vanvalenlab/kiosk-benchmarking.svg?branch=master)](https://travis-ci.com/vanvalenlab/kiosk-benchmarking)
 [![Coverage Status](https://coveralls.io/repos/github/vanvalenlab/kiosk-benchmarking/badge.svg?branch=master)](https://coveralls.io/github/vanvalenlab/kiosk-benchmarking?branch=master)
 
-Benchmarking utility for the Van Valen Lab Kiosk. Uses the asynchronous HTTP client `treq` and the [kiosk-frontend API](https://github.com/vanvalenlab/kiosk-frontend) to create and monitor many jobs at once. Once all jobs are completed, [costs are estimated](./docs/cost_computation_notes.md) by using the cluster's Grafana API. An output file is then generated with statistics on each job's performance and resulting output files.
+`kiosk-benchmarking` is tool for interacting with the [Kiosk](https://github.com/vanvalenlab/kiosk) in order to create and monitor deep learning image processing jobs. It uses the asynchronous HTTP client [treq](https://github.com/twisted/treq) and the [Kiosk-Frontend API](https://github.com/vanvalenlab/kiosk-frontend) to create and monitor many jobs at once. Once all jobs are completed, [costs are estimated](./docs/cost_computation_notes.md) by using the cluster's [Grafana API](https://grafana.com/docs/http_api/). An output file is then generated with statistics on each job's performance and resulting output files.
 
 ## Getting started
 
@@ -44,7 +44,7 @@ python benchmarking upload --file local_file_to_upload.png
 
 ## Environmental Variables
 
-Each job can be configured using a environmental variables.
+Each job can be configured using environmental variables in a `.env` file.
 
 | Name                 | Description                     | Required |
 | -------------------- |:-------------------------------:|:--------:|
