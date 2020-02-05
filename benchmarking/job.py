@@ -50,6 +50,7 @@ class Job(object):
         self.filepath = str(filepath)
         self.model_name = str(model_name)
         self.model_version = str(model_version)
+        self.job_type = str(kwargs.get('job_type', 'segmentation'))
 
         if not self.model_version.isdigit():
             raise ValueError('`model_version` must be a number, got ' +
@@ -202,6 +203,7 @@ class Job(object):
             'preprocessFunction': self.preprocess,
             'postprocessFunction': self.postprocess,
             'imageName': self.filepath,
+            'jobType': self.job_type,
             'uploadedName': os.path.join(self.upload_prefix, self.filepath),
         }
         host = '{}/api/predict'.format(self.host)
