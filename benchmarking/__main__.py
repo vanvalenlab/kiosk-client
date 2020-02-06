@@ -98,6 +98,7 @@ if __name__ == '__main__':
         'host': settings.HOST,
         'model_name': settings.MODEL_NAME,
         'model_version': settings.MODEL_VERSION,
+        'job_type': settings.JOB_TYPE,
         'update_interval': settings.UPDATE_INTERVAL,
         'start_delay': settings.START_DELAY,
         'refresh_rate': settings.MANAGER_REFRESH_RATE,

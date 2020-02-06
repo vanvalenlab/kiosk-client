@@ -59,6 +59,7 @@ class JobManager(object):
         self.host = host
         self.model_name = model_name
         self.model_version = model_version
+        self.job_type = kwargs.get('job_type', 'segmentation')
 
         self.preprocess = kwargs.get('preprocess', '')
         self.postprocess = kwargs.get('postprocess', '')
@@ -105,6 +106,7 @@ class JobManager(object):
                    host=self.host,
                    model_name=self.model_name,
                    model_version=self.model_version,
+                   job_type=self.job_type,
                    postprocess=self.postprocess,
                    upload_prefix=self.upload_prefix,
                    original_name=original_name,

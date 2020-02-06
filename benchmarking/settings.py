@@ -57,6 +57,9 @@ GRAFANA_PASSWORD = config('GRAFANA_PASSWORD', default='admin')
 MODEL = config('MODEL', default='HeLaS3watershed:2')
 MODEL_NAME, MODEL_VERSION = MODEL.split(':')
 
+# Job Type
+JOB_TYPE = config('JOB_TYPE', default='segmentation')
+
 # Pre- and Post-Processing functions
 PREPROCESS = config('PREPROCESS', default='')
 POSTPROCESS = config('POSTPROCESS', default='watershed')
