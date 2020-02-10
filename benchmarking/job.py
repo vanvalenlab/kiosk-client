@@ -51,8 +51,8 @@ class Job(object):
         self.model_name = str(model_name)
         self.model_version = str(model_version)
         self.job_type = str(kwargs.get('job_type', 'segmentation'))
-        self.data_scale = str(kwargs.get('data_scale', '1'))
-        self.data_label = str(kwargs.get('data_label', '0'))
+        self.data_scale = str(kwargs.get('data_scale', ''))
+        self.data_label = str(kwargs.get('data_label', ''))
 
         if not self.model_version.isdigit():
             raise ValueError('`model_version` must be a number, got ' +

@@ -60,8 +60,8 @@ class JobManager(object):
         self.model_name = model_name
         self.model_version = model_version
         self.job_type = kwargs.get('job_type', 'segmentation')
-        self.data_scale = str(kwargs.get('data_scale', '1'))
-        self.data_label = str(kwargs.get('data_label', '0'))
+        self.data_scale = str(kwargs.get('data_scale', ''))
+        self.data_label = str(kwargs.get('data_label', ''))
 
         self.preprocess = kwargs.get('preprocess', '')
         self.postprocess = kwargs.get('postprocess', '')
