@@ -123,6 +123,8 @@ class JobManager(object):
                    model_name=self.model_name,
                    model_version=self.model_version,
                    job_type=self.job_type,
+                   data_scale=self.data_scale,
+                   data_label=self.data_label,
                    postprocess=self.postprocess,
                    upload_prefix=self.upload_prefix,
                    original_name=original_name,
