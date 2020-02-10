@@ -199,6 +199,7 @@ class Job(object):
     @defer.inlineCallbacks
     def create(self):
         # Build a deferred request to the create API
+        # See https://tinyurl.com/u3qs9om for expected POST data
         job_data = {
             'modelName': self.model_name,
             'modelVersion': self.model_version,
