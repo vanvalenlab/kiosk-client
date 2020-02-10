@@ -60,8 +60,22 @@ class JobManager(object):
         self.model_name = model_name
         self.model_version = model_version
         self.job_type = kwargs.get('job_type', 'segmentation')
-        self.data_scale = str(kwargs.get('data_scale', ''))
-        self.data_label = str(kwargs.get('data_label', ''))
+
+        data_scale = str(kwargs.get('data_scale', ''))
+        if data_scale:
+            try:
+                data_scale = float(data_scale)
+            except ValueError:
+                raise ValueError('data_scale must be a number.')
+        self.data_scale = data_scale
+
+        data_label = str(kwargs.get('data_label', ''))
+        if data_label:
+            try:
+                data_label = int(data_label)
+            except ValueError:
+                raise ValueError('data_label must be an integer.')
+        self.data_label = data_label
 
         self.preprocess = kwargs.get('preprocess', '')
         self.postprocess = kwargs.get('postprocess', '')
