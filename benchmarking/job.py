@@ -206,8 +206,8 @@ class Job(object):
             'postprocessFunction': self.postprocess,
             'imageName': self.filepath,
             'jobType': self.job_type,
-            'scale': self.data_scale,
-            'label': self.data_label,
+            'dataRescale': self.data_scale,
+            'dataLabel': self.data_label,
             'uploadedName': os.path.join(self.upload_prefix, self.filepath),
         }
         host = '{}/api/predict'.format(self.host)
