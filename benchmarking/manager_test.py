@@ -44,6 +44,31 @@ from benchmarking import settings
 
 class TestJobManager(object):
 
+    def test_init(self):
+        mgr = manager.JobManager(
+            host='localhost',
+            model_name='m',
+            model_version='0',
+            data_scale='1',
+            data_label='1')
+
+        # test bad data_scale value
+        with pytest.raises(ValueError):
+            mgr = manager.JobManager(
+                host='localhost',
+                model_name='m',
+                model_version='0',
+                data_scale='one',
+                data_label='1')
+        # test bad data_label value
+        with pytest.raises(ValueError):
+            mgr = manager.JobManager(
+                host='localhost',
+                model_name='m',
+                model_version='0',
+                data_scale='1',
+                data_label='1.3')
+
     def test_make_job(self):
         mgr = manager.JobManager(
             host='localhost',
