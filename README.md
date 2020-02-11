@@ -49,13 +49,13 @@ Each job can be configured using environmental variables in a `.env` file.
 | Name | Description | Default Value |
 | :--- | :--- | :--- |
 | `API_HOST` | **REQUIRED**: Hostname and port for the *kiosk-frontend* API server. | `""` |
-| `STORAGE_BUCKET` | **REQUIRED**: Cloud storage bucket address (e.g. *gs://bucket-name*) | `""` |
-| `MODEL` | **REQUIRED**: Name and version of the model hosted by TensorFlow Serving (e.g. *modelname:0*) | `"modelname:0"` |
+| `STORAGE_BUCKET` | **REQUIRED**: Cloud storage bucket address (e.g. `"gs://bucket-name"`) | `""` |
+| `MODEL` | **REQUIRED**: Name and version of the model hosted by TensorFlow Serving (e.g. `"modelname:0"`) | `"modelname:0"` |
 | `JOB_TYPE` | **REQUIRED**: Name of job workflow. | `"segmentation"` |
 | `SCALE` | Rescale data by this float value for model compatibility. | `1` |
 | `LABEL` | Integer value of label type. | `""` |
-| `PREPROCESS` | Name of the preprocessing function to use (e.g. *normalize*). | `""` |
-| `POSTPROCESS` | Name of the postprocessing function to use (e.g. *watershed*). | `""` |
+| `PREPROCESS` | Name of the preprocessing function to use (e.g. `"normalize"`). | `""` |
+| `POSTPROCESS` | Name of the postprocessing function to use (e.g. `"watershed"`). | `""` |
 | `UPLOAD_PREFIX` | Prefix of upload directory in the cloud storage bucket. | `"/uploads"` |
 | `UPDATE_INTERVAL` | Number of seconds a job should wait between sending status update requests to the server. | `10` |
 | `START_DELAY` | Number of seconds between submitting each new job. This can be configured to simulate upload latency. | `0.05` |
