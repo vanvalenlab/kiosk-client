@@ -47,7 +47,7 @@ python benchmarking upload --file local_file_to_upload.png
 Each job can be configured using environmental variables in a `.env` file.
 
 | Name                 | Description                    | Required |
-| -------------------- |:-------------------------------|:---------|
+| -------------------- | ------------------------------ | -------- |
 | `API_HOST`             | Hostname and port for the *kiosk-frontend* API server | True |
 | `STORAGE_BUCKET`       | Cloud storage bucket address (e.g. *gs://bucket-name*) | True |
 | `MODEL`                | Name and version of the model hosted by TensorFlow Serving (e.g. *modelname:0*) | True |
