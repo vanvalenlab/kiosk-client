@@ -36,6 +36,8 @@ from decouple import config
 # remove leading/trailing "/"s from cloud bucket folder names
 _strip = lambda x: '/'.join(y for y in x.split('/') if y)
 
+# Debug Mode
+DEBUG = config('DEBUG', cast=bool, default=False)
 NUM_GPUS = config('NUM_GPUS', cast=int, default=0)
 
 # Google credentials
