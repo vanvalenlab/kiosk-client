@@ -46,22 +46,30 @@ python benchmarking upload --file local_file_to_upload.png
 
 Each job can be configured using environmental variables in a `.env` file.
 
-| Name                 | Description                    | Required |
-| :------------------- | :----------------------------- | :------- |
-| `API_HOST`             | Hostname and port for the *kiosk-frontend* API server | True |
-| `STORAGE_BUCKET`       | Cloud storage bucket address (e.g. *gs://bucket-name*) | True |
-| `MODEL`                | Name and version of the model hosted by TensorFlow Serving (e.g. *modelname:0*) | True |
-| `PREPROCESS`           | Name of the preprocessing function to use (e.g. *normalize*) | False |
-| `POSTPROCESS`          | Name of the postprocessing function to use (e.g. *watershed*). | False |
-| `UPDATE_INTERVAL`      | Number of seconds a job should wait between sending status update requests to the server. (defaults to 10) | False |
-| `START_DELAY`          | Number of seconds between submitting each new job. This can be configured to simulate upload latency. (defaults to .05) | False |
-| `MANAGER_REFRESH_RATE` | Number of seconds between completed job updates. (defaults to 10) | False |
-| `EXPIRE_TIME`          | Completed jobs are expired after this many seconds. (defaults to 600) | False |
-| `CONCURRENT_REQUESTS_PER_HOST` | Limit number of simultaneous requests to the server. (default 64) | False |
-| `UPLOAD_PREFIX` | Prefix of upload directory in the cloud storage bucket. (default `/uploads`) | False |
-| `GRAFANA_HOST`         | Hostname of the Grafana server.  | True |
-| `GRAFANA_USER`         | Username for the Grafana server. | True |
-| `GRAFANA_PASSWORD`     | Password for the Grafana server. | True |
+| Name | Description | Default Value |
+| :--- | :--- | :--- |
+| `API_HOST` | **REQUIRED**: Hostname and port for the *kiosk-frontend* API server. | `""` |
+| `STORAGE_BUCKET` | **REQUIRED**: Cloud storage bucket address (e.g. *gs://bucket-name*) | `""` |
+| `MODEL` | **REQUIRED**: Name and version of the model hosted by TensorFlow Serving (e.g. *modelname:0*) | `"modelname:0"` |
+| `JOB_TYPE` | **REQUIRED**: Name of job workflow. | `"segmentation"` |
+| `SCALE` | Rescale data by this float value for model compatibility. | `1` |
+| `LABEL` | Integer value of label type. | `""` |
+| `PREPROCESS` | Name of the preprocessing function to use (e.g. *normalize*). | `""` |
+| `POSTPROCESS` | Name of the postprocessing function to use (e.g. *watershed*). | `""` |
+| `UPLOAD_PREFIX` | Prefix of upload directory in the cloud storage bucket. | `"/uploads"` |
+| `UPDATE_INTERVAL` | Number of seconds a job should wait between sending status update requests to the server. | `10` |
+| `START_DELAY` | Number of seconds between submitting each new job. This can be configured to simulate upload latency. | `0.05` |
+| `MANAGER_REFRESH_RATE` | Number of seconds between completed job updates. | `10` |
+| `EXPIRE_TIME` | Completed jobs are expired after this many seconds. | `3600` |
+| `CONCURRENT_REQUESTS_PER_HOST` | Limit number of simultaneous requests to the server.  | `64` |
+| `NUM_GPUS` | Number of GPUs used during the run. Used for logging. | `0` |
+| `LOG_ENABLED` | Toggle for enabling/disabling logging. | `True` |
+| `LOG_LEVEL` | Level of output for logging statements. | `"DEBUG"` |
+| `LOG_FILE` | Filename of the log file. | `"benchmark.log"` |
+| `GRAFANA_HOST` | Hostname of the Grafana server. | `"prometheus-operator-grafana"` |
+| `GRAFANA_USER` | Username for the Grafana server. | `"admin"` |
+| `GRAFANA_PASSWORD` | Password for the Grafana server. | `"prom-operator"` |
+
 
 #### Google Cloud Authentication
 

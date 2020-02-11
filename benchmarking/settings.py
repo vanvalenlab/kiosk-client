@@ -36,9 +36,7 @@ from decouple import config
 # remove leading/trailing "/"s from cloud bucket folder names
 _strip = lambda x: '/'.join(y for y in x.split('/') if y)
 
-# Debug Mode
-DEBUG = config('DEBUG', cast=bool, default=False)
-NUM_GPUS = config('NUM_GPUS', cast=int, default=-1)
+NUM_GPUS = config('NUM_GPUS', cast=int, default=0)
 
 # Google credentials
 STORAGE_BUCKET = config('STORAGE_BUCKET', default='')
@@ -51,10 +49,10 @@ if not any(HOST.lower().startswith(x) for x in ('http://', 'https://')):
 # Grafana resources for cost estimation
 GRAFANA_HOST = config('GRAFANA_HOST', default='prometheus-operator-grafana')
 GRAFANA_USER = config('GRAFANA_USER', default='admin')
-GRAFANA_PASSWORD = config('GRAFANA_PASSWORD', default='admin')
+GRAFANA_PASSWORD = config('GRAFANA_PASSWORD', default='prom-operator')
 
 # TensorFlow Servable
-MODEL = config('MODEL', default='HeLaS3watershed:2')
+MODEL = config('MODEL', default='modelname:0')
 MODEL_NAME, MODEL_VERSION = MODEL.split(':')
 
 # Job Type
@@ -64,7 +62,7 @@ LABEL = config('LABEL', default='')   # detect data type automatically if empty
 
 # Pre- and Post-Processing functions
 PREPROCESS = config('PREPROCESS', default='')
-POSTPROCESS = config('POSTPROCESS', default='watershed')
+POSTPROCESS = config('POSTPROCESS', default='')
 
 # How frequently Jobs update their statuses
 UPDATE_INTERVAL = config('UPDATE_INTERVAL', default=10, cast=float)
@@ -79,7 +77,7 @@ MANAGER_REFRESH_RATE = config('MANAGER_REFRESH_RATE', default=10, cast=float)
 UPLOAD_PREFIX = config('UPLOAD_PREFIX', default='uploads')
 
 # Time in seconds to expire the completed jobs.
-EXPIRE_TIME = config('EXPIRE_TIME', default=600, cast=int)
+EXPIRE_TIME = config('EXPIRE_TIME', default=3600, cast=int)
 
 # Name of upload folder in storage bucket.
 UPLOAD_PREFIX = _strip(config('UPLOAD_PREFIX', default='uploads', cast=str))
