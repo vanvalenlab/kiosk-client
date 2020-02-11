@@ -52,7 +52,6 @@ Each job can be configured using environmental variables in a `.env` file.
 | `STORAGE_BUCKET` | **REQUIRED**: Cloud storage bucket address (e.g. `"gs://bucket-name"`). | `""` |
 | `MODEL` | **REQUIRED**: Name and version of the model hosted by TensorFlow Serving (e.g. `"modelname:0"`). | `"modelname:0"` |
 | `JOB_TYPE` | **REQUIRED**: Name of job workflow. | `"segmentation"` |
-| `NUM_CYCLES` | Number of times to run the job. | `1` |
 | `SCALE` | Rescale data by this float value for model compatibility. | `1` |
 | `LABEL` | Integer value of label type. | `""` |
 | `PREPROCESS` | Name of the preprocessing function to use (e.g. `"normalize"`). | `""` |
@@ -63,6 +62,7 @@ Each job can be configured using environmental variables in a `.env` file.
 | `MANAGER_REFRESH_RATE` | Number of seconds between completed job updates. | `10` |
 | `EXPIRE_TIME` | Completed jobs are expired after this many seconds. | `3600` |
 | `CONCURRENT_REQUESTS_PER_HOST` | Limit number of simultaneous requests to the server.  | `64` |
+| `NUM_CYCLES` | Number of times to run the job. | `1` |
 | `NUM_GPUS` | Number of GPUs used during the run. Used for logging. | `0` |
 | `LOG_ENABLED` | Toggle for enabling/disabling logging. | `True` |
 | `LOG_LEVEL` | Level of output for logging statements. | `"DEBUG"` |
