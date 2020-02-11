@@ -44,14 +44,44 @@ from benchmarking import settings
 
 class TestJobManager(object):
 
+    def test_init(self):
+        mgr = manager.JobManager(
+            host='localhost',
+            model_name='m',
+            model_version='0',
+            data_scale='1',
+            data_label='1')
+
+        # test bad data_scale value
+        with pytest.raises(ValueError):
+            mgr = manager.JobManager(
+                host='localhost',
+                model_name='m',
+                model_version='0',
+                data_scale='one',
+                data_label='1')
+        # test bad data_label value
+        with pytest.raises(ValueError):
+            mgr = manager.JobManager(
+                host='localhost',
+                model_name='m',
+                model_version='0',
+                data_scale='1',
+                data_label='1.3')
+
     def test_make_job(self):
         mgr = manager.JobManager(
             host='localhost',
             model_name='m',
-            model_version='0')
+            model_version='0',
+            data_scale='1',
+            data_label='0')
 
         j1 = mgr.make_job('test.png', original_name=None)
         j2 = mgr.make_job('test.png', original_name='test.png')
+
+        assert j1.data_scale == mgr.data_scale == j2.data_scale
+        assert j1.data_label == mgr.data_label == j2.data_label
 
         assert j1.json() == j2.json()
 

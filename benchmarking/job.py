@@ -52,6 +52,22 @@ class Job(object):
         self.model_version = str(model_version)
         self.job_type = str(kwargs.get('job_type', 'segmentation'))
 
+        data_scale = str(kwargs.get('data_scale', ''))
+        if data_scale:
+            try:
+                data_scale = float(data_scale)
+            except ValueError:
+                raise ValueError('data_scale must be a number.')
+        self.data_scale = data_scale
+
+        data_label = str(kwargs.get('data_label', ''))
+        if data_label:
+            try:
+                data_label = int(data_label)
+            except ValueError:
+                raise ValueError('data_label must be an integer.')
+        self.data_label = data_label
+
         if not self.model_version.isdigit():
             raise ValueError('`model_version` must be a number, got ' +
                              self.model_version)
@@ -197,6 +213,7 @@ class Job(object):
     @defer.inlineCallbacks
     def create(self):
         # Build a deferred request to the create API
+        # See https://tinyurl.com/u3qs9om for expected POST data
         job_data = {
             'modelName': self.model_name,
             'modelVersion': self.model_version,
@@ -204,6 +221,8 @@ class Job(object):
             'postprocessFunction': self.postprocess,
             'imageName': self.filepath,
             'jobType': self.job_type,
+            'dataRescale': self.data_scale,
+            'dataLabel': self.data_label,
             'uploadedName': os.path.join(self.upload_prefix, self.filepath),
         }
         host = '{}/api/predict'.format(self.host)

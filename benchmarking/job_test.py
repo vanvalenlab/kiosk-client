@@ -104,12 +104,28 @@ class TestJob(object):
         assert j.is_done
         assert not j.is_summarized  # status=done AND other fields are not None
 
+        # model_version should be an integer
         with pytest.raises(ValueError):
-            # model_version should be an integer
             job.Job(filepath='test.png',
                     host='localhost',
                     model_name='model',
                     model_version='version')
+
+        # data_scale should be a float
+        with pytest.raises(ValueError):
+            job.Job(filepath='test.png',
+                    host='localhost',
+                    model_name='model',
+                    model_version='version',
+                    data_scale='one')
+
+        # data_label should be an int
+        with pytest.raises(ValueError):
+            job.Job(filepath='test.png',
+                    host='localhost',
+                    model_name='model',
+                    model_version='1',
+                    data_label='3.14')
 
     def test__log_http_response(self):
         j = _get_default_job()

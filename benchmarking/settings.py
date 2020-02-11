@@ -59,6 +59,8 @@ MODEL_NAME, MODEL_VERSION = MODEL.split(':')
 
 # Job Type
 JOB_TYPE = config('JOB_TYPE', default='segmentation')
+SCALE = config('SCALE', default='1')  # detect scale automatically if empty
+LABEL = config('LABEL', default='')   # detect data type automatically if empty
 
 # Pre- and Post-Processing functions
 PREPROCESS = config('PREPROCESS', default='')
