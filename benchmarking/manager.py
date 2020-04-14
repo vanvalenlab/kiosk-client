@@ -151,6 +151,7 @@ class JobManager(object):
             if j.failed:
                 j.restart(delay=self.start_delay * failed)
 
+            # TODO: patched! "done" jobs can get stranded before summarization
             if j.status == 'done' and not j.is_summarized:
                 j.summarize()
 
