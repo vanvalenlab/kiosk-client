@@ -151,6 +151,9 @@ class JobManager(object):
             if j.failed:
                 j.restart(delay=self.start_delay * failed)
 
+            if j.status == 'done' and not j.is_summarized:
+                j.summarize()
+
         self.logger.info('%s created; %s finished; %s summarized; '
                          '%s; %s jobs total', created, expired, complete,
                          '; '.join('%s %s' % (v, k)
