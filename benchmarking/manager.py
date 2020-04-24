@@ -155,6 +155,10 @@ class JobManager(object):
             if j.status == 'done' and not j.is_summarized:
                 j.summarize()
 
+            # TODO: patched! sometimes jobs don't get expired?
+            elif j.status == 'done' and j.is_summarized and not j.is_expired:
+                j.expire()
+
         self.logger.info('%s created; %s finished; %s summarized; '
                          '%s; %s jobs total', created, expired, complete,
                          '; '.join('%s %s' % (v, k)
