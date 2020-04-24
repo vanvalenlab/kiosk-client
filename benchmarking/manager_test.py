@@ -104,6 +104,10 @@ class TestJobManager(object):
         j2.status = 'failed'
         assert mgr.get_completed_job_count() == 0
 
+        j1.status = 'done'
+        j2.status = 'done'
+        assert mgr.get_completed_job_count() == 0
+
         def fake_restart(delay):
             return None
 
@@ -111,6 +115,16 @@ class TestJobManager(object):
         j1.restart = fake_restart
         j1.is_expired = True
         assert mgr.get_completed_job_count() == 1
+
+        # test patch, summarized but not expired
+        j1.failed = False
+        j1.status = 'done'
+        j1.created_at = 1
+        j1.finished_at = 1
+        j1.output_url = 1
+        j1.is_expired = False
+        j1.expire = lambda: None
+        assert mgr.get_completed_job_count() == 0
 
     def test_summarize(self):
 
