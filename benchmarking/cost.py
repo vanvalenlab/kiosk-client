@@ -212,7 +212,7 @@ class CostGetter(object):
         (cpu_node_costs, gpu_node_costs, total_node_costs) = \
             self.compute_costs(node_data)
         total_costs = total_node_costs + self.networking_costs
-        return (str(cpu_node_costs), str(gpu_node_costs), str(total_costs))
+        return str(cpu_node_costs), str(gpu_node_costs), str(total_costs)
 
     def parse_create_response(self, response):
         node_info = {}
@@ -278,7 +278,7 @@ class CostGetter(object):
             else:
                 gpu_node_costs = gpu_node_costs + node_cost
             total_node_costs = total_node_costs + node_cost
-        return (cpu_node_costs, gpu_node_costs, total_node_costs)
+        return cpu_node_costs, gpu_node_costs, total_node_costs
 
     def compute_hourly_cost(self, node_data):
         """Get the hourly cost of a given node"""
