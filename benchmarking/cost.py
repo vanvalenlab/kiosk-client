@@ -87,8 +87,6 @@ class CostGetter(object):
                  benchmarking_start_time=None,
                  benchmarking_end_time=None,
                  **kwargs):
-        self.logger = logging.getLogger(str(self.__class__.__name__))
-
         # validate benchmarking_start_time
         if benchmarking_start_time is None:
             benchmarking_start_time = self.get_time()
@@ -123,6 +121,7 @@ class CostGetter(object):
         self.grafana_user = settings.GRAFANA_USER
         self.grafana_password = settings.GRAFANA_PASSWORD
         self.grafana_host = settings.GRAFANA_HOST
+        self.logger = logging.getLogger(str(self.__class__.__name__))
 
     @classmethod
     def get_time(cls):
