@@ -199,33 +199,59 @@ class CostGetter(object):
         self.creation_data = creation_data
         self.label_data = label_data
 
-        node_data = self.parse_http_response_data(creation_data, label_data)
+        parsed_creation_data = self.parse_create_response(creation_data)
+        parsed_label_data = self.parse_label_response(label_data)
+
+        # merge the dictionaries
+        node_data = parsed_creation_data.copy()
+        for node_name in parsed_label_data:
+            if node_name in node_data:
+                for k in parsed_label_data:
+                    node_data[node_name][k] = parsed_label_data[k]
+
         (cpu_node_costs, gpu_node_costs, total_node_costs) = \
             self.compute_costs(node_data)
         total_costs = total_node_costs + self.networking_costs
         return (str(cpu_node_costs), str(gpu_node_costs), str(total_costs))
 
-    def parse_http_response_data(self, create_response, label_response):
+    def parse_create_response(self, response):
         node_info = {}
-
         # parse node liveness data
-        for time_series in create_response['data']['result']:
+        for time_series in response['data']['result']:
             # get node name and create dictionary entry
             node_name = time_series['metric']['node']
             node_info[node_name] = {}
             # get node lifetime
-            node_last_data_point = time_series['values'][-1]
-            node_start_time = int(node_last_data_point[1])
-            # We only want to count costs during benchmarking,
-            # in case we start benchmarking long after cluster creation.
-            if node_start_time < self.benchmarking_start_time:
-                node_start_time = self.benchmarking_start_time
-            node_end_time = node_last_data_point[0]
-            node_benchmarking_time = node_end_time - node_start_time
-            node_info[node_name]['lifetime'] = node_benchmarking_time
+            # Was there only one creation event?
+            first_event = time_series['values'][0]
+            last_event = time_series['values'][-1]
 
+            if first_event[-1] == last_event[-1]:
+                # they're the same! easy to calculate
+                created_at = int(last_event[-1])
+                # only count costs during the benchmarking window.
+                created_at = max(created_at, self.benchmarking_start_time)
+                node_info[node_name]['lifetime'] = last_event[0] - created_at
+                continue
+
+            # there was more than one creation event :(
+            # loop over list backward to find the final event for each creation
+            lifetime = 0
+            curr_label = None
+            for i in range(len(time_series['values']), 0, -1):
+                ts, created_at = time_series['values'][i]
+                created_at = int(created_at)
+                if created_at != curr_label: # a new label.
+                    created_at = max(created_at, self.benchmarking_start_time)
+                    lifetime += ts - created_at
+
+            node_info[node_name]['lifetime'] = lifetime
+        return node_info
+
+    def parse_label_response(self, response):
+        node_info = {}
         # parse node label data
-        for label_set in label_response['data']['result']:
+        for label_set in response['data']['result']:
             metric = label_set['metric']
 
             instance_type = metric['label_beta_kubernetes_io_instance_type']
@@ -233,10 +259,9 @@ class CostGetter(object):
             gpu = metric.get('label_cloud_google_com_gke_accelerator', 'none')
 
             node = metric.get('label_kubernetes_io_hostname')
-            if node in node_info:
-                node_info[node]['instance_type'] = instance_type
-                node_info[node]['preemptible'] = preemptible
-                node_info[node]['gpu'] = gpu
+            node_info[node]['instance_type'] = instance_type
+            node_info[node]['preemptible'] = preemptible
+            node_info[node]['gpu'] = gpu
 
         return node_info
 
