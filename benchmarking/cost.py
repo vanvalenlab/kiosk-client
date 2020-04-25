@@ -114,6 +114,7 @@ class CostGetter(object):
         self.benchmarking_end_time = benchmarking_end_time
 
         # initialize other necessary variables
+        self.min_step = 15
         self.cost_table = kwargs.get('cost_table', COST_TABLE)
         self.gpu_table = kwargs.get('gpu_table', GPU_TABLE)
         self.networking_costs = kwargs.get('networking_costs', NETWORKING_COSTS)
@@ -130,28 +131,71 @@ class CostGetter(object):
         # to establish the beginning or end of cost accrual.
         return int(time.time())
 
+    def get_query_data(self, query, step=None):
+        """Return a payload of the given query for the Grafana API"""
+        step = self.min_step if step is None else step
+        return {
+            'query': query,
+            'start': self.benchmarking_start_time,
+            'end': self.benchmarking_end_time,
+            'step': step,
+        }
+
+    def get_url(self, data):
+        """Return a formatted URL for the Grafana API"""
+        return 'http://{user}:{passwd}@{host}{route}?{querystring}'.format(
+            user=self.grafana_user,
+            passwd=self.grafana_password,
+            host=self.grafana_host,
+            route='/api/datasources/proxy/1/api/v1/query_range',
+            querystring=urllib.parse.urlencode(data))
+
+    def send_grafana_api_request(self, query, step=None):
+        """Send a HTTP GET request with the data url encoded"""
+        # initialize retry loop values
+        status_code = None
+        errortext = None
+        is_first_req = True
+
+        # error text found in requests that are too large. must increase step.
+        retryable_errortext = 'exceeded maximum resolution'
+
+        reqdata = self.get_query_data(query, step)
+
+        status_is_400 = lambda x: x is None or x == 400
+        retryable_error = lambda x: x is None or retryable_errortext in str(x)
+
+        # if there are too many datapoints, a 400 error code is returned.
+        # inspect the error text to confirm.
+        while status_is_400(status_code) and retryable_error(errortext):
+            # don't spam the API
+            time.sleep(0.5 * int(not is_first_req))
+
+            reqdata['step'] += self.min_step * int(not is_first_req)
+            url = self.get_url(reqdata)
+
+            response = requests.get(url)
+            status_code = response.status_code
+
+            jsondata = response.json()
+
+            if status_code != 200:
+                is_first_req = False  # starting to retry
+                errortext = jsondata.get('error', '')
+                self.logger.warning('%s request failed due to error: %s',
+                                    query, errortext)
+
+        return jsondata
+
     def finish(self):
         # This is the wrapper function for all the functionality
         # that will executed immediately once benchmarking is finished.
         if not self.benchmarking_end_time:
             self.benchmarking_end_time = self.get_time()
 
-        create_request = self.get_http_request({
-            'query': 'kube_node_created',
-            'start': self.benchmarking_start_time,
-            'end': self.benchmarking_end_time,
-            'step': 15
-        })
+        creation_data = self.send_grafana_api_request('kube_node_created')
+        label_data = self.send_grafana_api_request('kube_node_labels')
 
-        label_request = self.get_http_request({
-            'query': 'kube_node_labels',
-            'start': self.benchmarking_start_time,
-            'end': self.benchmarking_end_time,
-            'step': 15
-        })
-
-        creation_data = requests.get(create_request).json()
-        label_data = requests.get(label_request).json()
         self.creation_data = creation_data
         self.label_data = label_data
 
@@ -160,15 +204,6 @@ class CostGetter(object):
             self.compute_costs(node_data)
         total_costs = total_node_costs + self.networking_costs
         return (str(cpu_node_costs), str(gpu_node_costs), str(total_costs))
-
-    def get_http_request(self, data):
-        """Return a formatted URL for the grafana API"""
-        return 'http://{user}:{passwd}@{host}{route}?{querystring}'.format(
-            user=self.grafana_user,
-            passwd=self.grafana_password,
-            host=self.grafana_host,
-            route='/api/datasources/proxy/1/api/v1/query_range',
-            querystring=urllib.parse.urlencode(data))
 
     def parse_http_response_data(self, create_response, label_response):
         node_info = {}
