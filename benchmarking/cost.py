@@ -254,14 +254,16 @@ class CostGetter(object):
         for label_set in response['data']['result']:
             metric = label_set['metric']
 
+            node_name = metric.get('label_kubernetes_io_hostname')
+            node_info[node_name] = {}
+
             instance_type = metric['label_beta_kubernetes_io_instance_type']
             preemptible = 'label_cloud_google_com_gke_preemptible' in metric
             gpu = metric.get('label_cloud_google_com_gke_accelerator')
 
-            node = metric.get('label_kubernetes_io_hostname')
-            node_info[node]['instance_type'] = instance_type
-            node_info[node]['preemptible'] = preemptible
-            node_info[node]['gpu'] = gpu
+            node_info[node_name]['instance_type'] = instance_type
+            node_info[node_name]['preemptible'] = preemptible
+            node_info[node_name]['gpu'] = gpu
 
         return node_info
 
