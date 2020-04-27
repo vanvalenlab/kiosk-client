@@ -206,8 +206,8 @@ class CostGetter(object):
         node_data = parsed_creation_data.copy()
         for node_name in parsed_label_data:
             if node_name in node_data:
-                for k in parsed_label_data:
-                    node_data[node_name][k] = parsed_label_data[k]
+                for k in parsed_label_data[node_name]:
+                    node_data[node_name][k] = parsed_label_data[node_name][k]
 
         (cpu_node_costs, gpu_node_costs, total_node_costs) = \
             self.compute_costs(node_data)
