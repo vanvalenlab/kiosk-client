@@ -275,7 +275,7 @@ class CostGetter(object):
         for _, node_dict in node_data.items():
             node_hourly_cost = self.compute_hourly_cost(node_dict)
             node_cost = node_hourly_cost * (node_dict['lifetime'] / 60 / 60)
-            if node_dict['gpu'] == "none":
+            if not node_dict['gpu']:
                 cpu_node_costs = cpu_node_costs + node_cost
             else:
                 gpu_node_costs = gpu_node_costs + node_cost
