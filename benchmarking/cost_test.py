@@ -326,6 +326,10 @@ class TestCostGetter(object):
         node_dict = {
             'instance_type': 'n1-highmem-2',
             'gpu': 'nvidia-tesla-v100',
-            'preemptible': False
         }
-        assert cg.compute_hourly_cost(node_dict) == 2.5984
+        for preemptible in (True, False):
+            node_dict['preemptible'] = preemptible
+            k = 'preemptible' if preemptible else 'ondemand'
+            expected = (cost.COST_TABLE[node_dict['instance_type']][k] +
+                        cost.GPU_TABLE[node_dict['gpu']][k])
+            assert cg.compute_hourly_cost(node_dict) == expected
