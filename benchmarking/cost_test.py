@@ -33,7 +33,7 @@ import time
 import pytest
 import requests.exceptions
 
-from benchmarking.cost import CostGetter
+from benchmarking import cost
 
 
 class FakeCreationData:
@@ -199,27 +199,27 @@ class TestCostGetter(object):
     def monkeypatch(self, monkeypatch):
         monkeypatch.setattr(requests, 'get', self.fake_requests_get)
 
-    def test___init__(self):
+    def test_init(self):
         # times are intentionally not being cast to ints
         now = time.time()
         nower = now * 2
         # passing start but not end time
         with pytest.raises(ValueError):
-            CostGetter(benchmarking_start_time=nower)
+            cost.CostGetter(benchmarking_start_time=nower)
         # passing end but not start time
         with pytest.raises(ValueError):
-            CostGetter(benchmarking_end_time=0)
+            cost.CostGetter(benchmarking_end_time=0)
         # passing both start and end times
-        CostGetter(benchmarking_start_time=now, benchmarking_end_time=now)
+        cost.CostGetter(benchmarking_start_time=now, benchmarking_end_time=now)
 
     def test_get_time(self):
-        cg = CostGetter()  # object creation
+        cg = cost.CostGetter()  # object creation
         old_time = int(time.time())
         new_time = cg.get_time()
         assert old_time <= new_time
 
     def test_finish(self):
-        cg = CostGetter()
+        cg = cost.CostGetter()
         # benchmarking_end_time is not generated until finish() is called
         assert not cg.benchmarking_end_time
 
@@ -263,7 +263,7 @@ class TestCostGetter(object):
 
     def test_parse_http_response_data_old_node(self):
         # object creation
-        cg = CostGetter()
+        cg = cost.CostGetter()
 
         # needed patch for testing
         cg.benchmarking_start_time = 1562872554
@@ -284,7 +284,7 @@ class TestCostGetter(object):
             assert isinstance(node_info[key]['preemptible'], bool)
 
     def test_compute_costs_with_patched_function(self):
-        cg = CostGetter()
+        cg = cost.CostGetter()
 
         # needed patch for testing
         cg.benchmarking_start_time = 1562872553
@@ -301,7 +301,7 @@ class TestCostGetter(object):
         assert float('%.9f' % (total_costs)) == 0.255695222
 
     def test_compute_costs_without_patched_function(self):
-        cg = CostGetter()
+        cg = cost.CostGetter()
         node_info = {
             'node1': {
                 'lifetime': 3600,
@@ -322,7 +322,7 @@ class TestCostGetter(object):
         assert total_costs == 5.1968
 
     def test_compute_hourly_cost(self):
-        cg = CostGetter()
+        cg = cost.CostGetter()
         node_dict = {
             'instance_type': 'n1-highmem-2',
             'gpu': 'nvidia-tesla-v100',
