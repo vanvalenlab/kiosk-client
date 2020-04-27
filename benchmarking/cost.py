@@ -256,7 +256,7 @@ class CostGetter(object):
 
             instance_type = metric['label_beta_kubernetes_io_instance_type']
             preemptible = 'label_cloud_google_com_gke_preemptible' in metric
-            gpu = metric.get('label_cloud_google_com_gke_accelerator', 'none')
+            gpu = metric.get('label_cloud_google_com_gke_accelerator')
 
             node = metric.get('label_kubernetes_io_hostname')
             node_info[node]['instance_type'] = instance_type
@@ -291,7 +291,7 @@ class CostGetter(object):
 
         instance_cost = self.cost_table[instance_type][key]
 
-        gpu_cost = 0 if gpu == 'none' else self.gpu_table[gpu][key]
+        gpu_cost = 0 if not gpu else self.gpu_table[gpu][key]
 
         hourly_cost = instance_cost + gpu_cost
         return hourly_cost
