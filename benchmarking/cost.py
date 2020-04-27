@@ -238,7 +238,7 @@ class CostGetter(object):
             # loop over list backward to find the final event for each creation
             lifetime = 0
             curr_label = None
-            for i in range(len(time_series['values']), 0, -1):
+            for i in range(len(time_series['values']) - 1, 0, -1):
                 ts, created_at = time_series['values'][i]
                 created_at = int(created_at)
                 if created_at != curr_label: # a new label.
