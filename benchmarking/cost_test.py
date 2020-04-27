@@ -44,17 +44,17 @@ class FakeCreationData:
             'data': {
                 'result': [
                     {
-                        "metric": {
-                            "__name__": "kube_node_created",
-                            "endpoint": "http",
-                            "instance": "10.48.5.8:8080",
-                            "job": "kube-state-metrics",
-                            "namespace": "test",
-                            "node": "test_node_1",
-                            "pod": "prometheus-operator-kube-state-metrics-1",
-                            "service": "prometheus-operator-kube-state-metrics"
+                        'metric': {
+                            '__name__': 'kube_node_created',
+                            'endpoint': 'http',
+                            'instance': '10.48.5.8:8080',
+                            'job': 'kube-state-metrics',
+                            'namespace': 'test',
+                            'node': 'test_node_1',
+                            'pod': 'prometheus-operator-kube-state-metrics-1',
+                            'service': 'prometheus-operator-kube-state-metrics'
                         },
-                        "values": [
+                        'values': [
                             [
                                 1562872560,
                                 "1562872553"
@@ -66,17 +66,17 @@ class FakeCreationData:
                         ]
                     },
                     {
-                        "metric": {
-                            "__name__": "kube_node_created",
-                            "endpoint": "http",
-                            "instance": "10.48.5.9:8080",
-                            "job": "kube-state-metrics",
-                            "namespace": "test",
-                            "node": "test_node_2",
-                            "pod": "prometheus-operator-kube-state-metrics-1",
-                            "service": "prometheus-operator-kube-state-metrics"
+                        'metric': {
+                            '__name__': 'kube_node_created',
+                            'endpoint': 'http',
+                            'instance': '10.48.5.9:8080',
+                            'job': 'kube-state-metrics',
+                            'namespace': 'test',
+                            'node': 'test_node_2',
+                            'pod': 'prometheus-operator-kube-state-metrics-1',
+                            'service': 'prometheus-operator-kube-state-metrics'
                         },
-                        "values": [
+                        'values': [
                             [
                                 1562872560,
                                 "1562872553"
@@ -99,105 +99,105 @@ class FakeLabelData:
     @staticmethod
     def json():
         return {
-            "data": {
-                "result": [
+            'data': {
+                'result': [
                     {
-                        "metric": {
-                            "__name__": "kube_node_labels",
-                            "endpoint": "http",
-                            "instance": "10.48.5.8:8080",
-                            "job": "kube-state-metrics",
-                            "label_beta_kubernetes_io_arch": "amd64",
-                            "label_beta_kubernetes_io_fluentd_ds_ready":
-                                "true",
-                            "label_beta_kubernetes_io_instance_type":
-                                "n1-highmem-2",
-                            "label_beta_kubernetes_io_os": "linux",
-                            "label_cloud_google_com_gke_accelerator":
-                                "nvidia-tesla-v100",
-                            "label_cloud_google_com_gke_nodepool":
-                                "prediction-gpu",
-                            "label_cloud_google_com_gke_os_distribution":
-                                "cos",
-                            "label_cloud_google_com_gke_preemptible": "true",
-                            "label_failure_domain_beta_kubernetes_io_region":
-                                "us-west1",
-                            "label_failure_domain_beta_kubernetes_io_zone":
-                                "us-west1-a",
-                            "label_kubernetes_io_hostname": "test_node_1",
-                            "namespace": "monitoring",
-                            "node": "test_node_1",
-                            "pod": "prometheus-operator-kube-state-metrics-1",
-                            "service": "prometheus-operator-kube-state-metrics"
+                        'metric': {
+                            '__name__': 'kube_node_labels',
+                            'endpoint': 'http',
+                            'instance': '10.48.5.8:8080',
+                            'job': 'kube-state-metrics',
+                            'label_beta_kubernetes_io_arch': 'amd64',
+                            'label_beta_kubernetes_io_fluentd_ds_ready':
+                                'true',
+                            'label_beta_kubernetes_io_instance_type':
+                                'n1-highmem-2',
+                            'label_beta_kubernetes_io_os': 'linux',
+                            'label_cloud_google_com_gke_accelerator':
+                                'nvidia-tesla-v100',
+                            'label_cloud_google_com_gke_nodepool':
+                                'prediction-gpu',
+                            'label_cloud_google_com_gke_os_distribution':
+                                'cos',
+                            'label_cloud_google_com_gke_preemptible': 'true',
+                            'label_failure_domain_beta_kubernetes_io_region':
+                                'us-west1',
+                            'label_failure_domain_beta_kubernetes_io_zone':
+                                'us-west1-a',
+                            'label_kubernetes_io_hostname': 'test_node_1',
+                            'namespace': 'monitoring',
+                            'node': 'test_node_1',
+                            'pod': 'prometheus-operator-kube-state-metrics-1',
+                            'service': 'prometheus-operator-kube-state-metrics'
                         },
-                        "values": [
+                        'values': [
                             [
                                 1562872560,
-                                "1"
+                                '1'
                             ],
                             [
                                 1562873595,
-                                "1"
+                                '1'
                             ]
                         ]
                     },
                     {
-                        "metric": {
-                            "__name__": "kube_node_labels",
-                            "endpoint": "http",
-                            "instance": "10.48.5.9:8080",
-                            "job": "kube-state-metrics",
-                            "label_beta_kubernetes_io_arch": "amd64",
-                            "label_beta_kubernetes_io_fluentd_ds_ready":
-                                "true",
-                            "label_beta_kubernetes_io_instance_type":
-                                "n1-highmem-2",
-                            "label_beta_kubernetes_io_os": "linux",
-                            "label_cloud_google_com_gke_nodepool":
-                                "logstash-cpu",
-                            "label_cloud_google_com_gke_os_distribution":
-                                "cos",
-                            "label_failure_domain_beta_kubernetes_io_region":
-                                "us-west1",
-                            "label_failure_domain_beta_kubernetes_io_zone":
-                                "us-west1-a",
-                            "label_kubernetes_io_hostname": "test_node_2",
-                            "namespace": "monitoring",
-                            "node": "test_node_1",
-                            "pod": "prometheus-operator-kube-state-metrics-1",
-                            "service": "prometheus-operator-kube-state-metrics"
+                        'metric': {
+                            '__name__': 'kube_node_labels',
+                            'endpoint': 'http',
+                            'instance': '10.48.5.9:8080',
+                            'job': 'kube-state-metrics',
+                            'label_beta_kubernetes_io_arch': 'amd64',
+                            'label_beta_kubernetes_io_fluentd_ds_ready':
+                                'true',
+                            'label_beta_kubernetes_io_instance_type':
+                                'n1-highmem-2',
+                            'label_beta_kubernetes_io_os': 'linux',
+                            'label_cloud_google_com_gke_nodepool':
+                                'logstash-cpu',
+                            'label_cloud_google_com_gke_os_distribution':
+                                'cos',
+                            'label_failure_domain_beta_kubernetes_io_region':
+                                'us-west1',
+                            'label_failure_domain_beta_kubernetes_io_zone':
+                                'us-west1-a',
+                            'label_kubernetes_io_hostname': 'test_node_2',
+                            'namespace': 'monitoring',
+                            'node': 'test_node_1',
+                            'pod': 'prometheus-operator-kube-state-metrics-1',
+                            'service': 'prometheus-operator-kube-state-metrics'
                         },
-                        "values": [
+                        'values': [
                             [
                                 1562872560,
-                                "1"
+                                '1'
                             ],
                             [
                                 1562873595,
-                                "1"
+                                '1'
                             ]
                         ]
                     },
                 ],
-                "resultType": "matrix"
+                'resultType': 'matrix'
             },
-            "status": "success"
+            'status': 'success'
         }
 
 
 class TestCostGetter(object):
 
     def fake_requests_get(self, http_request, **_):
-        if "kube_node_created" in http_request:
+        if 'kube_node_created' in http_request:
             return FakeCreationData()
-        if "kube_node_labels" in http_request:
+        if 'kube_node_labels' in http_request:
             return FakeLabelData()
-        raise ValueError("Your http_request doesn't "
-                         "contain a recognized Grafana metric.")
+        raise ValueError('Your http_request does not contain '
+                         'a recognized Grafana metric.')
 
     @pytest.fixture(autouse=True)
     def monkeypatch(self, monkeypatch):
-        monkeypatch.setattr(requests, "get", self.fake_requests_get)
+        monkeypatch.setattr(requests, 'get', self.fake_requests_get)
 
     def test___init__(self):
         # times are intentionally not being cast to ints
@@ -296,9 +296,9 @@ class TestCostGetter(object):
         node_info = cg.parse_http_response_data(creation_data, label_data)
 
         cpu_costs, gpu_costs, total_costs = cg.compute_costs(node_info)
-        assert float("%.9f" % (cpu_costs)) == 0.034270222
+        assert float('%.9f' % (cpu_costs)) == 0.034270222
         assert gpu_costs == 0.221425
-        assert float("%.9f" % (total_costs)) == 0.255695222
+        assert float('%.9f' % (total_costs)) == 0.255695222
 
     def test_compute_costs_without_patched_function(self):
         cg = CostGetter()
