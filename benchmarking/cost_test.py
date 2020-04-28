@@ -28,6 +28,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import random
 import time
 
 import pytest
@@ -38,8 +39,12 @@ from benchmarking import cost
 
 class FakeCreationData:
 
+    status_code = 200
+
     @staticmethod
-    def json():
+    def json(created_at=None, lifetime=10):
+        if created_at is None:
+            created_at = int(time.time())
         return {
             'data': {
                 'result': [
@@ -56,12 +61,12 @@ class FakeCreationData:
                         },
                         'values': [
                             [
-                                1562872560,
-                                "1562872553"
+                                created_at,
+                                str(created_at)
                             ],
                             [
-                                1562873595,
-                                "1562872553"
+                                created_at + lifetime,
+                                str(created_at)
                             ]
                         ]
                     },
@@ -78,12 +83,20 @@ class FakeCreationData:
                         },
                         'values': [
                             [
-                                1562872560,
-                                "1562872553"
+                                created_at,
+                                str(created_at)
                             ],
                             [
-                                1562873595,
-                                "1562872553"
+                                created_at + lifetime - lifetime // 2,
+                                str(created_at)
+                            ],
+                            [
+                                created_at + lifetime - lifetime // 2,
+                                str(created_at + lifetime - lifetime // 2)
+                            ],
+                            [
+                                created_at + lifetime,
+                                str(created_at + lifetime - lifetime // 2)
                             ]
                         ]
                     },
@@ -96,8 +109,12 @@ class FakeCreationData:
 
 class FakeLabelData:
 
+    status_code = 200
+
     @staticmethod
-    def json():
+    def json(created_at=None, lifetime=10):
+        if created_at is None:
+            created_at = int(time.time())
         return {
             'data': {
                 'result': [
@@ -132,11 +149,11 @@ class FakeLabelData:
                         },
                         'values': [
                             [
-                                1562872560,
+                                created_at,
                                 '1'
                             ],
                             [
-                                1562873595,
+                                created_at + lifetime,
                                 '1'
                             ]
                         ]
@@ -163,17 +180,17 @@ class FakeLabelData:
                                 'us-west1-a',
                             'label_kubernetes_io_hostname': 'test_node_2',
                             'namespace': 'monitoring',
-                            'node': 'test_node_1',
+                            'node': 'test_node_2',
                             'pod': 'prometheus-operator-kube-state-metrics-1',
                             'service': 'prometheus-operator-kube-state-metrics'
                         },
                         'values': [
                             [
-                                1562872560,
+                                created_at,
                                 '1'
                             ],
                             [
-                                1562873595,
+                                created_at + lifetime,
                                 '1'
                             ]
                         ]
@@ -219,88 +236,93 @@ class TestCostGetter(object):
         assert old_time <= new_time
 
     def test_finish(self):
-        cg = cost.CostGetter()
+        start_time = time.time() - 100  # started 100s ago
+        cg = cost.CostGetter(benchmarking_start_time=start_time)
+
         # benchmarking_end_time is not generated until finish() is called
         assert not cg.benchmarking_end_time
 
-        # needed patch for testing
-        cg.benchmarking_start_time = 1562872553
-
         cpu_costs, gpu_costs, total_costs = cg.finish()
+
         # did benchmarking_end_time get auto-generated?
         assert cg.benchmarking_end_time
-        # did patch work?
-        assert cg.creation_data == FakeCreationData.json()
-        assert cg.label_data == FakeLabelData.json()
+
         # did entire pipeline process correctly?
         cpu_costs = float(cpu_costs)
         total_costs = float(total_costs)
-        assert "%.9f" % (cpu_costs) == "0.034270222"
-        assert gpu_costs == "0.221425"
-        assert "%.9f" % (total_costs) == "7.255695222"
+        gpu_costs = float(gpu_costs)
+        assert '%.9f' % (cpu_costs) == '0.000328889'
+        assert '%.9f' % (gpu_costs) == '0.002125000'
+        assert '%.9f' % (total_costs) == '7.002453889'
 
-    def test_parse_http_response_data_fresh_node(self):
-        # object creation
-        cg = CostGetter()
+    def test_parse_create_response(self):
+        # test node exists after benchmarking
+        start_time = int(time.time()) - 100  # a little while ago.
+        cg = cost.CostGetter(benchmarking_start_time=start_time)
 
-        # needed patch for testing
-        cg.benchmarking_start_time = 1562872552
+        expected_node_names = ['test_node_1', 'test_node_2']
+        lifetime = random.randint(20, 100)
 
-        # patching HTTP request responses
-        creation_data = FakeCreationData.json()
-        label_data = FakeLabelData.json()
+        creation_data = FakeCreationData.json(
+            created_at=start_time + 10,  # node started after benchmarking
+            lifetime=lifetime)
 
-        node_info = cg.parse_http_response_data(creation_data, label_data)
-        name = 'test_node_1'
-        assert node_info[name]['lifetime'] == 1042
-        assert node_info[name]['instance_type'] == 'n1-highmem-2'
-        assert node_info[name]['preemptible']
-        assert node_info[name]['gpu'] == 'nvidia-tesla-v100'
+        node_info = cg.parse_create_response(creation_data)
 
-        for key in node_info:
-            assert isinstance(node_info[key]['lifetime'], int)
-            assert isinstance(node_info[key]['preemptible'], bool)
+        for name in expected_node_names:
+            assert node_info[name]['lifetime'] == lifetime
 
-    def test_parse_http_response_data_old_node(self):
-        # object creation
-        cg = cost.CostGetter()
+        # test node exists before benchmarking
+        creation_data = FakeCreationData.json(
+            created_at=start_time - 10,  # node started before benchmarking
+            lifetime=lifetime)
 
-        # needed patch for testing
-        cg.benchmarking_start_time = 1562872554
+        node_info = cg.parse_create_response(creation_data)
 
-        # patching HTTP request responses
-        creation_data = FakeCreationData.json()
-        label_data = FakeLabelData.json()
+        for name in expected_node_names:
+            assert node_info[name]['lifetime'] == lifetime - 10
 
-        node_info = cg.parse_http_response_data(creation_data, label_data)
-        name = 'test_node_1'
-        assert node_info[name]['lifetime'] == 1041
-        assert node_info[name]['instance_type'] == 'n1-highmem-2'
-        assert node_info[name]['preemptible']
-        assert node_info[name]['gpu'] == 'nvidia-tesla-v100'
+    def test_parse_label_response(self):
+        # test node exists after benchmarking
+        start_time = int(time.time()) - 100  # a little while ago.
+        cg = cost.CostGetter(benchmarking_start_time=start_time)
 
-        for key in node_info:
-            assert isinstance(node_info[key]['lifetime'], int)
-            assert isinstance(node_info[key]['preemptible'], bool)
+        expected_node_names = ['test_node_1', 'test_node_2']
+        expected_preemptibles = [True, False]
+        expected_gpus = ['nvidia-tesla-v100', None]
 
-    def test_compute_costs_with_patched_function(self):
-        cg = cost.CostGetter()
+        expected = zip(
+            expected_node_names,
+            expected_preemptibles,
+            expected_gpus
+        )
 
-        # needed patch for testing
-        cg.benchmarking_start_time = 1562872553
+        lifetime = random.randint(11, 100)
 
-        # patching HTTP request responses
-        creation_data = FakeCreationData.json()
-        label_data = FakeLabelData.json()
+        creation_data = FakeLabelData.json(
+            created_at=start_time + 10,  # node started after benchmarking
+            lifetime=lifetime)
 
-        node_info = cg.parse_http_response_data(creation_data, label_data)
+        node_info = cg.parse_label_response(creation_data)
 
-        cpu_costs, gpu_costs, total_costs = cg.compute_costs(node_info)
-        assert float('%.9f' % (cpu_costs)) == 0.034270222
-        assert gpu_costs == 0.221425
-        assert float('%.9f' % (total_costs)) == 0.255695222
+        for name, pre, gpu in expected:
+            assert node_info[name]['instance_type'] == 'n1-highmem-2'
+            assert node_info[name]['preemptible'] is pre
+            assert node_info[name]['gpu'] == gpu
 
-    def test_compute_costs_without_patched_function(self):
+        # test node exists before benchmarking
+        creation_data = FakeLabelData.json(
+            created_at=start_time - 10,  # node started before benchmarking
+            lifetime=lifetime)
+
+        node_info = cg.parse_label_response(creation_data)
+
+        for name, pre, gpu in expected:
+            assert node_info[name]['instance_type'] == 'n1-highmem-2'
+            assert node_info[name]['preemptible'] is pre
+            assert node_info[name]['gpu'] == gpu
+
+    def test_compute_costs(self):
         cg = cost.CostGetter()
         node_info = {
             'node1': {
