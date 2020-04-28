@@ -196,9 +196,6 @@ class CostGetter(object):
         creation_data = self.send_grafana_api_request('kube_node_created')
         label_data = self.send_grafana_api_request('kube_node_labels')
 
-        self.creation_data = creation_data
-        self.label_data = label_data
-
         parsed_creation_data = self.parse_create_response(creation_data)
         parsed_label_data = self.parse_label_response(label_data)
 
