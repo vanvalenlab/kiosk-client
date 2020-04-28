@@ -39,7 +39,13 @@ from benchmarking import cost
 
 class FakeCreationData:
 
-    status_code = 200
+    _status_code = 400
+
+    @property
+    def status_code(self):
+        code = self._status_code
+        if code == 400:
+            self._status_code = 200
 
     @staticmethod
     def json(created_at=None, lifetime=10):
@@ -113,7 +119,13 @@ class FakeCreationData:
 
 class FakeLabelData:
 
-    status_code = 200
+    _status_code = 400
+
+    @property
+    def status_code(self):
+        code = self._status_code
+        if code == 400:
+            self._status_code = 200
 
     @staticmethod
     def json(created_at=None, lifetime=10):
@@ -238,6 +250,11 @@ class TestCostGetter(object):
         old_time = int(time.time())
         new_time = cg.get_time()
         assert old_time <= new_time
+
+    def test_send_grafana_api_request(self):
+        cg = cost.CostGetter()
+        response = cg.send_grafana_api_request('kube_node_created')
+        assert isinstance(response, dict)
 
     def test_finish(self):
         start_time = time.time() - 100  # started 100s ago
