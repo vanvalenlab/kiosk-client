@@ -95,7 +95,7 @@ class FakeCreationData:
                                 str(created_at + lifetime - lifetime // 2)
                             ],
                             [
-                                created_at + lifetime -1,
+                                created_at + lifetime - 1,
                                 str(created_at + lifetime - lifetime // 2)
                             ],
                             [
