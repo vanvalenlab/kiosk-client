@@ -239,6 +239,7 @@ class CostGetter(object):
                 ts, created_at = time_series['values'][i]
                 created_at = int(created_at)
                 if created_at != curr_label:  # a new label.
+                    curr_label = created_at
                     created_at = max(created_at, self.benchmarking_start_time)
                     lifetime += ts - created_at
 
