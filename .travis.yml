@@ -15,7 +15,7 @@ cache: pip
 
 install:
   - pip install -r requirements.txt
-  - pip install pytest pytest-twisted pytest-cov pytest-pep8 coveralls
+  - pip install -U pytest pytest-twisted pytest-cov pytest-pep8 coveralls
 
 script:
   - pytest --cov=benchmarking --pep8 benchmarking
