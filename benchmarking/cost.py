@@ -87,8 +87,6 @@ class CostGetter(object):
                  benchmarking_start_time=None,
                  benchmarking_end_time=None,
                  **kwargs):
-        self.logger = logging.getLogger(str(self.__class__.__name__))
-
         # validate benchmarking_start_time
         if benchmarking_start_time is None:
             benchmarking_start_time = self.get_time()
@@ -116,6 +114,7 @@ class CostGetter(object):
         self.benchmarking_end_time = benchmarking_end_time
 
         # initialize other necessary variables
+        self.min_step = 15
         self.cost_table = kwargs.get('cost_table', COST_TABLE)
         self.gpu_table = kwargs.get('gpu_table', GPU_TABLE)
         self.networking_costs = kwargs.get('networking_costs', NETWORKING_COSTS)
@@ -123,6 +122,7 @@ class CostGetter(object):
         self.grafana_user = settings.GRAFANA_USER
         self.grafana_password = settings.GRAFANA_PASSWORD
         self.grafana_host = settings.GRAFANA_HOST
+        self.logger = logging.getLogger(str(self.__class__.__name__))
 
     @classmethod
     def get_time(cls):
@@ -131,39 +131,18 @@ class CostGetter(object):
         # to establish the beginning or end of cost accrual.
         return int(time.time())
 
-    def finish(self):
-        # This is the wrapper function for all the functionality
-        # that will executed immediately once benchmarking is finished.
-        if not self.benchmarking_end_time:
-            self.benchmarking_end_time = self.get_time()
-
-        create_request = self.get_http_request({
-            'query': 'kube_node_created',
+    def get_query_data(self, query, step=None):
+        """Return a payload of the given query for the Grafana API"""
+        step = self.min_step if step is None else step
+        return {
+            'query': query,
             'start': self.benchmarking_start_time,
             'end': self.benchmarking_end_time,
-            'step': 15
-        })
+            'step': step,
+        }
 
-        label_request = self.get_http_request({
-            'query': 'kube_node_labels',
-            'start': self.benchmarking_start_time,
-            'end': self.benchmarking_end_time,
-            'step': 15
-        })
-
-        creation_data = requests.get(create_request).json()
-        label_data = requests.get(label_request).json()
-        self.creation_data = creation_data
-        self.label_data = label_data
-
-        node_data = self.parse_http_response_data(creation_data, label_data)
-        (cpu_node_costs, gpu_node_costs, total_node_costs) = \
-            self.compute_costs(node_data)
-        total_costs = total_node_costs + self.networking_costs
-        return (str(cpu_node_costs), str(gpu_node_costs), str(total_costs))
-
-    def get_http_request(self, data):
-        """Return a formatted URL for the grafana API"""
+    def get_url(self, data):
+        """Return a formatted URL for the Grafana API"""
         return 'http://{user}:{passwd}@{host}{route}?{querystring}'.format(
             user=self.grafana_user,
             passwd=self.grafana_password,
@@ -171,38 +150,118 @@ class CostGetter(object):
             route='/api/datasources/proxy/1/api/v1/query_range',
             querystring=urllib.parse.urlencode(data))
 
-    def parse_http_response_data(self, create_response, label_response):
-        node_info = {}
+    def send_grafana_api_request(self, query, step=None):
+        """Send a HTTP GET request with the data url encoded"""
+        # initialize retry loop values
+        status_code = None
+        errortext = None
+        is_first_req = True
 
+        # error text found in requests that are too large. must increase step.
+        retryable_errortext = 'exceeded maximum resolution'
+
+        reqdata = self.get_query_data(query, step)
+
+        status_is_400 = lambda x: x is None or x == 400
+        retryable_error = lambda x: x is None or retryable_errortext in str(x)
+
+        # if there are too many datapoints, a 400 error code is returned.
+        # inspect the error text to confirm.
+        while status_is_400(status_code) and retryable_error(errortext):
+            # don't spam the API
+            time.sleep(0.5 * int(not is_first_req))
+
+            reqdata['step'] += self.min_step * int(not is_first_req)
+            url = self.get_url(reqdata)
+
+            response = requests.get(url)
+            status_code = response.status_code
+
+            jsondata = response.json()
+
+            if status_code != 200:
+                is_first_req = False  # starting to retry
+                errortext = jsondata.get('error', '')
+                self.logger.warning('%s request failed due to error: %s',
+                                    query, errortext)
+
+        return jsondata
+
+    def finish(self):
+        # This is the wrapper function for all the functionality
+        # that will executed immediately once benchmarking is finished.
+        if not self.benchmarking_end_time:
+            self.benchmarking_end_time = self.get_time()
+
+        creation_data = self.send_grafana_api_request('kube_node_created')
+        label_data = self.send_grafana_api_request('kube_node_labels')
+
+        parsed_creation_data = self.parse_create_response(creation_data)
+        parsed_label_data = self.parse_label_response(label_data)
+
+        # merge the dictionaries
+        node_data = parsed_creation_data.copy()
+        for node_name in parsed_label_data:
+            if node_name in node_data:
+                for k in parsed_label_data[node_name]:
+                    node_data[node_name][k] = parsed_label_data[node_name][k]
+
+        (cpu_node_costs, gpu_node_costs, total_node_costs) = \
+            self.compute_costs(node_data)
+        total_costs = total_node_costs + self.networking_costs
+        return str(cpu_node_costs), str(gpu_node_costs), str(total_costs)
+
+    def parse_create_response(self, response):
+        node_info = {}
         # parse node liveness data
-        for time_series in create_response['data']['result']:
+        for time_series in response['data']['result']:
             # get node name and create dictionary entry
             node_name = time_series['metric']['node']
             node_info[node_name] = {}
             # get node lifetime
-            node_last_data_point = time_series['values'][-1]
-            node_start_time = int(node_last_data_point[1])
-            # We only want to count costs during benchmarking,
-            # in case we start benchmarking long after cluster creation.
-            if node_start_time < self.benchmarking_start_time:
-                node_start_time = self.benchmarking_start_time
-            node_end_time = node_last_data_point[0]
-            node_benchmarking_time = node_end_time - node_start_time
-            node_info[node_name]['lifetime'] = node_benchmarking_time
+            # Was there only one creation event?
+            first_event = time_series['values'][0]
+            last_event = time_series['values'][-1]
 
+            if first_event[-1] == last_event[-1]:
+                # they're the same! easy to calculate
+                created_at = int(last_event[-1])
+                # only count costs during the benchmarking window.
+                created_at = max(created_at, self.benchmarking_start_time)
+                node_info[node_name]['lifetime'] = last_event[0] - created_at
+                continue
+
+            # there was more than one creation event :(
+            # loop over list backward to find the final event for each creation
+            lifetime = 0
+            curr_label = None
+            for i in range(len(time_series['values']) - 1, 0, -1):
+                ts, created_at = time_series['values'][i]
+                created_at = int(created_at)
+                if created_at != curr_label:  # a new label.
+                    curr_label = created_at
+                    created_at = max(created_at, self.benchmarking_start_time)
+                    lifetime += ts - created_at
+
+            node_info[node_name]['lifetime'] = lifetime
+        return node_info
+
+    def parse_label_response(self, response):
+        node_info = {}
         # parse node label data
-        for label_set in label_response['data']['result']:
+        for label_set in response['data']['result']:
             metric = label_set['metric']
+
+            node_name = metric.get('label_kubernetes_io_hostname')
+            node_info[node_name] = {}
 
             instance_type = metric['label_beta_kubernetes_io_instance_type']
             preemptible = 'label_cloud_google_com_gke_preemptible' in metric
-            gpu = metric.get('label_cloud_google_com_gke_accelerator', 'none')
+            gpu = metric.get('label_cloud_google_com_gke_accelerator')
 
-            node = metric.get('label_kubernetes_io_hostname')
-            if node in node_info:
-                node_info[node]['instance_type'] = instance_type
-                node_info[node]['preemptible'] = preemptible
-                node_info[node]['gpu'] = gpu
+            node_info[node_name]['instance_type'] = instance_type
+            node_info[node_name]['preemptible'] = preemptible
+            node_info[node_name]['gpu'] = gpu
 
         return node_info
 
@@ -214,12 +273,12 @@ class CostGetter(object):
         for _, node_dict in node_data.items():
             node_hourly_cost = self.compute_hourly_cost(node_dict)
             node_cost = node_hourly_cost * (node_dict['lifetime'] / 60 / 60)
-            if node_dict['gpu'] == "none":
+            if not node_dict['gpu']:
                 cpu_node_costs = cpu_node_costs + node_cost
             else:
                 gpu_node_costs = gpu_node_costs + node_cost
             total_node_costs = total_node_costs + node_cost
-        return (cpu_node_costs, gpu_node_costs, total_node_costs)
+        return cpu_node_costs, gpu_node_costs, total_node_costs
 
     def compute_hourly_cost(self, node_data):
         """Get the hourly cost of a given node"""
@@ -232,7 +291,7 @@ class CostGetter(object):
 
         instance_cost = self.cost_table[instance_type][key]
 
-        gpu_cost = 0 if gpu == 'none' else self.gpu_table[gpu][key]
+        gpu_cost = 0 if not gpu else self.gpu_table[gpu][key]
 
         hourly_cost = instance_cost + gpu_cost
         return hourly_cost
