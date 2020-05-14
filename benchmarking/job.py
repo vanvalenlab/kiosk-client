@@ -168,6 +168,7 @@ class Job(object):
 
     def _make_post_request(self, host, data, **kwargs):
         req_kwargs = {
+            'Connection': 'close',
             'headers': kwargs.get('headers', self.headers),
             'pool': kwargs.get('pool', self.pool)
         }
