@@ -151,13 +151,13 @@ class JobManager(object):
             if j.failed:
                 j.restart(delay=self.start_delay * failed)
 
-            # TODO: patched! "done" jobs can get stranded before summarization
-            if j.status == 'done' and not j.is_summarized:
-                j.summarize()
-
-            # TODO: patched! sometimes jobs don't get expired?
-            elif j.status == 'done' and j.is_summarized and not j.is_expired:
-                j.expire()
+            # # TODO: patched! "done" jobs can get stranded before summarization
+            # if j.status == 'done' and not j.is_summarized:
+            #     j.summarize()
+            #
+            # # TODO: patched! sometimes jobs don't get expired?
+            # elif j.status == 'done' and j.is_summarized and not j.is_expired:
+            #     j.expire()
 
         self.logger.info('%s created; %s finished; %s summarized; '
                          '%s; %s jobs total', created, expired, complete,

@@ -82,7 +82,10 @@ class Job(object):
         self.failed = False  # for error handling
         self.is_expired = False
 
-        self.headers = {'Content-Type': ['application/json']}
+        self.headers = {
+            'Content-Type': ['application/json'],
+            'Connection': 'close',
+        }
 
         # summary data
         self.status = None
