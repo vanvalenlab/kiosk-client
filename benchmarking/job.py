@@ -323,15 +323,14 @@ class Job(object):
 
         if self.job_id is None:  # never got started in the first place
             result = yield self.start()
-            return result
 
         elif self.is_done:  # no need to monitor, skip straight to summarize
             result = yield self.summarize()
-            return result
 
         else:  # job has begun but was not finished, monitor status
             result = yield self.monitor()
-            return result
+
+        defer.returnValue(result)
 
     @defer.inlineCallbacks
     def start(self, delay=0):
