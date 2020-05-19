@@ -101,7 +101,6 @@ class TestUtils(object):
         names = [
             'uploads',
             'uploads/with/subdir',
-            '/duplicate/leading/and/trailing/',
         ]
         fmt_strings = [
             '/{}',  # leading "/"
@@ -113,3 +112,7 @@ class TestUtils(object):
             for fmt_string in fmt_strings:
                 prefix = fmt_string.format(name)
                 assert name == utils.strip_bucket_prefix(prefix)
+
+        name = '/duplicate/leading/and/trailing/'
+        stripped = utils.strip_bucket_prefix(name)
+        assert name[1:-1] == stripped
