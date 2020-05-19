@@ -36,6 +36,11 @@ from twisted.internet import reactor
 from twisted.internet.task import deferLater
 
 
+def strip_bucket_prefix(prefix):
+    """Remove any leading or trailing "/" characters."""
+    return '/'.join(x for x in prefix.split('/') if x)
+
+
 def sleep(seconds):
     """Simple helper to delay asynchronously for some number of seconds."""
     return deferLater(reactor, seconds, lambda: None)

@@ -96,3 +96,20 @@ class TestUtils(object):
             assert set(list(results)) == set()
             results = utils.iter_image_files(valid_images[0])
             assert set(list(results)) == set((valid_images[0],))
+
+    def test_strip_bucket_prefix(self):
+        names = [
+            'uploads',
+            'uploads/with/subdir',
+            '/duplicate/leading/and/trailing/',
+        ]
+        fmt_strings = [
+            '/{}',  # leading "/"
+            '{}/',  # trailing "/"
+            '/{}/',  # both leading and trailing "/"
+            '{}',  # nothing
+        ]
+        for name in names:
+            for fmt_string in fmt_strings:
+                prefix = fmt_string.format(name)
+                assert name == utils.strip_bucket_prefix(prefix)

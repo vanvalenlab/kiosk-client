@@ -39,7 +39,7 @@ from twisted.internet import defer, reactor
 from twisted.web.client import HTTPConnectionPool
 
 from benchmarking.job import Job
-from benchmarking.utils import iter_image_files, sleep
+from benchmarking.utils import iter_image_files, sleep, strip_bucket_prefix
 from benchmarking import settings
 
 from benchmarking.cost import CostGetter
@@ -99,6 +99,7 @@ class JobManager(object):
         self.preprocess = kwargs.get('preprocess', '')
         self.postprocess = kwargs.get('postprocess', '')
         self.upload_prefix = kwargs.get('upload_prefix', 'uploads')
+        self.upload_prefix = strip_bucket_prefix(self.upload_prefix)
         self.refresh_rate = int(kwargs.get('refresh_rate', 10))
         self.update_interval = kwargs.get('update_interval', 10)
         self.expire_time = kwargs.get('expire_time', 3600)

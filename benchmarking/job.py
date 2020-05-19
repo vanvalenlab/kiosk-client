@@ -38,7 +38,7 @@ from twisted.internet import defer
 from twisted.internet import error as twisted_errors
 from twisted.web import _newclient as twisted_client
 
-from benchmarking.utils import sleep
+from benchmarking.utils import sleep, strip_bucket_prefix
 
 
 class Job(object):
@@ -84,6 +84,7 @@ class Job(object):
         self.preprocess = kwargs.get('preprocess', '')
         self.postprocess = kwargs.get('postprocess', '')
         self.upload_prefix = kwargs.get('upload_prefix', 'uploads')
+        self.upload_prefix = strip_bucket_prefix(self.upload_prefix)
         self.expire_time = int(kwargs.get('expire_time', 3600))
         self.update_interval = int(kwargs.get('update_interval', 10))
         self.original_name = kwargs.get('original_name', self.filepath)

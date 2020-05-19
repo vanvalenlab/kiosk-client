@@ -33,9 +33,6 @@ import os
 from decouple import config
 
 
-# remove leading/trailing "/"s from cloud bucket folder names
-_strip = lambda x: '/'.join(y for y in x.split('/') if y)
-
 # Debug Mode
 DEBUG = config('DEBUG', cast=bool, default=False)
 NUM_GPUS = config('NUM_GPUS', cast=int, default=0)
@@ -78,7 +75,7 @@ MANAGER_REFRESH_RATE = config('MANAGER_REFRESH_RATE', default=10, cast=float)
 EXPIRE_TIME = config('EXPIRE_TIME', default=3600, cast=int)
 
 # Name of upload folder in storage bucket.
-UPLOAD_PREFIX = _strip(config('UPLOAD_PREFIX', default='uploads', cast=str))
+UPLOAD_PREFIX = config('UPLOAD_PREFIX', default='uploads', cast=str)
 
 # HTTP Settings
 CONCURRENT_REQUESTS_PER_HOST = config('CONCURRENT_REQUESTS_PER_HOST',
