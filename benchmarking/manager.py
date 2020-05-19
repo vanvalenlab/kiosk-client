@@ -47,6 +47,18 @@ from benchmarking.cost import CostGetter
 
 
 class JobManager(object):
+    """Manages many DeepCell Kiosk jobs.
+
+    Args:
+        host (str): public IP address of the DeepCell Kiosk cluster.
+        model_name (str): Name of servable model.
+        model_version (int): Version of servable model.
+        upload_prefix (str): upload all files to this folder in the bucket.
+        refresh_rate (int): how often the manager checks the status, in seconds.
+        update_interval (int): how often each job its statuses, in seconds.
+        expire_time (int): time until finished jobs are expired, in seconds.
+        start_delay (int): delay between each job, in seconds.
+    """
 
     def __init__(self, host, model_name, model_version, **kwargs):
         self.logger = logging.getLogger(str(self.__class__.__name__))

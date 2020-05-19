@@ -44,6 +44,15 @@ from benchmarking.utils import sleep
 class Job(object):
 
     def __init__(self, host, filepath, model_name, model_version, **kwargs):
+        """Creates and tracks a DeepCell Kiosk job, recording various summary data.
+
+        Args:
+            host (str): public IP address of the DeepCell Kiosk cluster.
+            filepath (str): The filepath of the file to be processed.
+            model_name (str): Name of servable model.
+            model_version (int): Version of servable model.
+            kwargs (dict): Optional keyword arguments.
+        """
         self.logger = logging.getLogger(str(self.__class__.__name__))
 
         self.host = str(host)
