@@ -36,7 +36,6 @@ import uuid
 
 from google.cloud import storage as google_storage
 from twisted.internet import defer, reactor
-from twisted.internet.task import deferLater
 from twisted.web.client import HTTPConnectionPool
 
 from benchmarking.job import Job
