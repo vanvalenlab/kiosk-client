@@ -28,6 +28,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import errno
 import os
 
 from decouple import config
@@ -100,4 +101,8 @@ OUTPUT_DIR = config('OUTPUT_DIR', default=OUTPUT_DIR)
 LOG_DIR = config('LOG_DIR', default=LOG_DIR)
 
 for d in (DOWNLOAD_DIR, OUTPUT_DIR, LOG_DIR):
-    os.makedirs(d, exist_ok=True)  # python 3.2+
+    try:
+        os.makedirs(d)
+    except OSError as e:
+        if e.errno != errno.EEXIST:
+            raise
