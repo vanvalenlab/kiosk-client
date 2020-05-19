@@ -61,6 +61,7 @@ class JobManager(object):
 
     def __init__(self, host, model, **kwargs):
         self.logger = logging.getLogger(str(self.__class__.__name__))
+        self.created_at = timeit.default_timer()
         self.all_jobs = []
 
         host = str(host)
@@ -78,7 +79,6 @@ class JobManager(object):
 
         self.model_name = model_name
         self.model_version = model_version
-        self.job_type = kwargs.get('job_type', 'segmentation')
 
         data_scale = str(kwargs.get('data_scale', ''))
         if data_scale:
@@ -96,6 +96,7 @@ class JobManager(object):
                 raise ValueError('data_label must be an integer.')
         self.data_label = data_label
 
+        self.job_type = kwargs.get('job_type', 'segmentation')
         self.preprocess = kwargs.get('preprocess', '')
         self.postprocess = kwargs.get('postprocess', '')
         self.upload_prefix = kwargs.get('upload_prefix', 'uploads')
@@ -103,17 +104,16 @@ class JobManager(object):
         self.update_interval = kwargs.get('update_interval', 10)
         self.expire_time = kwargs.get('expire_time', 3600)
         self.start_delay = kwargs.get('start_delay', 0.1)
-        self.headers = {'Content-Type': ['application/json']}
-        self.created_at = timeit.default_timer()
-
-        self.pool = HTTPConnectionPool(reactor, persistent=True)
-        self.pool.maxPersistentPerHost = settings.CONCURRENT_REQUESTS_PER_HOST
-        self.pool.retryAutomatically = False
 
         # initializing cost estimation workflow
         self.cost_getter = CostGetter()
 
         self.sleep = sleep  # allow monkey-patch
+
+        # twisted configuration
+        self.pool = HTTPConnectionPool(reactor, persistent=True)
+        self.pool.maxPersistentPerHost = settings.CONCURRENT_REQUESTS_PER_HOST
+        self.pool.retryAutomatically = False
 
     def upload_file(self, filepath, acl='publicRead',
                     hash_filename=True, prefix=None):
