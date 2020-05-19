@@ -74,9 +74,6 @@ START_DELAY = config('START_DELAY', default=0.05, cast=float)
 # Time interval between Manager status checks
 MANAGER_REFRESH_RATE = config('MANAGER_REFRESH_RATE', default=10, cast=float)
 
-# Bucket prefix to upload all folders
-UPLOAD_PREFIX = config('UPLOAD_PREFIX', default='uploads')
-
 # Time in seconds to expire the completed jobs.
 EXPIRE_TIME = config('EXPIRE_TIME', default=3600, cast=int)
 
