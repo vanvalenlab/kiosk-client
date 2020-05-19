@@ -96,8 +96,7 @@ if __name__ == '__main__':
 
     mgr_kwargs = {
         'host': settings.HOST,
-        'model_name': settings.MODEL_NAME,
-        'model_version': settings.MODEL_VERSION,
+        'model': settings.MODEL,
         'job_type': settings.JOB_TYPE,
         'data_scale': settings.SCALE,
         'data_label': settings.LABEL,

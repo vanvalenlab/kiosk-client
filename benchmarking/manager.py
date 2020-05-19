@@ -51,8 +51,7 @@ class JobManager(object):
 
     Args:
         host (str): public IP address of the DeepCell Kiosk cluster.
-        model_name (str): Name of servable model.
-        model_version (int): Version of servable model.
+        model (str): model name and version, e.g. "model_name:version".
         upload_prefix (str): upload all files to this folder in the bucket.
         refresh_rate (int): how often the manager checks the status, in seconds.
         update_interval (int): how often each job its statuses, in seconds.
@@ -60,7 +59,7 @@ class JobManager(object):
         start_delay (int): delay between each job, in seconds.
     """
 
-    def __init__(self, host, model_name, model_version, **kwargs):
+    def __init__(self, host, model, **kwargs):
         self.logger = logging.getLogger(str(self.__class__.__name__))
         self.all_jobs = []
 
@@ -69,6 +68,14 @@ class JobManager(object):
             host = 'http://{}'.format(host)
 
         self.host = host
+
+        try:
+            model_name, model_version = str(model).split(':')
+        except Exception as err:
+            self.logger.error('Invalid model name, must be of the form '
+                              '"ModelName:Version", for example "model:0".')
+            raise err
+
         self.model_name = model_name
         self.model_version = model_version
         self.job_type = kwargs.get('job_type', 'segmentation')

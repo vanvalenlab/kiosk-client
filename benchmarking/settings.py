@@ -55,7 +55,6 @@ GRAFANA_PASSWORD = config('GRAFANA_PASSWORD', default='prom-operator')
 
 # TensorFlow Servable
 MODEL = config('MODEL', default='modelname:0')
-MODEL_NAME, MODEL_VERSION = MODEL.split(':')
 
 # Job Type
 JOB_TYPE = config('JOB_TYPE', default='segmentation')
