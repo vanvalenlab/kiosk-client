@@ -47,8 +47,7 @@ class TestJobManager(object):
     def test_init(self):
         mgr = manager.JobManager(
             host='localhost',
-            model_name='m',
-            model_version='0',
+            model='m:0',
             data_scale='1',
             data_label='1')
 
@@ -56,24 +55,21 @@ class TestJobManager(object):
         with pytest.raises(ValueError):
             mgr = manager.JobManager(
                 host='localhost',
-                model_name='m',
-                model_version='0',
+                model='m:0',
                 data_scale='one',
                 data_label='1')
         # test bad data_label value
         with pytest.raises(ValueError):
             mgr = manager.JobManager(
                 host='localhost',
-                model_name='m',
-                model_version='0',
+                model='m:0',
                 data_scale='1',
                 data_label='1.3')
 
     def test_make_job(self):
         mgr = manager.JobManager(
             host='localhost',
-            model_name='m',
-            model_version='0',
+            model='m:0',
             data_scale='1',
             data_label='0')
 
@@ -86,10 +82,7 @@ class TestJobManager(object):
         assert j1.json() == j2.json()
 
     def test_get_completed_job_count(self):
-        mgr = manager.JobManager(
-            host='localhost',
-            model_name='m',
-            model_version='0')
+        mgr = manager.JobManager(host='localhost', model='m:0',)
 
         j1 = mgr.make_job('test.png', original_name=None)
         j2 = mgr.make_job('test.png', original_name='test.png')
@@ -138,10 +131,7 @@ class TestJobManager(object):
         with tempfile.TemporaryDirectory() as tempdir:
             settings.OUTPUT_DIR = tempdir
 
-            mgr = manager.JobManager(
-                host='localhost',
-                model_name='m',
-                model_version='0')
+            mgr = manager.JobManager(host='localhost', model='m:0')
 
             # monkey-patches for testing
             mgr.cost_getter.finish = lambda: (1, 2, 3)
@@ -155,11 +145,7 @@ class TestJobManager(object):
 
     @pytest_twisted.inlineCallbacks
     def test_check_job_status(self):
-        mgr = manager.JobManager(
-            host='localhost',
-            model_name='m',
-            model_version='0',
-            refresh_rate=0)
+        mgr = manager.JobManager(host='localhost', model='m:0', refresh_rate=0)
 
         mgr.all_jobs = list(range(5))
 
@@ -192,10 +178,7 @@ class TestJobManager(object):
 class TestBenchmarkingJobManager(object):
 
     def test_run(self):
-        mgr = manager.BenchmarkingJobManager(
-            host='localhost',
-            model_name='m',
-            model_version='0')
+        mgr = manager.BenchmarkingJobManager(host='localhost', model='m:0')
 
         # pylint: disable=unused-argument
         def dummy_upload_file(filepath, **kwargs):
@@ -207,8 +190,7 @@ class TestBenchmarkingJobManager(object):
         def make_job(*args, **kwargs):
             m = manager.BatchProcessingJobManager(
                 host='localhost',
-                model_name='m',
-                model_version='0')
+                model='m:0')
 
             j = m.make_job(*args, **kwargs)
             j.start = dummy_start
@@ -232,10 +214,7 @@ class TestBenchmarkingJobManager(object):
 class TestBatchProcessingJobManager(object):
 
     def test_run(self):
-        mgr = manager.BatchProcessingJobManager(
-            host='localhost',
-            model_name='m',
-            model_version='0')
+        mgr = manager.BatchProcessingJobManager(host='localhost', model='m:0')
 
         # pylint: disable=unused-argument
         def dummy_upload_file(filepath, **kwargs):
@@ -247,8 +226,7 @@ class TestBatchProcessingJobManager(object):
         def make_job(*args, **kwargs):
             m = manager.BatchProcessingJobManager(
                 host='localhost',
-                model_name='m',
-                model_version='0')
+                model='m:0')
 
             j = m.make_job(*args, **kwargs)
             j.start = dummy_start
