@@ -127,7 +127,7 @@ class TestJobManager(object):
         def fake_upload_file_bad(filepath, hash_filename, prefix):
             return 1 / 0
 
-        settings.OUTPUT_DIR = tmpdir
+        settings.OUTPUT_DIR = str(tmpdir)
 
         mgr = manager.JobManager(host='localhost', model='m:0')
 
@@ -176,6 +176,7 @@ class TestJobManager(object):
 class TestBenchmarkingJobManager(object):
 
     def test_run(self, tmpdir):
+        tmpdir = str(tmpdir)
         mgr = manager.BenchmarkingJobManager(host='localhost', model='m:0')
 
         # pylint: disable=unused-argument
@@ -211,6 +212,7 @@ class TestBenchmarkingJobManager(object):
 class TestBatchProcessingJobManager(object):
 
     def test_run(self, tmpdir):
+        tmpdir = str(tmpdir)
         mgr = manager.BatchProcessingJobManager(host='localhost', model='m:0')
 
         # pylint: disable=unused-argument
