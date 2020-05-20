@@ -203,7 +203,7 @@ class Job(object):
             try:
                 self._log_http_response(response)
                 json_content = yield response.json()  # parse the JSON data
-            except (json.decoder.JSONDecodeError, AttributeError) as err:
+            except (ValueError, AttributeError) as err:
                 self.logger.error('[%s]: Failed to parse %s response as JSON '
                                   'due to %s: %s', self.job_id, name,
                                   type(err).__name__, err)
