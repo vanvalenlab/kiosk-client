@@ -67,26 +67,26 @@ class TestUtils(object):
 
         valid_images = []
         for i in range(num):
-            valid_image = os.path.join(tempdir, imagename(i))
+            valid_image = os.path.join(tmpdir, imagename(i))
             img = Image.new('RGB', (800, 1280), (255, 255, 255))
             img.save(valid_image, 'PNG')
             valid_images.append(valid_image)
 
         # only image files exist
-        results = utils.iter_image_files(tempdir, include_archives=True)
+        results = utils.iter_image_files(tmpdir, include_archives=True)
         assert set(list(results)) == set(valid_images)
 
         # create a new zip file of all the valid images
-        zippath = os.path.join(tempdir, 'test.zip')
+        zippath = os.path.join(tmpdir, 'test.zip')
         z = zipfile.ZipFile(zippath, 'w', zipfile.ZIP_DEFLATED)
         z.close()
 
         # turn off include_archives, should not see the zip file
-        results = utils.iter_image_files(tempdir, include_archives=False)
+        results = utils.iter_image_files(tmpdir, include_archives=False)
         assert set(list(results)) == set(valid_images)
 
         # with include_archives, zipfile should be in results
-        results = utils.iter_image_files(tempdir, include_archives=True)
+        results = utils.iter_image_files(tmpdir, include_archives=True)
         assert set(list(results)) == set(valid_images).union({zippath})
 
         # test single file paths
