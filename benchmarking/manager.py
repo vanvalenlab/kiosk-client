@@ -114,7 +114,6 @@ class JobManager(object):
         self.pool = HTTPConnectionPool(reactor, persistent=True)
         self.pool.maxPersistentPerHost = settings.CONCURRENT_REQUESTS_PER_HOST
         self.pool.retryAutomatically = False
-        self.next = self.__next__  # py2 vs py3 work around
 
     def upload_file(self, filepath, acl='publicRead',
                     hash_filename=True, prefix=None):

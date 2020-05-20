@@ -205,8 +205,11 @@ class TestBenchmarkingJobManager(object):
         img = Image.new('RGB', (800, 1280), (255, 255, 255))
         img.save(valid_image, 'PNG')
 
-        list(mgr.run(valid_image, count=2, upload=True))
-        list(mgr.run(valid_image, count=2, upload=False))
+        for _ in mgr.run(valid_image, count=2, upload=True):
+            pass
+
+        for _ in mgr.run(valid_image, count=2, upload=False):
+            pass
 
 
 class TestBatchProcessingJobManager(object):
@@ -245,4 +248,5 @@ class TestBatchProcessingJobManager(object):
             img.save(valid_image, 'PNG')
             valid_images.append(valid_image)
 
-        list(mgr.run(tmpdir))
+        for _ in mgr.run(tmpdir):
+            pass
