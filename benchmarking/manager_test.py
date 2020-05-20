@@ -175,6 +175,7 @@ class TestJobManager(object):
 
 class TestBenchmarkingJobManager(object):
 
+    @pytest_twisted.inlineCallbacks
     def test_run(self, tmpdir):
         tmpdir = str(tmpdir)
         mgr = manager.BenchmarkingJobManager(host='localhost', model='m:0')
@@ -205,15 +206,14 @@ class TestBenchmarkingJobManager(object):
         img = Image.new('RGB', (800, 1280), (255, 255, 255))
         img.save(valid_image, 'PNG')
 
-        for _ in mgr.run(valid_image, count=2, upload=True):
-            pass
+        yield mgr.run(valid_image, count=2, upload=True)
 
-        for _ in mgr.run(valid_image, count=2, upload=False):
-            pass
+        yield mgr.run(valid_image, count=2, upload=False)
 
 
 class TestBatchProcessingJobManager(object):
 
+    @pytest_twisted.inlineCallbacks
     def test_run(self, tmpdir):
         tmpdir = str(tmpdir)
         mgr = manager.BatchProcessingJobManager(host='localhost', model='m:0')
@@ -248,5 +248,4 @@ class TestBatchProcessingJobManager(object):
             img.save(valid_image, 'PNG')
             valid_images.append(valid_image)
 
-        for _ in mgr.run(tmpdir):
-            pass
+        yield mgr.run(tmpdir)
