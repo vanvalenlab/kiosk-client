@@ -34,8 +34,6 @@ import os
 from decouple import config
 
 
-# Debug Mode
-DEBUG = config('DEBUG', cast=bool, default=False)
 NUM_GPUS = config('NUM_GPUS', cast=int, default=0)
 
 # Google credentials
