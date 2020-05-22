@@ -49,7 +49,19 @@ class TestJobManager(object):
             model='m:0',
             data_scale='1',
             data_label='1')
-
+        # test bad model value
+        with pytest.raises(Exception):
+            mgr = manager.JobManager(
+                host='localhost',
+                model='model_no_version',
+                data_scale='1',
+                data_label='1')
+        with pytest.raises(Exception):
+            mgr = manager.JobManager(
+                host='localhost',
+                model='model:nonint_version',
+                data_scale='1',
+                data_label='1')
         # test bad data_scale value
         with pytest.raises(ValueError):
             mgr = manager.JobManager(

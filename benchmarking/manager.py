@@ -71,6 +71,7 @@ class JobManager(object):
 
         try:
             model_name, model_version = str(model).split(':')
+            model_version = int(model_version)
         except Exception as err:
             self.logger.error('Invalid model name, must be of the form '
                               '"ModelName:Version", for example "model:0".')
