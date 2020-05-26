@@ -106,6 +106,7 @@ class JobManager(object):
         self.expire_time = kwargs.get('expire_time', 3600)
         self.start_delay = kwargs.get('start_delay', 0.1)
         self.bucket = kwargs.get('storage_bucket')
+        self.upload_results = kwargs.get('upload_results')
 
         # initializing cost estimation workflow
         self.cost_getter = CostGetter()
@@ -244,14 +245,15 @@ class JobManager(object):
             json.dump(jsondata, jsonfile, indent=4)
             self.logger.info('Wrote job data as JSON to %s.', output_filepath)
 
-        try:
-            _ = self.upload_file(output_filepath,
-                                 hash_filename=False,
-                                 prefix='output')
-        except Exception as err:  # pylint: disable=broad-except
-            self.logger.error('Could not upload output file to bucket. '
-                              'Copy this file from the docker container to '
-                              'keep the data.')
+        if self.upload_results:
+            try:
+                _ = self.upload_file(output_filepath,
+                                     hash_filename=False,
+                                     prefix='output')
+            except Exception as err:  # pylint: disable=broad-except
+                self.logger.error('Could not upload output file to bucket. '
+                                  'Copy this file from the docker container to '
+                                  'keep the data.')
 
     def run(self, *args, **kwargs):
         raise NotImplementedError
