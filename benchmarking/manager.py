@@ -52,9 +52,9 @@ class JobManager(object):
         host (str): public IP address of the DeepCell Kiosk cluster.
         model (str): model name and version, e.g. "model_name:version".
         upload_prefix (str): upload all files to this folder in the bucket.
-        refresh_rate (int): how often the manager checks the status, in seconds.
-        update_interval (int): how often each job its statuses, in seconds.
-        expire_time (int): time until finished jobs are expired, in seconds.
+        refresh_rate (int): seconds between each manager status check.
+        update_interval (int): seconds between each job status refresh.
+        expire_time (int): seconds until finished jobs are expired.
         start_delay (int): delay between each job, in seconds.
     """
 
