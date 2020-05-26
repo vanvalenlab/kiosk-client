@@ -219,7 +219,7 @@ class JobManager(object):
         # add cost and timing data to json output
         try:
             cpu_cost, gpu_cost, total_cost = self.cost_getter.finish()
-        except Exception as err:
+        except Exception as err:  # pylint: disable=broad-except
             self.logger.error('Encountered %s while getting cost data: %s',
                               type(err).__name__, err)
             cpu_cost, gpu_cost, total_cost = '', '', ''
