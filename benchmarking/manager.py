@@ -234,15 +234,14 @@ class JobManager(object):
             'job_data': [j.json() for j in self.all_jobs]
         }
 
-        output_filepath = os.path.join(
-            settings.OUTPUT_DIR,
-            '{}gpu_{}delay_{}jobs_{}.json'.format(
-                settings.NUM_GPUS, self.start_delay,
-                len(self.all_jobs), uuid.uuid4().hex))
+        output_filepath = '{}{}delay_{}jobs_{}.json'.format(
+            '{}gpu_' if settings.NUM_GPUS else '',
+            self.start_delay, len(self.all_jobs),
+            uuid.uuid4().hex)
+        output_filepath = os.path.join(settings.OUTPUT_DIR, output_filepath)
 
         with open(output_filepath, 'w') as jsonfile:
             json.dump(jsondata, jsonfile, indent=4)
-
             self.logger.info('Wrote job data as JSON to %s.', output_filepath)
 
         try:
