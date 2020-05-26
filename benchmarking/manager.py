@@ -105,6 +105,7 @@ class JobManager(object):
         self.update_interval = kwargs.get('update_interval', 10)
         self.expire_time = kwargs.get('expire_time', 3600)
         self.start_delay = kwargs.get('start_delay', 0.1)
+        self.bucket = kwargs.get('storage_bucket')
 
         # initializing cost estimation workflow
         self.cost_getter = CostGetter()
@@ -129,7 +130,7 @@ class JobManager(object):
         else:
             dest = os.path.basename(filepath)
 
-        bucket = storage_client.get_bucket(settings.STORAGE_BUCKET)
+        bucket = storage_client.get_bucket(self.bucket)
         blob = bucket.blob(os.path.join(prefix, dest))
         blob.upload_from_filename(filepath, predefined_acl=acl)
         self.logger.debug('Uploaded %s to %s in %s seconds.',
