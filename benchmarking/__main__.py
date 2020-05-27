@@ -43,25 +43,78 @@ from benchmarking import settings
 def get_arg_parser():
     parser = argparse.ArgumentParser()
 
+    # Job definition
+    parser.add_argument('file', required=True,
+                        help='File to process in many duplicated jobs. '
+                             '(Must exist in the cloud storage bucket.)')
+
     parser.add_argument('mode', choices=['benchmark', 'upload'],
                         help='Benchmarking mode.  `benchmark` for data that '
                              'already exists in the bucket, `upload` to upload'
                              'a local file/directory and process them all.')
 
-    parser.add_argument('-f', '--file', required=True,
-                        help='File to process in many duplicated jobs. '
-                             '(Must exist in the cloud storage bucket.)')
+    parser.add_argument('-j', '--job-type', type=str,
+                        default=settings.JOB_TYPE,
+                        help='Type of job (name of Redis work queue).')
 
-    parser.add_argument('-c', '--count', default=10, type=int,
+    parser.add_argument('-m', '--model', type=str,
+                        default=settings.MODEL,
+                        help='Name and version of model hosted by TensorFlow '
+                             'Serving.')
+
+    parser.add_argument('-t', '--host', type=str,
+                        default=settings.HOST,
+                        help='IP or FQDN of the DeepCell Kiosk API.')
+
+    parser.add_argument('-b', '--storage-bucket', type=str,
+                        default=settings.STORAGE_BUCKET,
+                        help='Cloud storage bucket (e.g. gs://storage-bucket).')
+
+    parser.add_argument('-c', '--count', default=1, type=int,
                         help='Number of times to process the given file.')
 
-    parser.add_argument('-L', '--log-level', default=settings.LOG_LEVEL,
-                        choices=('DEBUG', 'INFO', 'WARN', 'ERROR', 'CRITICAL'),
-                        help='log level (default: DEBUG)')
+    parser.add_argument('--pre', '--preprocess', type=str,
+                        default=settings.PREPROCESS,
+                        help='Number of times to process the given file.')
 
-    parser.add_argument('--upload', action='store_true',
+    parser.add_argument('--post', '--postprocess', type=str,
+                        default=settings.POSTPROCESS,
+                        help='Number of times to process the given file.')
+
+    parser.add_argument('-U', '--upload', action='store_true',
                         help='If provided, uploads the file before creating '
                              'a new job.')
+
+    parser.add_argument('--upload-results', action='store_true',
+                        help='Upload the final output file to the bucket.')
+
+    # Timing / interval settings
+    parser.add_argument('--start-delay', type=float,
+                        default=settings.START_DELAY,
+                        help='Time between each job creation '
+                             '(0.5s is a typical file upload time).')
+
+    parser.add_argument('--update-interval', type=float,
+                        default=settings.UPDATE_INTERVAL,
+                        help='Seconds between each job status refresh.')
+
+    parser.add_argument('--refresh-rate', type=float,
+                        default=settings.MANAGER_REFRESH_RATE,
+                        help='Seconds between each manager status check.')
+
+    parser.add_argument('-x', '--expire-time', type=float,
+                        default=settings.EXPIRE_TIME,
+                        help='Finished jobs expire after this many seconds.')
+
+    # Logging options
+    parser.add_argument('-L', '--log-level', default=settings.LOG_LEVEL,
+                        choices=('DEBUG', 'INFO', 'WARN', 'ERROR', 'CRITICAL'),
+                        help='Only log the given level and above.')
+
+    # optional arguments
+    parser.add_argument('--upload-prefix', type=str,
+                        default=settings.UPLOAD_PREFIX,
+                        help='Maximum number of connections to the Kiosk.')
 
     return parser
 
@@ -95,17 +148,17 @@ if __name__ == '__main__':
         initialize_logger(log_level=args.log_level)
 
     mgr_kwargs = {
-        'host': settings.HOST,
-        'model': settings.MODEL,
-        'job_type': settings.JOB_TYPE,
-        'data_scale': settings.SCALE,
-        'data_label': settings.LABEL,
-        'update_interval': settings.UPDATE_INTERVAL,
-        'start_delay': settings.START_DELAY,
-        'refresh_rate': settings.MANAGER_REFRESH_RATE,
-        'postprocess': settings.POSTPROCESS,
-        'preprocess': settings.PREPROCESS,
-        'upload_prefix': settings.UPLOAD_PREFIX,
+        'host': args.host,
+        'model': args.model,
+        'job_type': args.job_type,
+        'update_interval': args.update_interval,
+        'start_delay': args.start_delay,
+        'refresh_rate': args.refresh_rate,
+        'postprocess': args.postprocess,
+        'preprocess': args.preprocess,
+        'upload_prefix': args.upload_prefix,
+        'expire_time': args.expire_time,
+        'upload_results': args.upload_results
     }
 
     if not os.path.exists(args.file) and (args.mode == 'upload' or args.upload):
