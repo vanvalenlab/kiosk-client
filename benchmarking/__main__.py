@@ -81,6 +81,15 @@ def get_arg_parser():
                         default=settings.POSTPROCESS,
                         help='Number of times to process the given file.')
 
+    parser.add_argument('-s', '--scale', type=float,
+                        default=settings.SCALE,
+                        help='Scale of the data. Data will be scaled up or '
+                             'for the best model compatibility.')
+
+    parser.add_argument('-l', '--label', type=str,
+                        default=settings.LABEL, choices=['', '0', '1', '2'],
+                        help='Data type (e.g. nuclear, cytoplasmic, etc.).')
+
     parser.add_argument('-U', '--upload', action='store_true',
                         help='If provided, uploads the file before creating '
                              'a new job.')
@@ -158,7 +167,9 @@ if __name__ == '__main__':
         'preprocess': args.preprocess,
         'upload_prefix': args.upload_prefix,
         'expire_time': args.expire_time,
-        'upload_results': args.upload_results
+        'upload_results': args.upload_results,
+        'data_scale': args.scale,
+        'data_label': args.label,
     }
 
     if not os.path.exists(args.file) and (args.mode == 'upload' or args.upload):
