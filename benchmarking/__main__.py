@@ -40,46 +40,67 @@ from benchmarking import manager
 from benchmarking import settings
 
 
+def valid_filepath(parser, arg):
+    """File validation for argparsing.
+
+    https://stackoverflow.com/a/11541450
+    """
+    if not os.path.exists(arg):
+        # Argparse uses the ArgumentTypeError to give a rejection message like:
+        # error: argument input: x does not exist
+        raise argparse.ArgumentTypeError("{0} does not exist".format(arg))
+    return arg
+
+
 def get_arg_parser():
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(
+        prog='kioskcli',
+        description='The Kicsk-CLI is a Command Line Interface (CLI) for '
+                    'interacting with the DeepCell Kiosk.'
+    )
 
     # Job definition
-    parser.add_argument('file', required=True,
+    parser.add_argument('file', type=str, metavar="FILE",
                         help='File to process in many duplicated jobs. '
-                             '(Must exist in the cloud storage bucket.)')
+                             '(Must exist in the cloud storage bucket if '
+                             'using benchmark mode.)')
 
-    parser.add_argument('mode', choices=['benchmark', 'upload'],
-                        help='Benchmarking mode.  `benchmark` for data that '
-                             'already exists in the bucket, `upload` to upload'
-                             'a local file/directory and process them all.')
+    parser.add_argument('--benchmark', action='store_true',
+                        help='Benchmarking mode. Manage COUNT simulated jobs. '
+                             'The FILE must exist in the STORAGE_BUCKET.')
 
-    parser.add_argument('-j', '--job-type', type=str,
-                        default=settings.JOB_TYPE,
+    parser.add_argument('-j', '--job-type', type=str, required=True,
                         help='Type of job (name of Redis work queue).')
+
+    parser.add_argument('-t', '--host', type=str, required=True,
+                        help='IP or FQDN of the DeepCell Kiosk API.')
 
     parser.add_argument('-m', '--model', type=str,
                         default=settings.MODEL,
                         help='Name and version of model hosted by TensorFlow '
-                             'Serving.')
-
-    parser.add_argument('-t', '--host', type=str,
-                        default=settings.HOST,
-                        help='IP or FQDN of the DeepCell Kiosk API.')
+                             'Serving. Overrides the default model defined by '
+                             'the JOB_TYPE.')
 
     parser.add_argument('-b', '--storage-bucket', type=str,
                         default=settings.STORAGE_BUCKET,
-                        help='Cloud storage bucket (e.g. gs://storage-bucket).')
+                        help='Cloud storage bucket (e.g. gs://storage-bucket).'
+                             'Only required if using `--upload-results`.')
 
     parser.add_argument('-c', '--count', default=1, type=int,
-                        help='Number of times to process the given file.')
+                        help='Number of times to process the given file. '
+                             'Only used in `benchmark` mode.')
 
     parser.add_argument('--pre', '--preprocess', type=str,
                         default=settings.PREPROCESS,
-                        help='Number of times to process the given file.')
+                        help='Preprocessing function to use before model '
+                             'prediction. Overrides default preprocessing '
+                             'function for the JOB_TYPE.')
 
     parser.add_argument('--post', '--postprocess', type=str,
                         default=settings.POSTPROCESS,
-                        help='Number of times to process the given file.')
+                        help='Postprocessing function to use after model '
+                             'prediction. Overrides default postprocessing '
+                             'function for the JOB_TYPE.')
 
     parser.add_argument('-s', '--scale', type=float,
                         default=settings.SCALE,
@@ -92,10 +113,15 @@ def get_arg_parser():
 
     parser.add_argument('-U', '--upload', action='store_true',
                         help='If provided, uploads the file before creating '
-                             'a new job.')
+                             'a new job. '
+                             '(Only applicable in `benchmark` mode.)')
 
     parser.add_argument('--upload-results', action='store_true',
                         help='Upload the final output file to the bucket.')
+
+    parser.add_argument('--calculate-cost', action='store_true',
+                        help='Use the Grafana API to calculate the cost of '
+                             'the job.')
 
     # Timing / interval settings
     parser.add_argument('--start-delay', type=float,
@@ -163,23 +189,24 @@ if __name__ == '__main__':
         'update_interval': args.update_interval,
         'start_delay': args.start_delay,
         'refresh_rate': args.refresh_rate,
-        'postprocess': args.postprocess,
-        'preprocess': args.preprocess,
+        'postprocess': args.post,
+        'preprocess': args.pre,
         'upload_prefix': args.upload_prefix,
         'expire_time': args.expire_time,
         'upload_results': args.upload_results,
         'data_scale': args.scale,
+        'calculate_cost': args.calculate_cost,
         'data_label': args.label,
     }
 
-    if not os.path.exists(args.file) and (args.mode == 'upload' or args.upload):
+    if not os.path.exists(args.file) and not args.benchmark and args.upload:
         raise FileNotFoundError('%s could not be found.' % args.file)
 
-    if args.mode == 'benchmark':
+    if args.benchmark:
         mgr = manager.BenchmarkingJobManager(**mgr_kwargs)
         mgr.run(filepath=args.file, count=args.count, upload=args.upload)
 
-    elif args.mode == 'upload':
+    else:
         mgr = manager.BatchProcessingJobManager(**mgr_kwargs)
         mgr.run(filepath=args.file)
 

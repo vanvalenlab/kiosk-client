@@ -19,6 +19,8 @@ do
     --expire-time $EXPIRE_TIME \
     --upload-prefix $UPLOAD_PREFIX \
     --log-level ${LOG_LEVEL:="DEBUG"} \
+    --upload-results \
+    --calculate_cost \
   && \
   sleep ${CYCLE_INTERVAL:="1h"}
 done
