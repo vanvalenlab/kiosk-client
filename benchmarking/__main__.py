@@ -132,21 +132,21 @@ def initialize_logger(log_level):
     logger = logging.getLogger()
     logger.setLevel(logging.DEBUG)
 
+    log_level = getattr(logging, log_level)
+
     formatter = logging.Formatter(fmt=settings.LOG_FORMAT)
 
     console = logging.StreamHandler(stream=sys.stdout)
     console.setFormatter(formatter)
+    console.setLevel(log_level)
+    logger.addHandler(console)
 
     fh = logging.handlers.RotatingFileHandler(
         filename=settings.LOG_FILE,
         maxBytes=10000000,
         backupCount=1)
     fh.setFormatter(formatter)
-
-    console.setLevel(getattr(logging, log_level))
-    fh.setLevel(getattr(logging, log_level))
-
-    logger.addHandler(console)
+    fh.setLevel(log_level)
     logger.addHandler(fh)
 
 
