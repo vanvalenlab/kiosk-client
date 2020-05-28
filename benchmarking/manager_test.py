@@ -141,7 +141,8 @@ class TestJobManager(object):
 
         settings.OUTPUT_DIR = str(tmpdir)
 
-        mgr = manager.JobManager(host='localhost', model='m:0')
+        mgr = manager.JobManager(host='localhost', model='m:0',
+                                 upload_results=True)
 
         # monkey-patches for testing
         mgr.cost_getter.finish = lambda: (1, 2, 3)
