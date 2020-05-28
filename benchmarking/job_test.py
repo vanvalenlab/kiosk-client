@@ -30,6 +30,7 @@ from __future__ import print_function
 
 import datetime
 import random
+import timeit
 
 import pytest
 import pytest_twisted
@@ -128,12 +129,13 @@ class TestJob(object):
                     data_label='3.14')
 
     def test__log_http_response(self):
+        now = timeit.default_timer()
         j = _get_default_job()
 
         dummy_response = DummyResponse()
-        j._log_http_response(dummy_response)
+        j._log_http_response(dummy_response, now)
         dummy_response.failed = True
-        j._log_http_response(dummy_response)
+        j._log_http_response(dummy_response, now)
 
     def test__make_post_request(self):
         j = _get_default_job()
