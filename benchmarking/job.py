@@ -178,20 +178,27 @@ class Job(object):
             response.request.absoluteURI.decode(),
             response.code, response.phrase.decode())
 
-    def _make_post_request(self, host, data, **kwargs):
+    def _make_post_request(self, host, **kwargs):
         req_kwargs = {
             'headers': kwargs.get('headers', self.headers),
-            'pool': kwargs.get('pool', self.pool)
+            'pool': kwargs.get('pool', self.pool),
         }
-        return treq.post(host, json=data, **req_kwargs)
+
+        # The name of the payload dictates the type of encoding and headers.
+        payload_names = {'data', 'json', 'files'}
+        for pn in payload_names:
+            if pn in kwargs:
+                req_kwargs[pn] = kwargs[pn]
+
+        return treq.post(host, **req_kwargs)
 
     @defer.inlineCallbacks
-    def _retry_post_request_wrapper(self, host, data, name='REDIS', **kwargs):
+    def _retry_post_request_wrapper(self, host, name='REDIS', **kwargs):
         retrying = True  # retry  loop to prevent stackoverflow
         while retrying:
 
             try:
-                request = self._make_post_request(host, data, **kwargs)
+                request = self._make_post_request(host, **kwargs)
                 response = yield request  # Wait for the deferred request
             except self._http_errors as err:
                 self.logger.warning('[%s]: Encountered %s during %s: %s',
@@ -214,11 +221,27 @@ class Job(object):
         defer.returnValue(json_content)  # "return" the value
 
     @defer.inlineCallbacks
+    def upload_file(self):
+        host = '{}/api/upload'.format(self.host)
+        headers = self.headers.copy()
+        headers['Content-Type'] = ['multipart/form-data']
+        name = 'UPLOAD {}'.format(self.filepath)
+        payload = {
+            'file': (self.filepath, open(self.filepath, 'rb'))
+        }
+        response = yield self._retry_post_request_wrapper(host, name,
+                                                          files=payload,
+                                                          headers=headers)
+        uploaded_path = response.get('uploadedName')
+        defer.returnValue(uploaded_path)  # "return" the value
+
+    @defer.inlineCallbacks
     def get_redis_value(self, field):
         host = '{}/api/redis'.format(self.host)
         payload = {'hash': self.job_id, 'key': field}
         name = 'REDIS HGET {}'.format(field)
-        response = yield self._retry_post_request_wrapper(host, payload, name)
+        response = yield self._retry_post_request_wrapper(host, name,
+                                                          json=payload)
         value = response.get('value')
         defer.returnValue(value)  # "return" the value
 
@@ -239,7 +262,8 @@ class Job(object):
         }
         host = '{}/api/predict'.format(self.host)
         name = 'REDIS CREATE'
-        response = yield self._retry_post_request_wrapper(host, job_data, name)
+        response = yield self._retry_post_request_wrapper(host, name,
+                                                          json=job_data)
 
         job_id = response.get('hash')
 
@@ -304,7 +328,8 @@ class Job(object):
         host = '{}/api/redis/expire'.format(self.host)
         payload = {'hash': self.job_id, 'expireIn': self.expire_time}
         name = 'REDIS EXPIRE'
-        response = yield self._retry_post_request_wrapper(host, payload, name)
+        response = yield self._retry_post_request_wrapper(host, name,
+                                                          json=payload)
         value = response.get('value')
         defer.returnValue(value)  # "return" the value
 
@@ -332,10 +357,14 @@ class Job(object):
         defer.returnValue(result)
 
     @defer.inlineCallbacks
-    def start(self, delay=0):
+    def start(self, delay=0, upload=False):
 
         if delay:  # delay the start if required
             yield self.sleep(delay)
+
+        if upload:
+            uploaded_path = yield self.upload_file()
+            self.filepath = os.path.relpath(uploaded_path, self.upload_prefix)
 
         try:
             self.job_id = yield self.create()

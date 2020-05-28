@@ -138,8 +138,7 @@ class JobManager(object):
                           filepath, dest, timeit.default_timer() - start)
         return dest
 
-    def make_job(self, filepath, original_name=None):
-        original_name = original_name if original_name else filepath
+    def make_job(self, filepath):
         return Job(filepath=filepath,
                    host=self.host,
                    model_name=self.model_name,
@@ -149,7 +148,6 @@ class JobManager(object):
                    data_label=self.data_label,
                    postprocess=self.postprocess,
                    upload_prefix=self.upload_prefix,
-                   original_name=original_name,
                    update_interval=self.update_interval,
                    expire_time=self.expire_time,
                    pool=self.pool)
@@ -268,16 +266,13 @@ class BenchmarkingJobManager(JobManager):
 
         for i in range(count):
 
-            if upload:
-                dest = self.upload_file(filepath, hash_filename=False)
-                job = self.make_job(dest, original_name=filepath)
-            else:
-                job = self.make_job(filepath)
+            job = self.make_job(filepath)
 
             self.all_jobs.append(job)
 
             # stagger the delay seconds; if upload it will be staggered already
-            job.start(delay=self.start_delay * i * int(not upload))
+            job.start(delay=self.start_delay * i * int(not upload),
+                      upload=upload)
 
             yield self.sleep(self.start_delay * upload)
 
@@ -295,11 +290,9 @@ class BatchProcessingJobManager(JobManager):
         self.logger.info('Benchmarking all image/zip files in `%s`', filepath)
 
         for i, f in enumerate(iter_image_files(filepath)):
-
-            dest = self.upload_file(f, hash_filename=True)
-
-            job = self.make_job(dest, original_name=f)
+            job = self.make_job(f)
             self.all_jobs.append(job)
-            job.start(delay=self.start_delay * i)  # stagger the delay seconds
+            # stagger the delay seconds
+            job.start(delay=self.start_delay * i, upload=True)
 
         yield self.check_job_status()

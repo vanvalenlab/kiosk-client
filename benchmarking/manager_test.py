@@ -84,8 +84,8 @@ class TestJobManager(object):
             data_scale='1',
             data_label='0')
 
-        j1 = mgr.make_job('test.png', original_name=None)
-        j2 = mgr.make_job('test.png', original_name='test.png')
+        j1 = mgr.make_job('test.png')
+        j2 = mgr.make_job('test.png')
 
         assert j1.data_scale == mgr.data_scale == j2.data_scale
         assert j1.data_label == mgr.data_label == j2.data_label
@@ -95,8 +95,8 @@ class TestJobManager(object):
     def test_get_completed_job_count(self):
         mgr = manager.JobManager(host='localhost', model='m:0',)
 
-        j1 = mgr.make_job('test.png', original_name=None)
-        j2 = mgr.make_job('test.png', original_name='test.png')
+        j1 = mgr.make_job('test.png')
+        j2 = mgr.make_job('test.png')
 
         mgr.all_jobs = [j1, j2]
 
@@ -196,7 +196,7 @@ class TestBenchmarkingJobManager(object):
         def dummy_upload_file(filepath, **kwargs):
             return filepath
 
-        def dummy_start(delay):
+        def dummy_start(delay, upload=False):
             return True
 
         def make_job(*args, **kwargs):
@@ -234,7 +234,7 @@ class TestBatchProcessingJobManager(object):
         def dummy_upload_file(filepath, **kwargs):
             return filepath
 
-        def dummy_start(delay):
+        def dummy_start(delay, upload=False):
             return True
 
         def make_job(*args, **kwargs):
