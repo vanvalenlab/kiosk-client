@@ -107,6 +107,7 @@ class JobManager(object):
         self.start_delay = kwargs.get('start_delay', 0.1)
         self.bucket = kwargs.get('storage_bucket')
         self.upload_results = kwargs.get('upload_results', False)
+        self.calculate_cost = kwargs.get('calculate_cost', False)
 
         # initializing cost estimation workflow
         self.cost_getter = CostGetter()
@@ -216,12 +217,13 @@ class JobManager(object):
                          len(self.all_jobs), time_elapsed)
 
         # add cost and timing data to json output
-        try:
-            cpu_cost, gpu_cost, total_cost = self.cost_getter.finish()
-        except Exception as err:  # pylint: disable=broad-except
-            self.logger.error('Encountered %s while getting cost data: %s',
-                              type(err).__name__, err)
-            cpu_cost, gpu_cost, total_cost = '', '', ''
+        cpu_cost, gpu_cost, total_cost = '', '', ''
+        if self.calculate_cost:
+            try:
+                cpu_cost, gpu_cost, total_cost = self.cost_getter.finish()
+            except Exception as err:  # pylint: disable=broad-except
+                self.logger.error('Encountered %s while getting cost data: %s',
+                                  type(err).__name__, err)
 
         jsondata = {
             'cpu_node_cost': cpu_cost,
