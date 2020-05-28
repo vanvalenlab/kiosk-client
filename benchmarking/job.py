@@ -30,6 +30,7 @@ from __future__ import print_function
 
 import logging
 import os
+import timeit
 
 import dateutil.parser
 import treq
@@ -171,12 +172,13 @@ class Job(object):
             'job_id': self.job_id,
         }
 
-    def _log_http_response(self, response):
+    def _log_http_response(self, response, created_at):
         log = self.logger.debug if response.code == 200 else self.logger.warning
-        log('%s %s - %s %s',
+        log('%s %s - %s %s - took %ss',
             response.request.method.decode(),
             response.request.absoluteURI.decode(),
-            response.code, response.phrase.decode())
+            response.code, response.phrase.decode(),
+            timeit.default_timer() - created_at)
 
     def _make_post_request(self, host, **kwargs):
         req_kwargs = {
@@ -196,7 +198,7 @@ class Job(object):
     def _retry_post_request_wrapper(self, host, name='REDIS', **kwargs):
         retrying = True  # retry  loop to prevent stackoverflow
         while retrying:
-
+            created_at = timeit.default_timer()
             try:
                 request = self._make_post_request(host, **kwargs)
                 response = yield request  # Wait for the deferred request
@@ -207,7 +209,7 @@ class Job(object):
                 continue  # return to top of retry loop
 
             try:
-                self._log_http_response(response)
+                self._log_http_response(response, created_at)
                 json_content = yield response.json()  # parse the JSON data
             except (ValueError, AttributeError) as err:
                 self.logger.error('[%s]: Failed to parse %s response as JSON '
