@@ -2,7 +2,7 @@
 
 for (( i=0; i<${NUM_CYCLES}; i++ ))
 do
-  python -m benchmarking \
+  python -m kiosk_client \
     $FILE \
     --job-type=$JOB_TYPE \
     --host=$API_HOST \

@@ -7,7 +7,7 @@
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#     http://www.github.com/vanvalenlab/kiosk-benchmarking/LICENSE
+#     http://www.github.com/vanvalenlab/kiosk-client/LICENSE
 #
 # The Work provided may be used for non-commercial academic purposes only.
 # For any other use of the Work, including commercial use, please contact:
@@ -36,8 +36,8 @@ import sys
 
 from twisted.internet import reactor
 
-from benchmarking import manager
-from benchmarking import settings
+from kiosk_client import manager
+from kiosk_client import settings
 
 
 def valid_filepath(parser, arg):
@@ -54,7 +54,7 @@ def valid_filepath(parser, arg):
 
 def get_arg_parser():
     parser = argparse.ArgumentParser(
-        prog='kioskcli',
+        prog='kioskclient',
         description='The Kicsk-CLI is a Command Line Interface (CLI) for '
                     'interacting with the DeepCell Kiosk.'
     )

@@ -7,7 +7,7 @@
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#     http://www.github.com/vanvalenlab/kiosk-benchmarking/LICENSE
+#     http://www.github.com/vanvalenlab/kiosk-client/LICENSE
 #
 # The Work provided may be used for non-commercial academic purposes only.
 # For any other use of the Work, including commercial use, please contact:
@@ -37,8 +37,8 @@ from twisted.internet import defer
 import pytest
 import pytest_twisted
 
-from benchmarking import manager
-from benchmarking import settings
+from kiosk_client import manager
+from kiosk_client import settings
 
 
 class TestJobManager(object):
