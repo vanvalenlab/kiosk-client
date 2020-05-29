@@ -200,10 +200,11 @@ if __name__ == '__main__':
         'preprocess': args.pre,
         'upload_prefix': args.upload_prefix,
         'expire_time': args.expire_time,
-        'upload_results': args.upload_results,
         'data_scale': args.scale,
-        'calculate_cost': args.calculate_cost,
         'data_label': args.label,
+        'storage_bucket': args.storage_bucket,
+        'upload_results': args.upload_results,
+        'calculate_cost': args.calculate_cost,
     }
 
     if not os.path.exists(args.file) and not args.benchmark and args.upload:
