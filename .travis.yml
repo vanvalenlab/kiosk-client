@@ -20,7 +20,7 @@ install:
   - pip install -U pytest pytest-twisted pytest-cov pytest-pep8 coveralls attrs>=19.2.0
 
 script:
-  - pytest --cov=benchmarking --pep8 benchmarking
+  - pytest --cov=kiosk_client --pep8 kiosk_client
 
 jobs:
   include:

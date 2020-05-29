@@ -7,7 +7,7 @@
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#     http://www.github.com/vanvalenlab/kiosk-benchmarking/LICENSE
+#     http://www.github.com/vanvalenlab/kiosk-client/LICENSE
 #
 # The Work provided may be used for non-commercial academic purposes only.
 # For any other use of the Work, including commercial use, please contact:
@@ -26,14 +26,14 @@
 from setuptools import setup
 from setuptools import find_packages
 
-setup(name='Kiosk_Benchmarking',
+setup(name='Kiosk_Client',
       version='0.4.0',
-      description='Benchmarking utility for the DeepCell Kiosk.',
+      description='ClI client for the DeepCell Kiosk.',
       author='Van Valen Lab',
       author_email='vanvalenlab@gmail.com',
-      url='https://github.com/vanvalenlab/kiosk-benchmarking',
+      url='https://github.com/vanvalenlab/kiosk-client',
       download_url='https://github.com/vanvalenlab/'
-                   'kiosk-benchmarking/tarball/0.4.0',
+                   'kiosk-client/tarball/0.4.0',
       license='LICENSE',
       install_requires=['boto3',
                         'google-cloud-storage',

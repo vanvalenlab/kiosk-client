@@ -1,10 +1,10 @@
-# kiosk-benchmarking
+# kiosk-client
 
-[![Build Status](https://travis-ci.com/vanvalenlab/kiosk-benchmarking.svg?branch=master)](https://travis-ci.com/vanvalenlab/kiosk-benchmarking)
-[![Coverage Status](https://coveralls.io/repos/github/vanvalenlab/kiosk-benchmarking/badge.svg?branch=master)](https://coveralls.io/github/vanvalenlab/kiosk-benchmarking?branch=master)
+[![Build Status](https://travis-ci.com/vanvalenlab/kiosk-client.svg?branch=master)](https://travis-ci.com/vanvalenlab/kiosk-client)
+[![Coverage Status](https://coveralls.io/repos/github/vanvalenlab/kiosk-client/badge.svg?branch=master)](https://coveralls.io/github/vanvalenlab/kiosk-client?branch=master)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](/LICENSE)
 
-`kiosk-benchmarking` is tool for interacting with the [Kiosk](https://github.com/vanvalenlab/kiosk-console) in order to create and monitor deep learning image processing jobs. It uses the asynchronous HTTP client [treq](https://github.com/twisted/treq) and the [Kiosk-Frontend API](https://github.com/vanvalenlab/kiosk-frontend) to create and monitor many jobs at once. Once all jobs are completed, [costs are estimated](./docs/cost_computation_notes.md) by using the cluster's [Grafana API](https://grafana.com/docs/http_api/). An output file is then generated with statistics on each job's performance and resulting output files.
+`kiosk-client` is tool for interacting with the [DeepCell Kiosk](https://github.com/vanvalenlab/kiosk-console) in order to create and monitor deep learning image processing jobs. It uses the asynchronous HTTP client [treq](https://github.com/twisted/treq) and the [Kiosk-Frontend API](https://github.com/vanvalenlab/kiosk-frontend) to create and monitor many jobs at once. Once all jobs are completed, [costs are estimated](./docs/cost_computation_notes.md) by using the cluster's [Grafana API](https://grafana.com/docs/http_api/). An output file is then generated with statistics on each job's performance and resulting output files.
 
 This repository is part of the [DeepCell Kiosk](https://github.com/vanvalenlab/kiosk-console). More information about the Kiosk project is available through [Read the Docs](https://deepcell-kiosk.readthedocs.io/en/master) and our [FAQ](http://www.deepcell.org/faq) page.
 
@@ -14,10 +14,10 @@ First, clone the git repository and install the required dependencies.
 
 ```bash
 # clone the repository
-git clone https://github.com/vanvalenlab/kiosk-benchmarking.git
+git clone https://github.com/vanvalenlab/kiosk-client.git
 
 # move into the new repository directory
-cd kiosk-benchmarking
+cd kiosk-client
 
 # install the requirements
 pip install -r requirements.txt
@@ -28,8 +28,8 @@ pip install -r requirements.txt
 The only thing necessary to use the CLI is the image file to process, the type of job, and the IP address or FQDN of the DeepCell Kiosk.
 
 ```bash
-# from within the kiosk-benchmarking repository
-python benchmarking path/to/image.png \
+# from within the kiosk-client repository
+python kiosk_client path/to/image.png \
   --job-type segmentation \
   --host 123.456.789.012
 ```
@@ -37,8 +37,8 @@ python benchmarking path/to/image.png \
 It is also possible to override the default model and post-processing function for a given job type.
 
 ```bash
-# from within the kiosk-benchmarking repository
-python benchmarking path/to/image.png \
+# from within the kiosk-client repository
+python kiosk_client path/to/image.png \
   --job-type segmentation \
   --host 123.456.789.012 \
   --model ModelName:0 \
@@ -54,8 +54,8 @@ A new job is created every `START_DELAY` seconds up to `COUNT` jobs.
 The upload time can be simulated by changing the start delay.
 
 ```bash
-# from within the kiosk-benchmarking repository
-python benchmarking path/to/image.png \
+# from within the kiosk-client repository
+python kiosk_client path/to/image.png \
   --job-type segmentation \
   --host 123.456.789.012 \
   --model ModelName:0 \

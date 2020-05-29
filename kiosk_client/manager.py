@@ -7,7 +7,7 @@
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#     http://www.github.com/vanvalenlab/kiosk-benchmarking/LICENSE
+#     http://www.github.com/vanvalenlab/kiosk-client/LICENSE
 #
 # The Work provided may be used for non-commercial academic purposes only.
 # For any other use of the Work, including commercial use, please contact:
@@ -38,11 +38,11 @@ from google.cloud import storage as google_storage
 from twisted.internet import defer, reactor
 from twisted.web.client import HTTPConnectionPool
 
-from benchmarking.job import Job
-from benchmarking.utils import iter_image_files, sleep, strip_bucket_prefix
-from benchmarking import settings
+from kiosk_client.job import Job
+from kiosk_client.utils import iter_image_files, sleep, strip_bucket_prefix
+from kiosk_client import settings
 
-from benchmarking.cost import CostGetter
+from kiosk_client.cost import CostGetter
 
 
 class JobManager(object):
