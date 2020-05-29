@@ -239,10 +239,9 @@ class JobManager(object):
             'job_data': [j.json() for j in self.all_jobs]
         }
 
-        output_filepath = '{}{}delay_{}jobs_{}.json'.format(
-            '{}gpu_' if settings.NUM_GPUS else '',
-            self.start_delay, len(self.all_jobs),
-            uuid.uuid4().hex)
+        output_filepath = '{}{}jobs_{}delay_{}.json'.format(
+            '{}gpu_'.format(settings.NUM_GPUS) if settings.NUM_GPUS else '',
+            len(self.all_jobs), self.start_delay, uuid.uuid4().hex)
         output_filepath = os.path.join(settings.OUTPUT_DIR, output_filepath)
 
         with open(output_filepath, 'w') as jsonfile:
