@@ -74,9 +74,9 @@ Each job can be configured using environmental variables in a `.env` file. Most 
 
 | Name | Description | Default Value |
 | :--- | :--- | :--- |
-| `API_HOST` | **REQUIRED**: Hostname and port for the *kiosk-frontend* API server. | `""` |
-| `STORAGE_BUCKET` | **REQUIRED**: Cloud storage bucket address (e.g. `"gs://bucket-name"`). | `""` |
 | `JOB_TYPE` | **REQUIRED**: Name of job workflow. | `"segmentation"` |
+| `API_HOST` | **REQUIRED**: Hostname and port for the *kiosk-frontend* API server. | `""` |
+| `STORAGE_BUCKET` | Cloud storage bucket address (e.g. `"gs://bucket-name"`). Required if using `benchmark` mode and `upload-results`. | `""` |
 | `MODEL` | Name and version of the model hosted by TensorFlow Serving (e.g. `"modelname:0"`). Overrides default model for the given `JOB_TYPE` | `"modelname:0"` |
 | `SCALE` | Rescale data by this float value for model compatibility. | `1` |
 | `LABEL` | Integer value of label type. | `""` |
