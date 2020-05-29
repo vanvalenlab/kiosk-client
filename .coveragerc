@@ -14,4 +14,4 @@ show_missing = True
 
 omit =
     **/*_test.py
-    client/__main__.py
+    kiosk_client/__main__.py
