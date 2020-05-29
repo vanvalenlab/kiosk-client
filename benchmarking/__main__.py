@@ -48,7 +48,7 @@ def valid_filepath(parser, arg):
     if not os.path.exists(arg):
         # Argparse uses the ArgumentTypeError to give a rejection message like:
         # error: argument input: x does not exist
-        raise argparse.ArgumentTypeError("{0} does not exist".format(arg))
+        raise argparse.ArgumentTypeError('{0} does not exist'.format(arg))
     return arg
 
 
@@ -102,7 +102,7 @@ def get_arg_parser():
                              'prediction. Overrides default postprocessing '
                              'function for the JOB_TYPE.')
 
-    parser.add_argument('-s', '--scale', type=float,
+    parser.add_argument('-s', '--scale', type=str,
                         default=settings.SCALE,
                         help='Scale of the data. Data will be scaled up or '
                              'for the best model compatibility.')
@@ -181,6 +181,13 @@ if __name__ == '__main__':
 
     if settings.LOG_ENABLED:
         initialize_logger(log_level=args.log_level)
+
+    if args.scale:  # optional, but if provided should be a float
+        try:
+            args.scale = float(args.scale)
+        except ValueError:
+            raise argparse.ArgumentTypeError(
+                '{0} is not a float'.format(args.scale))
 
     mgr_kwargs = {
         'host': args.host,
