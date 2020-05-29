@@ -254,6 +254,7 @@ class JobManager(object):
                                      hash_filename=False,
                                      prefix='output')
             except Exception as err:  # pylint: disable=broad-except
+                self.logger.error(err)
                 self.logger.error('Could not upload output file to bucket. '
                                   'Copy this file from the docker container to '
                                   'keep the data.')
