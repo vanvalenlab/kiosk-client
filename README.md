@@ -10,17 +10,20 @@ This repository is part of the [DeepCell Kiosk](https://github.com/vanvalenlab/k
 
 ## Installation
 
-First, clone the git repository and install the required dependencies.
+### Install with `pip`
+
+```bash
+pip install kiosk_client
+```
+
+### Install from source
 
 ```bash
 # clone the repository
 git clone https://github.com/vanvalenlab/kiosk-client.git
 
-# move into the new repository directory
-cd kiosk-client
-
-# install the requirements
-pip install -r requirements.txt
+# install the package
+pip install kiosk-client
 ```
 
 ## Usage
@@ -28,8 +31,7 @@ pip install -r requirements.txt
 The only thing necessary to use the CLI is the image file to process, the type of job, and the IP address or FQDN of the DeepCell Kiosk.
 
 ```bash
-# from within the kiosk-client repository
-python kiosk_client path/to/image.png \
+python -m kiosk_client path/to/image.png \
   --job-type segmentation \
   --host 123.456.789.012
 ```
@@ -37,8 +39,7 @@ python kiosk_client path/to/image.png \
 It is also possible to override the default model and post-processing function for a given job type.
 
 ```bash
-# from within the kiosk-client repository
-python kiosk_client path/to/image.png \
+python -m kiosk_client path/to/image.png \
   --job-type segmentation \
   --host 123.456.789.012 \
   --model ModelName:0 \
@@ -55,7 +56,7 @@ The upload time can be simulated by changing the start delay.
 
 ```bash
 # from within the kiosk-client repository
-python kiosk_client path/to/image.png \
+python -m kiosk_client path/to/image.png \
   --job-type segmentation \
   --host 123.456.789.012 \
   --model ModelName:0 \

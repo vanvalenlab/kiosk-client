@@ -1,4 +1,3 @@
-sudo: true
 dist: xenial
 
 git:
@@ -24,7 +23,7 @@ script:
 
 jobs:
   include:
-    - stage: deploy
+    - stage: docker_deploy
       if: tag IS present
       python: 3.6
       script:
@@ -34,6 +33,14 @@ jobs:
       - docker tag "$TRAVIS_REPO_SLUG" "$TRAVIS_REPO_SLUG":latest
       - docker tag "$TRAVIS_REPO_SLUG" "$TRAVIS_REPO_SLUG":"${TRAVIS_TAG}"
       - docker push "$TRAVIS_REPO_SLUG"
+    - stage: pip_deploy
+      if: tag IS present
+      deploy:
+        provider: pypi
+        user: $PYPI_USERNAME
+        password: $PYPI_PASSWORD
+        on:
+          tags: true
 
 after_success:
   - coveralls
