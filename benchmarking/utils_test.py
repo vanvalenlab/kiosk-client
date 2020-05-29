@@ -41,58 +41,78 @@ from benchmarking import utils
 
 class TestUtils(object):
 
-    def test_is_image_file(self):
-        with tempfile.TemporaryDirectory() as tempdir:
-            # Test valid image
-            valid_image = os.path.join(tempdir, 'image.png')
+    def test_is_image_file(self, tmpdir):
+        # Test valid image
+        tmpdir = str(tmpdir)
+        valid_image = os.path.join(tmpdir, 'image.png')
+        img = Image.new('RGB', (800, 1280), (255, 255, 255))
+        img.save(valid_image, 'PNG')
+        assert utils.is_image_file(valid_image)
+
+        # Test invalid image
+        invalid_image = os.path.join(tmpdir, 'bad_image.png')
+        with open(invalid_image, 'w') as f:
+            f.write('line1')
+        assert not utils.is_image_file(invalid_image)
+
+        # Test image file does not exist
+        missing_image = os.path.join(tmpdir, 'nofile.png')
+        assert not utils.is_image_file(missing_image)
+
+    def test_iter_image_files(self, tmpdir):
+        # test image files
+        tmpdir = str(tmpdir)
+        num = random.randint(1, 5)
+        imagename = lambda x: 'image%s.png' % x
+
+        valid_images = []
+        for i in range(num):
+            valid_image = os.path.join(tmpdir, imagename(i))
             img = Image.new('RGB', (800, 1280), (255, 255, 255))
             img.save(valid_image, 'PNG')
-            assert utils.is_image_file(valid_image)
+            valid_images.append(valid_image)
 
-            # Test invalid image
-            invalid_image = os.path.join(tempdir, 'bad_image.png')
-            with open(invalid_image, 'w') as f:
-                f.write('line1')
-            assert not utils.is_image_file(invalid_image)
+        # only image files exist
+        results = utils.iter_image_files(tmpdir, include_archives=True)
+        assert set(list(results)) == set(valid_images)
 
-            # Test image file does not exist
-            missing_image = os.path.join(tempdir, 'nofile.png')
-            assert not utils.is_image_file(missing_image)
+        # create a new zip file of all the valid images
+        zippath = os.path.join(tmpdir, 'test.zip')
+        z = zipfile.ZipFile(zippath, 'w', zipfile.ZIP_DEFLATED)
+        z.close()
 
-    def test_iter_image_files(self):
-        # test image files
-        with tempfile.TemporaryDirectory() as tempdir:
-            num = random.randint(1, 5)
-            imagename = lambda x: 'image%s.png' % x
+        # turn off include_archives, should not see the zip file
+        results = utils.iter_image_files(tmpdir, include_archives=False)
+        assert set(list(results)) == set(valid_images)
 
-            valid_images = []
-            for i in range(num):
-                valid_image = os.path.join(tempdir, imagename(i))
-                img = Image.new('RGB', (800, 1280), (255, 255, 255))
-                img.save(valid_image, 'PNG')
-                valid_images.append(valid_image)
+        # with include_archives, zipfile should be in results
+        results = utils.iter_image_files(tmpdir, include_archives=True)
+        assert set(list(results)) == set(valid_images).union({zippath})
 
-            # only image files exist
-            results = utils.iter_image_files(tempdir, include_archives=True)
-            assert set(list(results)) == set(valid_images)
+        # test single file paths
+        results = utils.iter_image_files(zippath, include_archives=True)
+        assert set(list(results)) == set((zippath,))
+        results = utils.iter_image_files(zippath, include_archives=False)
+        assert set(list(results)) == set()
+        results = utils.iter_image_files(valid_images[0])
+        assert set(list(results)) == set((valid_images[0],))
 
-            # create a new zip file of all the valid images
-            zippath = os.path.join(tempdir, 'test.zip')
-            z = zipfile.ZipFile(zippath, 'w', zipfile.ZIP_DEFLATED)
-            z.close()
+    def test_strip_bucket_prefix(self):
+        names = [
+            'uploads',
+            'uploads/with/subdir',
+        ]
+        fmt_strings = [
+            '/{}',  # leading "/"
+            '{}/',  # trailing "/"
+            '/{}/',  # both leading and trailing "/"
+            '{}',  # nothing
+        ]
+        for name in names:
+            for fmt_string in fmt_strings:
+                prefix = fmt_string.format(name)
+                assert name == utils.strip_bucket_prefix(prefix)
 
-            # turn off include_archives, should not see the zip file
-            results = utils.iter_image_files(tempdir, include_archives=False)
-            assert set(list(results)) == set(valid_images)
-
-            # with include_archives, zipfile should be in results
-            results = utils.iter_image_files(tempdir, include_archives=True)
-            assert set(list(results)) == set(valid_images).union({zippath})
-
-            # test single file paths
-            results = utils.iter_image_files(zippath, include_archives=True)
-            assert set(list(results)) == set((zippath,))
-            results = utils.iter_image_files(zippath, include_archives=False)
-            assert set(list(results)) == set()
-            results = utils.iter_image_files(valid_images[0])
-            assert set(list(results)) == set((valid_images[0],))
+        name = '/duplicate/leading/and/trailing/'
+        stripped = utils.strip_bucket_prefix(name)
+        assert name[1:-1] == stripped

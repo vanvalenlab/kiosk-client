@@ -8,7 +8,7 @@
 
 This repository is part of the [DeepCell Kiosk](https://github.com/vanvalenlab/kiosk-console). More information about the Kiosk project is available through [Read the Docs](https://deepcell-kiosk.readthedocs.io/en/master) and our [FAQ](http://www.deepcell.org/faq) page.
 
-## Getting started
+## Installation
 
 First, clone the git repository and install the required dependencies.
 
@@ -23,38 +23,61 @@ cd kiosk-benchmarking
 pip install -r requirements.txt
 ```
 
-## Usage Examples
+## Usage
 
-Benchmarking can be run in 2 different modes: `benchmark` and `upload`.
+The only thing necessary to use the CLI is the image file to process, the type of job, and the IP address or FQDN of the DeepCell Kiosk.
+
+```bash
+# from within the kiosk-benchmarking repository
+python benchmarking path/to/image.png \
+  --job-type segmentation \
+  --host 123.456.789.012
+```
+
+It is also possible to override the default model and post-processing function for a given job type.
+
+```bash
+# from within the kiosk-benchmarking repository
+python benchmarking path/to/image.png \
+  --job-type segmentation \
+  --host 123.456.789.012 \
+  --model ModelName:0 \
+  --post deep_watershed
+```
 
 ### Benchmark Mode
 
-```bash
-# from within the kiosk-benchmarking repository
-python benchmarking benchmark --file image_to_process.png  --count 100
-```
-
-`benchmark` mode will create a new job every `START_DELAY` seconds up to `COUNT` jobs. Each job is monitored and when all jobs are finished, the stats are summarized, cost is estimated, and the output file is uploaded to the `STORAGE_BUCKET`.  The `FILE` is expected to be inside the bucket in the `UPLOAD_PREFIX` directory (`/uploads` by default) and can be either a single image or a zip file of images. The upload time can be simulated by changing the start delay.
-
-### Upload Mode
+The CLI can also be used to benchmark the cluster with high volume jobs.
+It is a prerequisite that the the `FILE` exist in the `STORAGE_BUCKET` inside `UPLOAD_PREFIX` (e.g. `/uploads/image.png`).
+There are also a number of other benchmarking options including `--upload-results` and `--calculate_cost`.
+A new job is created every `START_DELAY` seconds up to `COUNT` jobs.
+The upload time can be simulated by changing the start delay.
 
 ```bash
 # from within the kiosk-benchmarking repository
-python benchmarking upload --file local_file_to_upload.png
+python benchmarking path/to/image.png \
+  --job-type segmentation \
+  --host 123.456.789.012 \
+  --model ModelName:0 \
+  --post deep_watershed \
+  --start-delay 0.5 \
+  --count 1000 \
+  --calculate_cost \
+  --upload-results
 ```
 
-`upload` mode is designed for batch processing local files.  The `FILE` path is checked for any zip or image files, each is uploaded and monitored.  When all jobs are finished, the stats are summarized, cost is estimated, and the output file is uploaded to the `STORAGE_BUCKET`.
+_It is easiest to run a benchmarking job from within the DeepCell Kiosk._
 
 ## Configuration
 
-Each job can be configured using environmental variables in a `.env` file.
+Each job can be configured using environmental variables in a `.env` file. Most of these environment variables can be overridden with command line options. Use `python benchmarking --help` for detailed list of options.
 
 | Name | Description | Default Value |
 | :--- | :--- | :--- |
 | `API_HOST` | **REQUIRED**: Hostname and port for the *kiosk-frontend* API server. | `""` |
 | `STORAGE_BUCKET` | **REQUIRED**: Cloud storage bucket address (e.g. `"gs://bucket-name"`). | `""` |
-| `MODEL` | **REQUIRED**: Name and version of the model hosted by TensorFlow Serving (e.g. `"modelname:0"`). | `"modelname:0"` |
 | `JOB_TYPE` | **REQUIRED**: Name of job workflow. | `"segmentation"` |
+| `MODEL` | Name and version of the model hosted by TensorFlow Serving (e.g. `"modelname:0"`). Overrides default model for the given `JOB_TYPE` | `"modelname:0"` |
 | `SCALE` | Rescale data by this float value for model compatibility. | `1` |
 | `LABEL` | Integer value of label type. | `""` |
 | `PREPROCESS` | Name of the preprocessing function to use (e.g. `"normalize"`). | `""` |

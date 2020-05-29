@@ -36,20 +36,31 @@ import uuid
 
 from google.cloud import storage as google_storage
 from twisted.internet import defer, reactor
-from twisted.internet.task import deferLater
 from twisted.web.client import HTTPConnectionPool
 
 from benchmarking.job import Job
-from benchmarking.utils import iter_image_files, sleep
+from benchmarking.utils import iter_image_files, sleep, strip_bucket_prefix
 from benchmarking import settings
 
 from benchmarking.cost import CostGetter
 
 
 class JobManager(object):
+    """Manages many DeepCell Kiosk jobs.
 
-    def __init__(self, host, model_name, model_version, **kwargs):
+    Args:
+        host (str): public IP address of the DeepCell Kiosk cluster.
+        job_type (str): DeepCell Kiosk job type (e.g. "segmentation").
+        upload_prefix (str): upload all files to this folder in the bucket.
+        refresh_rate (int): seconds between each manager status check.
+        update_interval (int): seconds between each job status refresh.
+        expire_time (int): seconds until finished jobs are expired.
+        start_delay (int): delay between each job, in seconds.
+    """
+
+    def __init__(self, host, job_type, **kwargs):
         self.logger = logging.getLogger(str(self.__class__.__name__))
+        self.created_at = timeit.default_timer()
         self.all_jobs = []
 
         host = str(host)
@@ -57,9 +68,22 @@ class JobManager(object):
             host = 'http://{}'.format(host)
 
         self.host = host
+        self.job_type = job_type
+
+        model = kwargs.get('model', '')
+        if model:
+            try:
+                model_name, model_version = str(model).split(':')
+                model_version = int(model_version)
+            except Exception as err:
+                self.logger.error('Invalid model name, must be of the form '
+                                  '"ModelName:Version", for example "model:0".')
+                raise err
+        else:
+            model_name, model_version = '', ''
+
         self.model_name = model_name
         self.model_version = model_version
-        self.job_type = kwargs.get('job_type', 'segmentation')
 
         data_scale = str(kwargs.get('data_scale', ''))
         if data_scale:
@@ -80,21 +104,24 @@ class JobManager(object):
         self.preprocess = kwargs.get('preprocess', '')
         self.postprocess = kwargs.get('postprocess', '')
         self.upload_prefix = kwargs.get('upload_prefix', 'uploads')
+        self.upload_prefix = strip_bucket_prefix(self.upload_prefix)
         self.refresh_rate = int(kwargs.get('refresh_rate', 10))
         self.update_interval = kwargs.get('update_interval', 10)
         self.expire_time = kwargs.get('expire_time', 3600)
         self.start_delay = kwargs.get('start_delay', 0.1)
-        self.headers = {'Content-Type': ['application/json']}
-        self.created_at = timeit.default_timer()
-
-        self.pool = HTTPConnectionPool(reactor, persistent=True)
-        self.pool.maxPersistentPerHost = settings.CONCURRENT_REQUESTS_PER_HOST
-        self.pool.retryAutomatically = False
+        self.bucket = kwargs.get('storage_bucket')
+        self.upload_results = kwargs.get('upload_results', False)
+        self.calculate_cost = kwargs.get('calculate_cost', False)
 
         # initializing cost estimation workflow
         self.cost_getter = CostGetter()
 
         self.sleep = sleep  # allow monkey-patch
+
+        # twisted configuration
+        self.pool = HTTPConnectionPool(reactor, persistent=True)
+        self.pool.maxPersistentPerHost = settings.CONCURRENT_REQUESTS_PER_HOST
+        self.pool.retryAutomatically = False
 
     def upload_file(self, filepath, acl='publicRead',
                     hash_filename=True, prefix=None):
@@ -109,15 +136,14 @@ class JobManager(object):
         else:
             dest = os.path.basename(filepath)
 
-        bucket = storage_client.get_bucket(settings.STORAGE_BUCKET)
+        bucket = storage_client.get_bucket(self.bucket)
         blob = bucket.blob(os.path.join(prefix, dest))
         blob.upload_from_filename(filepath, predefined_acl=acl)
         self.logger.debug('Uploaded %s to %s in %s seconds.',
                           filepath, dest, timeit.default_timer() - start)
         return dest
 
-    def make_job(self, filepath, original_name=None):
-        original_name = original_name if original_name else filepath
+    def make_job(self, filepath):
         return Job(filepath=filepath,
                    host=self.host,
                    model_name=self.model_name,
@@ -127,7 +153,6 @@ class JobManager(object):
                    data_label=self.data_label,
                    postprocess=self.postprocess,
                    upload_prefix=self.upload_prefix,
-                   original_name=original_name,
                    update_interval=self.update_interval,
                    expire_time=self.expire_time,
                    pool=self.pool)
@@ -196,12 +221,13 @@ class JobManager(object):
                          len(self.all_jobs), time_elapsed)
 
         # add cost and timing data to json output
-        try:
-            cpu_cost, gpu_cost, total_cost = self.cost_getter.finish()
-        except Exception as err:
-            self.logger.error('Encountered %s while getting cost data: %s',
-                              type(err).__name__, err)
-            cpu_cost, gpu_cost, total_cost = '', '', ''
+        cpu_cost, gpu_cost, total_cost = '', '', ''
+        if self.calculate_cost:
+            try:
+                cpu_cost, gpu_cost, total_cost = self.cost_getter.finish()
+            except Exception as err:  # pylint: disable=broad-except
+                self.logger.error('Encountered %s while getting cost data: %s',
+                                  type(err).__name__, err)
 
         jsondata = {
             'cpu_node_cost': cpu_cost,
@@ -213,25 +239,25 @@ class JobManager(object):
             'job_data': [j.json() for j in self.all_jobs]
         }
 
-        output_filepath = os.path.join(
-            settings.OUTPUT_DIR,
-            '{}gpu_{}delay_{}jobs_{}.json'.format(
-                settings.NUM_GPUS, self.start_delay,
-                len(self.all_jobs), uuid.uuid4().hex))
+        output_filepath = '{}{}jobs_{}delay_{}.json'.format(
+            '{}gpu_'.format(settings.NUM_GPUS) if settings.NUM_GPUS else '',
+            len(self.all_jobs), self.start_delay, uuid.uuid4().hex)
+        output_filepath = os.path.join(settings.OUTPUT_DIR, output_filepath)
 
         with open(output_filepath, 'w') as jsonfile:
             json.dump(jsondata, jsonfile, indent=4)
-
             self.logger.info('Wrote job data as JSON to %s.', output_filepath)
 
-        try:
-            _ = self.upload_file(output_filepath,
-                                 hash_filename=False,
-                                 prefix='output')
-        except Exception as err:  # pylint: disable=broad-except
-            self.logger.error('Could not upload output file to bucket. '
-                              'Copy this file from the docker container to '
-                              'keep the data.')
+        if self.upload_results:
+            try:
+                _ = self.upload_file(output_filepath,
+                                     hash_filename=False,
+                                     prefix='output')
+            except Exception as err:  # pylint: disable=broad-except
+                self.logger.error(err)
+                self.logger.error('Could not upload output file to bucket. '
+                                  'Copy this file from the docker container to '
+                                  'keep the data.')
 
     def run(self, *args, **kwargs):
         raise NotImplementedError
@@ -246,16 +272,13 @@ class BenchmarkingJobManager(JobManager):
 
         for i in range(count):
 
-            if upload:
-                dest = self.upload_file(filepath, hash_filename=False)
-                job = self.make_job(dest, original_name=filepath)
-            else:
-                job = self.make_job(filepath)
+            job = self.make_job(filepath)
 
             self.all_jobs.append(job)
 
             # stagger the delay seconds; if upload it will be staggered already
-            job.start(delay=self.start_delay * i * int(not upload))
+            job.start(delay=self.start_delay * i * int(not upload),
+                      upload=upload)
 
             yield self.sleep(self.start_delay * upload)
 
@@ -273,11 +296,9 @@ class BatchProcessingJobManager(JobManager):
         self.logger.info('Benchmarking all image/zip files in `%s`', filepath)
 
         for i, f in enumerate(iter_image_files(filepath)):
-
-            dest = self.upload_file(f, hash_filename=True)
-
-            job = self.make_job(dest, original_name=f)
+            job = self.make_job(f)
             self.all_jobs.append(job)
-            job.start(delay=self.start_delay * i)  # stagger the delay seconds
+            # stagger the delay seconds
+            job.start(delay=self.start_delay * i, upload=True)
 
         yield self.check_job_status()

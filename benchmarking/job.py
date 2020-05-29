@@ -28,9 +28,9 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-import json
 import logging
 import os
+import timeit
 
 import dateutil.parser
 import treq
@@ -38,12 +38,21 @@ from twisted.internet import defer
 from twisted.internet import error as twisted_errors
 from twisted.web import _newclient as twisted_client
 
-from benchmarking.utils import sleep
+from benchmarking.utils import sleep, strip_bucket_prefix
 
 
 class Job(object):
 
     def __init__(self, host, filepath, model_name, model_version, **kwargs):
+        """Creates and tracks a DeepCell Kiosk job, recording various summary data.
+
+        Args:
+            host (str): public IP address of the DeepCell Kiosk cluster.
+            filepath (str): The filepath of the file to be processed.
+            model_name (str): Name of servable model.
+            model_version (int): Version of servable model.
+            kwargs (dict): Optional keyword arguments.
+        """
         self.logger = logging.getLogger(str(self.__class__.__name__))
 
         self.host = str(host)
@@ -68,13 +77,14 @@ class Job(object):
                 raise ValueError('data_label must be an integer.')
         self.data_label = data_label
 
-        if not self.model_version.isdigit():
+        if self.model_version and not self.model_version.isdigit():
             raise ValueError('`model_version` must be a number, got ' +
                              self.model_version)
 
         self.preprocess = kwargs.get('preprocess', '')
         self.postprocess = kwargs.get('postprocess', '')
         self.upload_prefix = kwargs.get('upload_prefix', 'uploads')
+        self.upload_prefix = strip_bucket_prefix(self.upload_prefix)
         self.expire_time = int(kwargs.get('expire_time', 3600))
         self.update_interval = int(kwargs.get('update_interval', 10))
         self.original_name = kwargs.get('original_name', self.filepath)
@@ -162,27 +172,35 @@ class Job(object):
             'job_id': self.job_id,
         }
 
-    def _log_http_response(self, response):
+    def _log_http_response(self, response, created_at):
         log = self.logger.debug if response.code == 200 else self.logger.warning
-        log('%s %s - %s %s',
+        log('%s %s - %s %s - took %ss',
             response.request.method.decode(),
             response.request.absoluteURI.decode(),
-            response.code, response.phrase.decode())
+            response.code, response.phrase.decode(),
+            timeit.default_timer() - created_at)
 
-    def _make_post_request(self, host, data, **kwargs):
+    def _make_post_request(self, host, **kwargs):
         req_kwargs = {
             'headers': kwargs.get('headers', self.headers),
-            'pool': kwargs.get('pool', self.pool)
+            'pool': kwargs.get('pool', self.pool),
         }
-        return treq.post(host, json=data, **req_kwargs)
+
+        # The name of the payload dictates the type of encoding and headers.
+        payload_names = {'data', 'json', 'files'}
+        for pn in payload_names:
+            if pn in kwargs:
+                req_kwargs[pn] = kwargs[pn]
+
+        return treq.post(host, **req_kwargs)
 
     @defer.inlineCallbacks
-    def _retry_post_request_wrapper(self, host, data, name='REDIS', **kwargs):
+    def _retry_post_request_wrapper(self, host, name='REDIS', **kwargs):
         retrying = True  # retry  loop to prevent stackoverflow
         while retrying:
-
+            created_at = timeit.default_timer()
             try:
-                request = self._make_post_request(host, data, **kwargs)
+                request = self._make_post_request(host, **kwargs)
                 response = yield request  # Wait for the deferred request
             except self._http_errors as err:
                 self.logger.warning('[%s]: Encountered %s during %s: %s',
@@ -191,9 +209,9 @@ class Job(object):
                 continue  # return to top of retry loop
 
             try:
-                self._log_http_response(response)
+                self._log_http_response(response, created_at)
                 json_content = yield response.json()  # parse the JSON data
-            except (json.decoder.JSONDecodeError, AttributeError) as err:
+            except (ValueError, AttributeError) as err:
                 self.logger.error('[%s]: Failed to parse %s response as JSON '
                                   'due to %s: %s', self.job_id, name,
                                   type(err).__name__, err)
@@ -205,11 +223,27 @@ class Job(object):
         defer.returnValue(json_content)  # "return" the value
 
     @defer.inlineCallbacks
+    def upload_file(self):
+        host = '{}/api/upload'.format(self.host)
+        headers = self.headers.copy()
+        headers['Content-Type'] = ['multipart/form-data']
+        name = 'UPLOAD {}'.format(self.filepath)
+        payload = {
+            'file': (self.filepath, open(self.filepath, 'rb'))
+        }
+        response = yield self._retry_post_request_wrapper(host, name,
+                                                          files=payload,
+                                                          headers=headers)
+        uploaded_path = response.get('uploadedName')
+        defer.returnValue(uploaded_path)  # "return" the value
+
+    @defer.inlineCallbacks
     def get_redis_value(self, field):
         host = '{}/api/redis'.format(self.host)
         payload = {'hash': self.job_id, 'key': field}
         name = 'REDIS HGET {}'.format(field)
-        response = yield self._retry_post_request_wrapper(host, payload, name)
+        response = yield self._retry_post_request_wrapper(host, name,
+                                                          json=payload)
         value = response.get('value')
         defer.returnValue(value)  # "return" the value
 
@@ -230,7 +264,8 @@ class Job(object):
         }
         host = '{}/api/predict'.format(self.host)
         name = 'REDIS CREATE'
-        response = yield self._retry_post_request_wrapper(host, job_data, name)
+        response = yield self._retry_post_request_wrapper(host, name,
+                                                          json=job_data)
 
         job_id = response.get('hash')
 
@@ -295,7 +330,8 @@ class Job(object):
         host = '{}/api/redis/expire'.format(self.host)
         payload = {'hash': self.job_id, 'expireIn': self.expire_time}
         name = 'REDIS EXPIRE'
-        response = yield self._retry_post_request_wrapper(host, payload, name)
+        response = yield self._retry_post_request_wrapper(host, name,
+                                                          json=payload)
         value = response.get('value')
         defer.returnValue(value)  # "return" the value
 
@@ -313,21 +349,24 @@ class Job(object):
 
         if self.job_id is None:  # never got started in the first place
             result = yield self.start()
-            return result
 
         elif self.is_done:  # no need to monitor, skip straight to summarize
             result = yield self.summarize()
-            return result
 
         else:  # job has begun but was not finished, monitor status
             result = yield self.monitor()
-            return result
+
+        defer.returnValue(result)
 
     @defer.inlineCallbacks
-    def start(self, delay=0):
+    def start(self, delay=0, upload=False):
 
         if delay:  # delay the start if required
             yield self.sleep(delay)
+
+        if upload:
+            uploaded_path = yield self.upload_file()
+            self.filepath = os.path.relpath(uploaded_path, self.upload_prefix)
 
         try:
             self.job_id = yield self.create()

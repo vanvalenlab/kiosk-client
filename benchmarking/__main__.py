@@ -40,28 +40,116 @@ from benchmarking import manager
 from benchmarking import settings
 
 
+def valid_filepath(parser, arg):
+    """File validation for argparsing.
+
+    https://stackoverflow.com/a/11541450
+    """
+    if not os.path.exists(arg):
+        # Argparse uses the ArgumentTypeError to give a rejection message like:
+        # error: argument input: x does not exist
+        raise argparse.ArgumentTypeError('{0} does not exist'.format(arg))
+    return arg
+
+
 def get_arg_parser():
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(
+        prog='kioskcli',
+        description='The Kicsk-CLI is a Command Line Interface (CLI) for '
+                    'interacting with the DeepCell Kiosk.'
+    )
 
-    parser.add_argument('mode', choices=['benchmark', 'upload'],
-                        help='Benchmarking mode.  `benchmark` for data that '
-                             'already exists in the bucket, `upload` to upload'
-                             'a local file/directory and process them all.')
-
-    parser.add_argument('-f', '--file', required=True,
+    # Job definition
+    parser.add_argument('file', type=str, metavar="FILE",
                         help='File to process in many duplicated jobs. '
-                             '(Must exist in the cloud storage bucket.)')
+                             '(Must exist in the cloud storage bucket if '
+                             'using benchmark mode.)')
 
-    parser.add_argument('-c', '--count', default=10, type=int,
-                        help='Number of times to process the given file.')
+    parser.add_argument('--benchmark', action='store_true',
+                        help='Benchmarking mode. Manage COUNT simulated jobs. '
+                             'The FILE must exist in the STORAGE_BUCKET.')
 
+    parser.add_argument('-j', '--job-type', type=str, required=True,
+                        help='Type of job (name of Redis work queue).')
+
+    parser.add_argument('-t', '--host', type=str, required=True,
+                        help='IP or FQDN of the DeepCell Kiosk API.')
+
+    parser.add_argument('-m', '--model', type=str,
+                        default=settings.MODEL,
+                        help='Name and version of model hosted by TensorFlow '
+                             'Serving. Overrides the default model defined by '
+                             'the JOB_TYPE.')
+
+    parser.add_argument('-b', '--storage-bucket', type=str,
+                        default=settings.STORAGE_BUCKET,
+                        help='Cloud storage bucket (e.g. gs://storage-bucket).'
+                             'Only required if using `--upload-results`.')
+
+    parser.add_argument('-c', '--count', default=1, type=int,
+                        help='Number of times to process the given file. '
+                             'Only used in `benchmark` mode.')
+
+    parser.add_argument('--pre', '--preprocess', type=str,
+                        default=settings.PREPROCESS,
+                        help='Preprocessing function to use before model '
+                             'prediction. Overrides default preprocessing '
+                             'function for the JOB_TYPE.')
+
+    parser.add_argument('--post', '--postprocess', type=str,
+                        default=settings.POSTPROCESS,
+                        help='Postprocessing function to use after model '
+                             'prediction. Overrides default postprocessing '
+                             'function for the JOB_TYPE.')
+
+    parser.add_argument('-s', '--scale', type=str,
+                        default=settings.SCALE,
+                        help='Scale of the data. Data will be scaled up or '
+                             'for the best model compatibility.')
+
+    parser.add_argument('-l', '--label', type=str,
+                        default=settings.LABEL, choices=['', '0', '1', '2'],
+                        help='Data type (e.g. nuclear, cytoplasmic, etc.).')
+
+    parser.add_argument('-U', '--upload', action='store_true',
+                        help='If provided, uploads the file before creating '
+                             'a new job. '
+                             '(Only applicable in `benchmark` mode.)')
+
+    parser.add_argument('--upload-results', action='store_true',
+                        help='Upload the final output file to the bucket.')
+
+    parser.add_argument('--calculate-cost', action='store_true',
+                        help='Use the Grafana API to calculate the cost of '
+                             'the job.')
+
+    # Timing / interval settings
+    parser.add_argument('--start-delay', type=float,
+                        default=settings.START_DELAY,
+                        help='Time between each job creation '
+                             '(0.5s is a typical file upload time).')
+
+    parser.add_argument('--update-interval', type=float,
+                        default=settings.UPDATE_INTERVAL,
+                        help='Seconds between each job status refresh.')
+
+    parser.add_argument('--refresh-rate', type=float,
+                        default=settings.MANAGER_REFRESH_RATE,
+                        help='Seconds between each manager status check.')
+
+    parser.add_argument('-x', '--expire-time', type=float,
+                        default=settings.EXPIRE_TIME,
+                        help='Finished jobs expire after this many seconds.')
+
+    # Logging options
     parser.add_argument('-L', '--log-level', default=settings.LOG_LEVEL,
                         choices=('DEBUG', 'INFO', 'WARN', 'ERROR', 'CRITICAL'),
-                        help='log level (default: DEBUG)')
+                        help='Only log the given level and above.')
 
-    parser.add_argument('--upload', action='store_true',
-                        help='If provided, uploads the file before creating '
-                             'a new job.')
+    # optional arguments
+    parser.add_argument('--upload-prefix', type=str,
+                        default=settings.UPLOAD_PREFIX,
+                        help='Maximum number of connections to the Kiosk.')
 
     return parser
 
@@ -70,21 +158,21 @@ def initialize_logger(log_level):
     logger = logging.getLogger()
     logger.setLevel(logging.DEBUG)
 
+    log_level = getattr(logging, log_level)
+
     formatter = logging.Formatter(fmt=settings.LOG_FORMAT)
 
     console = logging.StreamHandler(stream=sys.stdout)
     console.setFormatter(formatter)
+    console.setLevel(log_level)
+    logger.addHandler(console)
 
     fh = logging.handlers.RotatingFileHandler(
         filename=settings.LOG_FILE,
         maxBytes=10000000,
         backupCount=1)
     fh.setFormatter(formatter)
-
-    console.setLevel(getattr(logging, log_level))
-    fh.setLevel(getattr(logging, log_level))
-
-    logger.addHandler(console)
+    fh.setLevel(log_level)
     logger.addHandler(fh)
 
 
@@ -94,29 +182,39 @@ if __name__ == '__main__':
     if settings.LOG_ENABLED:
         initialize_logger(log_level=args.log_level)
 
+    if args.scale:  # optional, but if provided should be a float
+        try:
+            args.scale = float(args.scale)
+        except ValueError:
+            raise argparse.ArgumentTypeError(
+                '{0} is not a float'.format(args.scale))
+
     mgr_kwargs = {
-        'host': settings.HOST,
-        'model_name': settings.MODEL_NAME,
-        'model_version': settings.MODEL_VERSION,
-        'job_type': settings.JOB_TYPE,
-        'data_scale': settings.SCALE,
-        'data_label': settings.LABEL,
-        'update_interval': settings.UPDATE_INTERVAL,
-        'start_delay': settings.START_DELAY,
-        'refresh_rate': settings.MANAGER_REFRESH_RATE,
-        'postprocess': settings.POSTPROCESS,
-        'preprocess': settings.PREPROCESS,
-        'upload_prefix': settings.UPLOAD_PREFIX,
+        'host': args.host,
+        'model': args.model,
+        'job_type': args.job_type,
+        'update_interval': args.update_interval,
+        'start_delay': args.start_delay,
+        'refresh_rate': args.refresh_rate,
+        'postprocess': args.post,
+        'preprocess': args.pre,
+        'upload_prefix': args.upload_prefix,
+        'expire_time': args.expire_time,
+        'data_scale': args.scale,
+        'data_label': args.label,
+        'storage_bucket': args.storage_bucket,
+        'upload_results': args.upload_results,
+        'calculate_cost': args.calculate_cost,
     }
 
-    if not os.path.exists(args.file) and (args.mode == 'upload' or args.upload):
+    if not os.path.exists(args.file) and not args.benchmark and args.upload:
         raise FileNotFoundError('%s could not be found.' % args.file)
 
-    if args.mode == 'benchmark':
+    if args.benchmark:
         mgr = manager.BenchmarkingJobManager(**mgr_kwargs)
         mgr.run(filepath=args.file, count=args.count, upload=args.upload)
 
-    elif args.mode == 'upload':
+    else:
         mgr = manager.BatchProcessingJobManager(**mgr_kwargs)
         mgr.run(filepath=args.file)
 

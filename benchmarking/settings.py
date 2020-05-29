@@ -28,16 +28,12 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import errno
 import os
 
 from decouple import config
 
 
-# remove leading/trailing "/"s from cloud bucket folder names
-_strip = lambda x: '/'.join(y for y in x.split('/') if y)
-
-# Debug Mode
-DEBUG = config('DEBUG', cast=bool, default=False)
 NUM_GPUS = config('NUM_GPUS', cast=int, default=0)
 
 # Google credentials
@@ -54,12 +50,11 @@ GRAFANA_USER = config('GRAFANA_USER', default='admin')
 GRAFANA_PASSWORD = config('GRAFANA_PASSWORD', default='prom-operator')
 
 # TensorFlow Servable
-MODEL = config('MODEL', default='modelname:0')
-MODEL_NAME, MODEL_VERSION = MODEL.split(':')
+MODEL = config('MODEL', default='')
 
 # Job Type
 JOB_TYPE = config('JOB_TYPE', default='segmentation')
-SCALE = config('SCALE', default='1')  # detect scale automatically if empty
+SCALE = config('SCALE', default='')  # detect scale automatically if empty
 LABEL = config('LABEL', default='')   # detect data type automatically if empty
 
 # Pre- and Post-Processing functions
@@ -75,14 +70,11 @@ START_DELAY = config('START_DELAY', default=0.05, cast=float)
 # Time interval between Manager status checks
 MANAGER_REFRESH_RATE = config('MANAGER_REFRESH_RATE', default=10, cast=float)
 
-# Bucket prefix to upload all folders
-UPLOAD_PREFIX = config('UPLOAD_PREFIX', default='uploads')
-
 # Time in seconds to expire the completed jobs.
 EXPIRE_TIME = config('EXPIRE_TIME', default=3600, cast=int)
 
 # Name of upload folder in storage bucket.
-UPLOAD_PREFIX = _strip(config('UPLOAD_PREFIX', default='uploads', cast=str))
+UPLOAD_PREFIX = config('UPLOAD_PREFIX', default='uploads', cast=str)
 
 # HTTP Settings
 CONCURRENT_REQUESTS_PER_HOST = config('CONCURRENT_REQUESTS_PER_HOST',
@@ -107,4 +99,8 @@ OUTPUT_DIR = config('OUTPUT_DIR', default=OUTPUT_DIR)
 LOG_DIR = config('LOG_DIR', default=LOG_DIR)
 
 for d in (DOWNLOAD_DIR, OUTPUT_DIR, LOG_DIR):
-    os.makedirs(d, exist_ok=True)  # python 3.2+
+    try:
+        os.makedirs(d)
+    except OSError as e:
+        if e.errno != errno.EEXIST:
+            raise

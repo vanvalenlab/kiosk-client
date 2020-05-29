@@ -30,6 +30,7 @@ from __future__ import print_function
 
 import datetime
 import random
+import timeit
 
 import pytest
 import pytest_twisted
@@ -71,9 +72,9 @@ class DummyResponse(object):
             raise AttributeError('on purpose')
 
 
-def _get_default_job():
+def _get_default_job(filepath='filepath.png'):
     return job.Job(
-        filepath='filepath.png',
+        filepath=filepath,
         host='localhost',
         model_name='model_name',
         model_version='0',
@@ -128,17 +129,47 @@ class TestJob(object):
                     data_label='3.14')
 
     def test__log_http_response(self):
+        now = timeit.default_timer()
         j = _get_default_job()
 
         dummy_response = DummyResponse()
-        j._log_http_response(dummy_response)
+        j._log_http_response(dummy_response, now)
         dummy_response.failed = True
-        j._log_http_response(dummy_response)
+        j._log_http_response(dummy_response, now)
 
     def test__make_post_request(self):
         j = _get_default_job()
-        req = j._make_post_request('localhost', {})
+        req = j._make_post_request('localhost', data={})
         assert isinstance(req, defer.Deferred)
+
+    @pytest_twisted.inlineCallbacks
+    def test_upload_file(self, tmpdir):
+
+        @pytest_twisted.inlineCallbacks
+        def dummy_request_success(*_, **__):
+            yield defer.returnValue({'uploadedName': 'uploads/blah.png'})
+
+        @pytest_twisted.inlineCallbacks
+        def dummy_request_fail(*_, **__):
+            yield defer.returnValue(dict())
+
+        filepath = 'test.png'
+        p = tmpdir.join(filepath)
+        p.write('content')
+        j = _get_default_job(filepath=str(p))
+
+        j._retry_post_request_wrapper = dummy_request_success
+        uploaded_path = yield j.upload_file()
+        assert uploaded_path == 'uploads/blah.png'
+
+        filepath = 'test2.png'
+        p = tmpdir.join(filepath)
+        p.write('content')
+        j = _get_default_job(filepath=str(p))
+
+        j._retry_post_request_wrapper = dummy_request_fail
+        job_id = yield j.upload_file()
+        assert job_id is None
 
     @pytest_twisted.inlineCallbacks
     def test_summarize(self):
@@ -272,6 +303,10 @@ class TestJob(object):
             yield defer.returnValue(True)
 
         @pytest_twisted.inlineCallbacks
+        def dummy_upload_success(*_, **__):
+            yield defer.returnValue('uploads/test.png')
+
+        @pytest_twisted.inlineCallbacks
         def dummy_request_fail(*_, **__):
             yield defer.returnValue(None)
 
@@ -282,6 +317,7 @@ class TestJob(object):
         j.monitor = dummy_request_success
         j.get_redis_value = dummy_request_success
         j.expire = dummy_request_success
+        j.upload_file = dummy_upload_success
 
         # is_done and is_summarized
         j.status = 'done'
@@ -289,22 +325,24 @@ class TestJob(object):
         j.created_at = datetime.datetime.now().isoformat()
         j.finished_at = datetime.datetime.now().isoformat()
 
-        value = yield j.start(.000001)
+        delay = .000001
+        upload = True
+        value = yield j.start(delay, upload)
         assert value
 
         # test status is done but not summarized
         j.output_url = None
-        value = yield j.start(.000001)
+        value = yield j.start(delay, upload)
         assert value is False  # raise exception which is caught
 
         # test status is failed
         j.status = 'failed'
-        value = yield j.start(.000001)
+        value = yield j.start(delay, upload)
         assert value
 
         # test bad results
         j.create = dummy_request_fail
-        value = yield j.start(.000001)
+        value = yield j.start(delay, upload)
         assert value is False  # failed
 
     @pytest_twisted.inlineCallbacks

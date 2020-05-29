@@ -30,7 +30,6 @@ from __future__ import print_function
 
 import os
 import random
-import tempfile
 
 from PIL import Image
 from twisted.internet import defer
@@ -46,39 +45,53 @@ class TestJobManager(object):
 
     def test_init(self):
         mgr = manager.JobManager(
+            job_type='job',
             host='localhost',
-            model_name='m',
-            model_version='0',
+            model='m:0',
             data_scale='1',
             data_label='1')
-
+        # test bad model value
+        with pytest.raises(Exception):
+            mgr = manager.JobManager(
+                job_type='job',
+                host='localhost',
+                model='model_no_version',
+                data_scale='1',
+                data_label='1')
+        with pytest.raises(Exception):
+            mgr = manager.JobManager(
+                job_type='job',
+                host='localhost',
+                model='model:nonint_version',
+                data_scale='1',
+                data_label='1')
         # test bad data_scale value
         with pytest.raises(ValueError):
             mgr = manager.JobManager(
+                job_type='job',
                 host='localhost',
-                model_name='m',
-                model_version='0',
+                model='m:0',
                 data_scale='one',
                 data_label='1')
         # test bad data_label value
         with pytest.raises(ValueError):
             mgr = manager.JobManager(
+                job_type='job',
                 host='localhost',
-                model_name='m',
-                model_version='0',
+                model='m:0',
                 data_scale='1',
                 data_label='1.3')
 
     def test_make_job(self):
         mgr = manager.JobManager(
+            job_type='job',
             host='localhost',
-            model_name='m',
-            model_version='0',
+            model='m:0',
             data_scale='1',
             data_label='0')
 
-        j1 = mgr.make_job('test.png', original_name=None)
-        j2 = mgr.make_job('test.png', original_name='test.png')
+        j1 = mgr.make_job('test.png')
+        j2 = mgr.make_job('test.png')
 
         assert j1.data_scale == mgr.data_scale == j2.data_scale
         assert j1.data_label == mgr.data_label == j2.data_label
@@ -86,13 +99,10 @@ class TestJobManager(object):
         assert j1.json() == j2.json()
 
     def test_get_completed_job_count(self):
-        mgr = manager.JobManager(
-            host='localhost',
-            model_name='m',
-            model_version='0')
+        mgr = manager.JobManager(host='localhost', job_type='job')
 
-        j1 = mgr.make_job('test.png', original_name=None)
-        j2 = mgr.make_job('test.png', original_name='test.png')
+        j1 = mgr.make_job('test.png')
+        j2 = mgr.make_job('test.png')
 
         mgr.all_jobs = [j1, j2]
 
@@ -126,7 +136,7 @@ class TestJobManager(object):
         j1.expire = lambda: None
         assert mgr.get_completed_job_count() == 0
 
-    def test_summarize(self):
+    def test_summarize(self, tmpdir):
 
         # pylint: disable=unused-argument
         def fake_upload_file(filepath, hash_filename, prefix):
@@ -135,30 +145,27 @@ class TestJobManager(object):
         def fake_upload_file_bad(filepath, hash_filename, prefix):
             return 1 / 0
 
-        with tempfile.TemporaryDirectory() as tempdir:
-            settings.OUTPUT_DIR = tempdir
+        settings.OUTPUT_DIR = str(tmpdir)
 
-            mgr = manager.JobManager(
-                host='localhost',
-                model_name='m',
-                model_version='0')
+        mgr = manager.JobManager(host='localhost', job_type='job',
+                                 upload_results=True,
+                                 calculate_cost=True)
 
-            # monkey-patches for testing
-            mgr.cost_getter.finish = lambda: (1, 2, 3)
-            mgr.upload_file = fake_upload_file
-            mgr.summarize()
+        # monkey-patches for testing
+        mgr.cost_getter.finish = lambda: (1, 2, 3)
+        mgr.upload_file = fake_upload_file
+        mgr.summarize()
 
-            # test Exceptions
-            mgr.cost_getter.finish = lambda: 0 / 1
-            mgr.upload_file = fake_upload_file_bad
-            mgr.summarize()
+        # test Exceptions
+        mgr.cost_getter.finish = lambda: 0 / 1
+        mgr.upload_file = fake_upload_file_bad
+        mgr.summarize()
 
     @pytest_twisted.inlineCallbacks
     def test_check_job_status(self):
         mgr = manager.JobManager(
             host='localhost',
-            model_name='m',
-            model_version='0',
+            job_type='job',
             refresh_rate=0)
 
         mgr.all_jobs = list(range(5))
@@ -191,24 +198,22 @@ class TestJobManager(object):
 
 class TestBenchmarkingJobManager(object):
 
-    def test_run(self):
-        mgr = manager.BenchmarkingJobManager(
-            host='localhost',
-            model_name='m',
-            model_version='0')
+    @pytest_twisted.inlineCallbacks
+    def test_run(self, tmpdir):
+        tmpdir = str(tmpdir)
+        mgr = manager.BenchmarkingJobManager(host='localhost', job_type='job')
 
         # pylint: disable=unused-argument
         def dummy_upload_file(filepath, **kwargs):
             return filepath
 
-        def dummy_start(delay):
+        def dummy_start(delay, upload=False):
             return True
 
         def make_job(*args, **kwargs):
             m = manager.BatchProcessingJobManager(
                 host='localhost',
-                model_name='m',
-                model_version='0')
+                job_type='job')
 
             j = m.make_job(*args, **kwargs)
             j.start = dummy_start
@@ -220,35 +225,35 @@ class TestBenchmarkingJobManager(object):
         mgr.sleep = lambda x: True
         mgr.get_completed_job_count = lambda: True
 
-        with tempfile.TemporaryDirectory() as tempdir:
-            valid_image = os.path.join(tempdir, 'image.png')
-            img = Image.new('RGB', (800, 1280), (255, 255, 255))
-            img.save(valid_image, 'PNG')
+        valid_image = os.path.join(tmpdir, 'image.png')
+        img = Image.new('RGB', (800, 1280), (255, 255, 255))
+        img.save(valid_image, 'PNG')
 
-            list(mgr.run(valid_image, count=2, upload=True))
-            list(mgr.run(valid_image, count=2, upload=False))
+        yield mgr.run(valid_image, count=2, upload=True)
+
+        yield mgr.run(valid_image, count=2, upload=False)
 
 
 class TestBatchProcessingJobManager(object):
 
-    def test_run(self):
+    @pytest_twisted.inlineCallbacks
+    def test_run(self, tmpdir):
+        tmpdir = str(tmpdir)
         mgr = manager.BatchProcessingJobManager(
             host='localhost',
-            model_name='m',
-            model_version='0')
+            job_type='job')
 
         # pylint: disable=unused-argument
         def dummy_upload_file(filepath, **kwargs):
             return filepath
 
-        def dummy_start(delay):
+        def dummy_start(delay, upload=False):
             return True
 
         def make_job(*args, **kwargs):
             m = manager.BatchProcessingJobManager(
                 host='localhost',
-                model_name='m',
-                model_version='0')
+                job_type='job')
 
             j = m.make_job(*args, **kwargs)
             j.start = dummy_start
@@ -258,15 +263,14 @@ class TestBatchProcessingJobManager(object):
         mgr.upload_file = dummy_upload_file
         mgr.make_job = make_job
 
-        with tempfile.TemporaryDirectory() as tempdir:
-            num = random.randint(1, 5)
-            imagename = lambda x: 'image%s.png' % x
+        num = random.randint(1, 5)
+        imagename = lambda x: 'image%s.png' % x
 
-            valid_images = []
-            for i in range(num):
-                valid_image = os.path.join(tempdir, imagename(i))
-                img = Image.new('RGB', (800, 1280), (255, 255, 255))
-                img.save(valid_image, 'PNG')
-                valid_images.append(valid_image)
+        valid_images = []
+        for i in range(num):
+            valid_image = os.path.join(tmpdir, imagename(i))
+            img = Image.new('RGB', (800, 1280), (255, 255, 255))
+            img.save(valid_image, 'PNG')
+            valid_images.append(valid_image)
 
-            list(mgr.run(tempdir))
+        yield mgr.run(tmpdir)

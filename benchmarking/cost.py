@@ -30,7 +30,7 @@ from __future__ import print_function
 
 import logging
 import time
-import urllib.parse
+import urllib
 
 import requests
 
@@ -143,12 +143,17 @@ class CostGetter(object):
 
     def get_url(self, data):
         """Return a formatted URL for the Grafana API"""
+        # check python2 vs python3
+        if hasattr(urllib, 'parse'):
+            url_encode = urllib.parse.urlencode  # pylint: disable=E1101
+        else:
+            url_encode = urllib.urlencode  # pylint: disable=E1101
         return 'http://{user}:{passwd}@{host}{route}?{querystring}'.format(
             user=self.grafana_user,
             passwd=self.grafana_password,
             host=self.grafana_host,
             route='/api/datasources/proxy/1/api/v1/query_range',
-            querystring=urllib.parse.urlencode(data))
+            querystring=url_encode(data))
 
     def send_grafana_api_request(self, query, step=None):
         """Send a HTTP GET request with the data url encoded"""
