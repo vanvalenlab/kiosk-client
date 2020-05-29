@@ -45,6 +45,7 @@ class TestJobManager(object):
 
     def test_init(self):
         mgr = manager.JobManager(
+            job_type='job',
             host='localhost',
             model='m:0',
             data_scale='1',
@@ -52,12 +53,14 @@ class TestJobManager(object):
         # test bad model value
         with pytest.raises(Exception):
             mgr = manager.JobManager(
+                job_type='job',
                 host='localhost',
                 model='model_no_version',
                 data_scale='1',
                 data_label='1')
         with pytest.raises(Exception):
             mgr = manager.JobManager(
+                job_type='job',
                 host='localhost',
                 model='model:nonint_version',
                 data_scale='1',
@@ -65,6 +68,7 @@ class TestJobManager(object):
         # test bad data_scale value
         with pytest.raises(ValueError):
             mgr = manager.JobManager(
+                job_type='job',
                 host='localhost',
                 model='m:0',
                 data_scale='one',
@@ -72,6 +76,7 @@ class TestJobManager(object):
         # test bad data_label value
         with pytest.raises(ValueError):
             mgr = manager.JobManager(
+                job_type='job',
                 host='localhost',
                 model='m:0',
                 data_scale='1',
@@ -79,6 +84,7 @@ class TestJobManager(object):
 
     def test_make_job(self):
         mgr = manager.JobManager(
+            job_type='job',
             host='localhost',
             model='m:0',
             data_scale='1',
@@ -93,7 +99,7 @@ class TestJobManager(object):
         assert j1.json() == j2.json()
 
     def test_get_completed_job_count(self):
-        mgr = manager.JobManager(host='localhost', model='m:0',)
+        mgr = manager.JobManager(host='localhost', job_type='job')
 
         j1 = mgr.make_job('test.png')
         j2 = mgr.make_job('test.png')
@@ -141,7 +147,7 @@ class TestJobManager(object):
 
         settings.OUTPUT_DIR = str(tmpdir)
 
-        mgr = manager.JobManager(host='localhost', model='m:0',
+        mgr = manager.JobManager(host='localhost', job_type='job',
                                  upload_results=True,
                                  calculate_cost=True)
 
@@ -157,7 +163,10 @@ class TestJobManager(object):
 
     @pytest_twisted.inlineCallbacks
     def test_check_job_status(self):
-        mgr = manager.JobManager(host='localhost', model='m:0', refresh_rate=0)
+        mgr = manager.JobManager(
+            host='localhost',
+            job_type='job',
+            refresh_rate=0)
 
         mgr.all_jobs = list(range(5))
 
@@ -192,7 +201,7 @@ class TestBenchmarkingJobManager(object):
     @pytest_twisted.inlineCallbacks
     def test_run(self, tmpdir):
         tmpdir = str(tmpdir)
-        mgr = manager.BenchmarkingJobManager(host='localhost', model='m:0')
+        mgr = manager.BenchmarkingJobManager(host='localhost', job_type='job')
 
         # pylint: disable=unused-argument
         def dummy_upload_file(filepath, **kwargs):
@@ -204,7 +213,7 @@ class TestBenchmarkingJobManager(object):
         def make_job(*args, **kwargs):
             m = manager.BatchProcessingJobManager(
                 host='localhost',
-                model='m:0')
+                job_type='job')
 
             j = m.make_job(*args, **kwargs)
             j.start = dummy_start
@@ -230,7 +239,9 @@ class TestBatchProcessingJobManager(object):
     @pytest_twisted.inlineCallbacks
     def test_run(self, tmpdir):
         tmpdir = str(tmpdir)
-        mgr = manager.BatchProcessingJobManager(host='localhost', model='m:0')
+        mgr = manager.BatchProcessingJobManager(
+            host='localhost',
+            job_type='job')
 
         # pylint: disable=unused-argument
         def dummy_upload_file(filepath, **kwargs):
@@ -242,7 +253,7 @@ class TestBatchProcessingJobManager(object):
         def make_job(*args, **kwargs):
             m = manager.BatchProcessingJobManager(
                 host='localhost',
-                model='m:0')
+                job_type='job')
 
             j = m.make_job(*args, **kwargs)
             j.start = dummy_start

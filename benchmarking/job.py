@@ -77,7 +77,7 @@ class Job(object):
                 raise ValueError('data_label must be an integer.')
         self.data_label = data_label
 
-        if not self.model_version.isdigit():
+        if self.model_version and not self.model_version.isdigit():
             raise ValueError('`model_version` must be a number, got ' +
                              self.model_version)
 

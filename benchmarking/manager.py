@@ -50,7 +50,7 @@ class JobManager(object):
 
     Args:
         host (str): public IP address of the DeepCell Kiosk cluster.
-        model (str): model name and version, e.g. "model_name:version".
+        job_type (str): DeepCell Kiosk job type (e.g. "segmentation").
         upload_prefix (str): upload all files to this folder in the bucket.
         refresh_rate (int): seconds between each manager status check.
         update_interval (int): seconds between each job status refresh.
@@ -58,7 +58,7 @@ class JobManager(object):
         start_delay (int): delay between each job, in seconds.
     """
 
-    def __init__(self, host, model, **kwargs):
+    def __init__(self, host, job_type, **kwargs):
         self.logger = logging.getLogger(str(self.__class__.__name__))
         self.created_at = timeit.default_timer()
         self.all_jobs = []
@@ -68,14 +68,19 @@ class JobManager(object):
             host = 'http://{}'.format(host)
 
         self.host = host
+        self.job_type = job_type
 
-        try:
-            model_name, model_version = str(model).split(':')
-            model_version = int(model_version)
-        except Exception as err:
-            self.logger.error('Invalid model name, must be of the form '
-                              '"ModelName:Version", for example "model:0".')
-            raise err
+        model = kwargs.get('model', '')
+        if model:
+            try:
+                model_name, model_version = str(model).split(':')
+                model_version = int(model_version)
+            except Exception as err:
+                self.logger.error('Invalid model name, must be of the form '
+                                  '"ModelName:Version", for example "model:0".')
+                raise err
+        else:
+            model_name, model_version = '', ''
 
         self.model_name = model_name
         self.model_version = model_version
@@ -96,7 +101,6 @@ class JobManager(object):
                 raise ValueError('data_label must be an integer.')
         self.data_label = data_label
 
-        self.job_type = kwargs.get('job_type', 'segmentation')
         self.preprocess = kwargs.get('preprocess', '')
         self.postprocess = kwargs.get('postprocess', '')
         self.upload_prefix = kwargs.get('upload_prefix', 'uploads')
