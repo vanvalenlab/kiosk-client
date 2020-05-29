@@ -3,24 +3,23 @@
 for (( i=0; i<${NUM_CYCLES}; i++ ))
 do
   python -m benchmarking \
-    benchmark \
     $FILE \
-    --job-type $JOB_TYPE \
-    --model $MODEL \
-    --host $HOST \
-    --storage-bucket $STORAGE_BUCKET \
-    --count $COUNT \
-    --preprocess $PREPROCESS \
-    --postprocess $POSTPROCESS \
+    --job-type=$JOB_TYPE \
+    --host=$API_HOST \
+    --model=${MODEL:=""} \
+    --pre=${PREPROCESS:=""} \
+    --post=${POSTPROCESS:=""} \
+    --start-delay=${START_DELAY:=0.5} \
+    --update-interval=${UPDATE_INTERVAL:=10} \
+    --refresh-rate=${MANAGER_REFRESH_RATE:=10} \
+    --expire-time=${EXPIRE_TIME:=3600} \
+    --upload-prefix=${UPLOAD_PREFIX:=uploads} \
+    --log-level=${LOG_LEVEL:="DEBUG"} \
+    --benchmark \
+    --storage-bucket=${STORAGE_BUCKET:=""} \
+    --count=${COUNT:=1} \
     --upload-results \
-    --start-delay $START_DELAY \
-    --update-interval $UPDATE_INTERVAL \
-    --refresh-rate $MANAGER_REFRESH_RATE \
-    --expire-time $EXPIRE_TIME \
-    --upload-prefix $UPLOAD_PREFIX \
-    --log-level ${LOG_LEVEL:="DEBUG"} \
-    --upload-results \
-    --calculate_cost \
+    --calculate-cost \
   && \
   sleep ${CYCLE_INTERVAL:="1h"}
 done
