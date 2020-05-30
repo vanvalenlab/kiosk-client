@@ -54,8 +54,8 @@ def valid_filepath(parser, arg):
 
 def get_arg_parser():
     parser = argparse.ArgumentParser(
-        prog='kioskclient',
-        description='The Kicsk-CLI is a Command Line Interface (CLI) for '
+        prog='kiosk_client',
+        description='The Kiosk-Client is a Command Line Interface (CLI) for '
                     'interacting with the DeepCell Kiosk.'
     )
 
