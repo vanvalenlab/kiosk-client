@@ -280,7 +280,7 @@ class JobManager(object):
         if self.download_results:
             try:
                 self.download_result_files(output_filepath)
-            except Exception as err:
+            except Exception as err:  # pylint: disable=broad-except
                 self.logger.error(err)
                 self.logger.error('Could not download all results.')
 
