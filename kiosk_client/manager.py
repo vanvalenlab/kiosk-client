@@ -28,12 +28,16 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import io
 import json
 import logging
 import os
+import shutil
 import timeit
 import uuid
+import zipfile
 
+import requests
 from google.cloud import storage as google_storage
 from twisted.internet import defer, reactor
 from twisted.web.client import HTTPConnectionPool
@@ -111,6 +115,7 @@ class JobManager(object):
         self.start_delay = kwargs.get('start_delay', 0.1)
         self.bucket = kwargs.get('storage_bucket')
         self.upload_results = kwargs.get('upload_results', False)
+        self.download_results = kwargs.get('download_results', False)
         self.calculate_cost = kwargs.get('calculate_cost', False)
 
         # initializing cost estimation workflow
@@ -215,6 +220,34 @@ class JobManager(object):
 
         yield self._stop()
 
+    def download_result_files(self, output_filepath):
+        """Download all output image files"""
+        # TODO: resolve treq SSL issue, replace requests with treq.
+        dir_name = os.path.splitext(os.path.basename(output_filepath))[0]
+        results_dir = os.path.join(settings.OUTPUT_DIR, dir_name)
+        os.mkdir(results_dir)
+
+        for job in self.all_jobs:
+            try:
+                start = timeit.default_timer()
+                with requests.get(job.output_url, stream=True) as r:
+                    r.raise_for_status()
+                    fileobj = io.BytesIO(r.content)
+                    with zipfile.ZipFile(fileobj) as zf:
+                        for f in zf.namelist():
+                            basename = os.path.basename(f)
+                            filepath = os.path.join(results_dir, basename)
+                            with open(filepath, 'wb') as outfile:
+                                shutil.copyfileobj(zf.open(f), outfile)
+                            end = timeit.default_timer()
+                            self.logger.debug('Saved zipped file to %s in %ss',
+                                              filepath, end - start)
+
+            except Exception as err:
+                self.logger.error('Could not download %s due to %s. '
+                                  'Please manually download this file.',
+                                  job.output_url, err)
+
     def summarize(self):
         time_elapsed = timeit.default_timer() - self.created_at
         self.logger.info('Finished %s jobs in %s seconds.',
@@ -258,6 +291,13 @@ class JobManager(object):
                 self.logger.error('Could not upload output file to bucket. '
                                   'Copy this file from the docker container to '
                                   'keep the data.')
+
+        if self.download_results:
+            try:
+                self.download_result_files(output_filepath)
+            except Exception as err:
+                self.logger.error(err)
+                self.logger.error('Could not download all results.')
 
     def run(self, *args, **kwargs):
         raise NotImplementedError
