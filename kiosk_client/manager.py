@@ -240,7 +240,7 @@ class JobManager(object):
                             with open(filepath, 'wb') as outfile:
                                 shutil.copyfileobj(zf.open(f), outfile)
                             end = timeit.default_timer()
-                            self.logger.debug('Saved zipped file to %s in %ss',
+                            self.logger.debug('Saved %s in %s s.',
                                               filepath, end - start)
 
             except Exception as err:
