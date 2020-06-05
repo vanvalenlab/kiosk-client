@@ -178,6 +178,10 @@ def initialize_logger(log_level):
     fh.setLevel(log_level)
     logger.addHandler(fh)
 
+    # 3rd party loggers
+    logging.getLogger('PIL.Image').addHandler(log_level)
+    logging.getLogger('urllib3.connectionpool').addHandler(log_level)
+
 
 if __name__ == '__main__':
     args = get_arg_parser().parse_args()
