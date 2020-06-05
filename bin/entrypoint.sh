@@ -20,6 +20,7 @@ do
     --count=${COUNT:=1} \
     --upload-results \
     --calculate-cost \
+    --no-download-results \
   && \
   sleep ${CYCLE_INTERVAL:="1h"}
 done
