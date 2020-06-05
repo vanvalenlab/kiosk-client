@@ -27,7 +27,7 @@ from setuptools import setup
 from setuptools import find_packages
 
 setup(name='Kiosk_Client',
-      version='0.5.0',
+      version='0.5.1',
       description='ClI client for the DeepCell Kiosk.',
       author='Van Valen Lab',
       author_email='vanvalenlab@gmail.com',
