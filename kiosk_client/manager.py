@@ -277,6 +277,13 @@ class JobManager(object):
             len(self.all_jobs), self.start_delay, uuid.uuid4().hex)
         output_filepath = os.path.join(settings.OUTPUT_DIR, output_filepath)
 
+        if self.download_results:
+            try:
+                self.download_result_files(output_filepath)
+            except Exception as err:
+                self.logger.error(err)
+                self.logger.error('Could not download all results.')
+
         with open(output_filepath, 'w') as jsonfile:
             json.dump(jsondata, jsonfile, indent=4)
             self.logger.info('Wrote job data as JSON to %s.', output_filepath)
@@ -291,13 +298,6 @@ class JobManager(object):
                 self.logger.error('Could not upload output file to bucket. '
                                   'Copy this file from the docker container to '
                                   'keep the data.')
-
-        if self.download_results:
-            try:
-                self.download_result_files(output_filepath)
-            except Exception as err:
-                self.logger.error(err)
-                self.logger.error('Could not download all results.')
 
     def run(self, *args, **kwargs):
         raise NotImplementedError
