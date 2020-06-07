@@ -42,8 +42,7 @@ class TestUtils(object):
 
     def test_get_download_path(self):
         download_dir = utils.get_download_path()
-        if os.path.exists(download_dir):  # may not exist in CI/CD.
-            assert os.path.isdir(download_dir)
+        assert os.path.isdir(download_dir)
 
     def test_is_image_file(self, tmpdir):
         # Test valid image

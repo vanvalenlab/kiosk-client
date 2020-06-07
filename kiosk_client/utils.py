@@ -48,7 +48,10 @@ def get_download_path():
         with winreg.OpenKey(winreg.HKEY_CURRENT_USER, k) as key:
             location = winreg.QueryValueEx(key, downloads_guid)[0]
         return location
-    return os.path.join(os.path.expanduser('~'), 'Downloads')
+    location = os.path.join(os.path.expanduser('~'), 'Downloads')
+    while not os.path.exists(location):
+        location = os.path.abspath(os.path.join(location, '..'))
+    return location
 
 
 def strip_bucket_prefix(prefix):
