@@ -36,6 +36,21 @@ from twisted.internet import reactor
 from twisted.internet.task import deferLater
 
 
+def get_download_path():
+    """Returns the default downloads path for linux or windows.
+    https://stackoverflow.com/a/48706260
+    """
+    if os.name == 'nt':
+        # pylint: disable=E0401,C0415
+        import winreg
+        k = r'SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Shell Folders'
+        downloads_guid = '{374DE290-123F-4565-9164-39C4925E467B}'
+        with winreg.OpenKey(winreg.HKEY_CURRENT_USER, k) as key:
+            location = winreg.QueryValueEx(key, downloads_guid)[0]
+        return location
+    return os.path.join(os.path.expanduser('~'), 'Downloads')
+
+
 def strip_bucket_prefix(prefix):
     """Remove any leading or trailing "/" characters."""
     return '/'.join(x for x in prefix.split('/') if x)

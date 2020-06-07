@@ -41,6 +41,11 @@ from kiosk_client import utils
 
 class TestUtils(object):
 
+    def test_get_download_path(self):
+        download_dir = utils.get_download_path()
+        assert os.path.exists(download_dir)
+        assert os.path.isdir(download_dir)
+
     def test_is_image_file(self, tmpdir):
         # Test valid image
         tmpdir = str(tmpdir)
