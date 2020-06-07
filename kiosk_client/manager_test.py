@@ -41,6 +41,11 @@ from kiosk_client import manager
 from kiosk_client import settings
 
 
+class Bunch(object):
+    def __init__(self, **kwds):
+        self.__dict__.update(kwds)
+
+
 class TestJobManager(object):
 
     def test_init(self):
@@ -145,21 +150,43 @@ class TestJobManager(object):
         def fake_upload_file_bad(filepath, hash_filename, prefix):
             return 1 / 0
 
+        def fake_download_file(url, dest):
+            return None
+
+        def fake_download_file_bad(url, dest):
+            return 1 / 0
+
         settings.OUTPUT_DIR = str(tmpdir)
 
         mgr = manager.JobManager(host='localhost', job_type='job',
                                  upload_results=True,
                                  calculate_cost=True)
 
+        fakejson = lambda: {'output_url': 'example.com/json.txt'}
+        mgr.all_jobs = [Bunch(output_url='example.com/a.txt', json=fakejson),
+                        Bunch(output_url='example.com/b.txt', json=fakejson)]
+
         # monkey-patches for testing
         mgr.cost_getter.finish = lambda: (1, 2, 3)
         mgr.upload_file = fake_upload_file
+        mgr.download_file_from_url = fake_download_file
         mgr.summarize()
 
         # test Exceptions
         mgr.cost_getter.finish = lambda: 0 / 1
         mgr.upload_file = fake_upload_file_bad
+        mgr.download_file_from_url = fake_download_file_bad
         mgr.summarize()
+
+    def test_download_file_from_url(self, tmpdir, requests_mock):
+        tmpdir = str(tmpdir)
+        expected_file = os.path.join(tmpdir, 'downloaded.txt')
+        requests_mock.get('http://test.com', text='data')
+
+        mgr = manager.BenchmarkingJobManager(host='localhost', job_type='job')
+        mgr.download_file_from_url('http://test.com', expected_file)
+        assert os.path.exists(expected_file)
+        assert os.path.isfile(expected_file)
 
     @pytest_twisted.inlineCallbacks
     def test_check_job_status(self):
