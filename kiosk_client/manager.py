@@ -115,7 +115,7 @@ class JobManager(object):
         self.start_delay = kwargs.get('start_delay', 0.1)
         self.bucket = kwargs.get('storage_bucket')
         self.upload_results = kwargs.get('upload_results', False)
-        self.download_results = kwargs.get('download_results', False)
+        self.download_results = kwargs.get('download_results', True)
         self.calculate_cost = kwargs.get('calculate_cost', False)
 
         # initializing cost estimation workflow
