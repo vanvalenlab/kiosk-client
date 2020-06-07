@@ -47,6 +47,7 @@ setup(name='Kiosk_Client',
                     'pytest-twisted',
                     'pytest-pep8',
                     'pytest-cov',
+                    'requests-mock',
                     'attrs>=19.2.0'],
       },
       packages=find_packages())
