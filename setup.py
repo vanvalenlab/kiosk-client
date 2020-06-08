@@ -27,13 +27,13 @@ from setuptools import setup
 from setuptools import find_packages
 
 setup(name='Kiosk_Client',
-      version='0.5.1',
+      version='0.6.0',
       description='ClI client for the DeepCell Kiosk.',
       author='Van Valen Lab',
       author_email='vanvalenlab@gmail.com',
       url='https://github.com/vanvalenlab/kiosk-client',
       download_url='https://github.com/vanvalenlab/'
-                   'kiosk-client/tarball/0.5.0',
+                   'kiosk-client/tarball/0.6.0',
       license='LICENSE',
       install_requires=['boto3',
                         'google-cloud-storage',
