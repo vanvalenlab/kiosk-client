@@ -28,18 +28,25 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import io
 import json
 import logging
 import os
+import shutil
 import timeit
 import uuid
+import zipfile
 
+import requests
 from google.cloud import storage as google_storage
 from twisted.internet import defer, reactor
 from twisted.web.client import HTTPConnectionPool
 
 from kiosk_client.job import Job
-from kiosk_client.utils import iter_image_files, sleep, strip_bucket_prefix
+from kiosk_client.utils import get_download_path
+from kiosk_client.utils import iter_image_files
+from kiosk_client.utils import sleep
+from kiosk_client.utils import strip_bucket_prefix
 from kiosk_client import settings
 
 from kiosk_client.cost import CostGetter
@@ -111,6 +118,7 @@ class JobManager(object):
         self.start_delay = kwargs.get('start_delay', 0.1)
         self.bucket = kwargs.get('storage_bucket')
         self.upload_results = kwargs.get('upload_results', False)
+        self.download_results = kwargs.get('download_results', True)
         self.calculate_cost = kwargs.get('calculate_cost', False)
 
         # initializing cost estimation workflow
@@ -215,6 +223,18 @@ class JobManager(object):
 
         yield self._stop()
 
+    def download_file_from_url(self, url, dest):
+        """Download a file from the URL to the destination file path."""
+        # TODO: resolve treq SSL issue, replace requests with treq.
+        start = timeit.default_timer()
+        self.logger.info('Downloading output file %s to %s.', url, dest)
+        with requests.get(url, stream=True) as r:
+            r.raise_for_status()
+            with open(dest, 'wb') as outfile:
+                shutil.copyfileobj(r.raw, outfile)
+        self.logger.info('Saved output file: "%s" in %s s.',
+                         dest, timeit.default_timer() - start)
+
     def summarize(self):
         time_elapsed = timeit.default_timer() - self.created_at
         self.logger.info('Finished %s jobs in %s seconds.',
@@ -243,6 +263,17 @@ class JobManager(object):
             '{}gpu_'.format(settings.NUM_GPUS) if settings.NUM_GPUS else '',
             len(self.all_jobs), self.start_delay, uuid.uuid4().hex)
         output_filepath = os.path.join(settings.OUTPUT_DIR, output_filepath)
+
+        if self.download_results:
+            for job in self.all_jobs:
+                try:
+                    basename = job.output_url.split('/')[-1]
+                    filepath = os.path.join(get_download_path(), basename)
+                    self.download_file_from_url(job.output_url, filepath)
+                except Exception as err:  # pylint: disable=broad-except
+                    self.logger.error('Could not download %s due to %s: %s. ',
+                                      job.output_url, type(err).__name__, err)
+                    continue
 
         with open(output_filepath, 'w') as jsonfile:
             json.dump(jsondata, jsonfile, indent=4)

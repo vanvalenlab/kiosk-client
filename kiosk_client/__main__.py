@@ -119,6 +119,9 @@ def get_arg_parser():
     parser.add_argument('--upload-results', action='store_true',
                         help='Upload the final output file to the bucket.')
 
+    parser.add_argument('--no-download-results', action='store_true',
+                        help='Upload the final output file to the bucket.')
+
     parser.add_argument('--calculate-cost', action='store_true',
                         help='Use the Grafana API to calculate the cost of '
                              'the job.')
@@ -205,6 +208,7 @@ if __name__ == '__main__':
         'storage_bucket': args.storage_bucket,
         'upload_results': args.upload_results,
         'calculate_cost': args.calculate_cost,
+        'download_results': not args.no_download_results,
     }
 
     if not os.path.exists(args.file) and not args.benchmark and args.upload:
