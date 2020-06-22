@@ -385,14 +385,13 @@ class TestJob(object):
         assert value is False  # failed
 
     @pytest_twisted.inlineCallbacks
-    def test__retry_post_request_wrapper(self):
+    def test__retry_post_request_wrapper(self, mocker):
 
         global _make_request_failed
         _make_request_failed = False
 
         @pytest_twisted.inlineCallbacks
-        def _make_post_request(*_, **__):
-            _j = _get_default_job()
+        def dummy_post_request(*_, **__):
             global _make_request_failed
             if _make_request_failed:
                 _make_request_failed = False
@@ -404,7 +403,6 @@ class TestJob(object):
                 raise err('on purpose')
 
         j = _get_default_job()
-        j._make_post_request = _make_post_request
-
+        mocker.patch('treq.post', dummy_post_request)
         result = yield j._retry_post_request_wrapper('host', {})
         assert result.get('success')
