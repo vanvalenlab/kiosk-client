@@ -26,6 +26,12 @@
 from setuptools import setup
 from setuptools import find_packages
 
+# read the contents of your README file
+from os import path
+this_directory = path.abspath(path.dirname(__file__))
+with open(path.join(this_directory, 'README.md'), encoding='utf-8') as f:
+    long_description = f.read()
+
 setup(name='Kiosk_Client',
       version='0.6.0',
       description='ClI client for the DeepCell Kiosk.',
@@ -39,7 +45,7 @@ setup(name='Kiosk_Client',
                         'google-cloud-storage',
                         'Pillow',
                         'python-decouple',
-                        'python-dateutil==2.8.0',
+                        'python-dateutil',
                         'treq==20.3.0',
                         'twisted[tls]>=20.3.0'],
       extras_require={
@@ -50,4 +56,16 @@ setup(name='Kiosk_Client',
                     'pytest-mock',
                     'attrs>=19.2.0'],
       },
-      packages=find_packages())
+      packages=find_packages(),
+      long_description=long_description,
+      long_description_content_type='text/markdown',
+      classifiers=[
+          'Programming Language :: Python',
+          'Programming Language :: Python :: 2',
+          'Programming Language :: Python :: 2.7',
+          'Programming Language :: Python :: 3',
+          'Programming Language :: Python :: 3.5',
+          'Programming Language :: Python :: 3.6',
+          'Programming Language :: Python :: 3.7',
+          'Programming Language :: Python :: 3.8'
+      ])

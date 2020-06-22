@@ -3,6 +3,8 @@
 [![Build Status](https://travis-ci.com/vanvalenlab/kiosk-client.svg?branch=master)](https://travis-ci.com/vanvalenlab/kiosk-client)
 [![Coverage Status](https://coveralls.io/repos/github/vanvalenlab/kiosk-client/badge.svg?branch=master)](https://coveralls.io/github/vanvalenlab/kiosk-client?branch=master)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](/LICENSE)
+[![PyPi](https://img.shields.io/pypi/v/kiosk_client.svg)](https://pypi.org/project/Kiosk-Client/)
+[![Python Versions](https://img.shields.io/pypi/pyversions/kiosk_client.svg)](https://pypi.org/project/kiosk_client/)
 
 `kiosk-client` is tool for interacting with the [DeepCell Kiosk](https://github.com/vanvalenlab/kiosk-console) in order to create and monitor deep learning image processing jobs. It uses the asynchronous HTTP client [treq](https://github.com/twisted/treq) and the [Kiosk-Frontend API](https://github.com/vanvalenlab/kiosk-frontend) to create and monitor many jobs at once. Once all jobs are completed, [costs are estimated](./docs/cost_computation_notes.md) by using the cluster's [Grafana API](https://grafana.com/docs/http_api/). An output file is then generated with statistics on each job's performance and resulting output files.
 
