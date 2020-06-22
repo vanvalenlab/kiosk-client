@@ -169,24 +169,12 @@ class TestJobManager(object):
         # monkey-patches for testing
         mgr.cost_getter.finish = lambda: (1, 2, 3)
         mgr.upload_file = fake_upload_file
-        mgr.download_file_from_url = fake_download_file
         mgr.summarize()
 
         # test Exceptions
         mgr.cost_getter.finish = lambda: 0 / 1
         mgr.upload_file = fake_upload_file_bad
-        mgr.download_file_from_url = fake_download_file_bad
         mgr.summarize()
-
-    def test_download_file_from_url(self, tmpdir, requests_mock):
-        tmpdir = str(tmpdir)
-        expected_file = os.path.join(tmpdir, 'downloaded.txt')
-        requests_mock.get('http://test.com', text='data')
-
-        mgr = manager.BenchmarkingJobManager(host='localhost', job_type='job')
-        mgr.download_file_from_url('http://test.com', expected_file)
-        assert os.path.exists(expected_file)
-        assert os.path.isfile(expected_file)
 
     @pytest_twisted.inlineCallbacks
     def test_check_job_status(self):

@@ -16,7 +16,7 @@ cache: pip
 
 install:
   - pip install -r requirements.txt
-  - pip install -U pytest pytest-twisted pytest-cov pytest-pep8 coveralls requests-mock attrs>=19.2.0
+  - pip install -U pytest pytest-twisted pytest-cov pytest-pep8 coveralls pytest-mock attrs>=19.2.0
 
 script:
   - pytest --cov=kiosk_client --pep8 kiosk_client

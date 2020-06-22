@@ -29,6 +29,7 @@ from __future__ import division
 from __future__ import print_function
 
 import datetime
+import os
 import random
 import timeit
 
@@ -78,6 +79,7 @@ def _get_default_job(filepath='filepath.png'):
         host='localhost',
         model_name='model_name',
         model_version='0',
+        download_results=True,
         update_interval=0.0001)
 
 
@@ -170,6 +172,37 @@ class TestJob(object):
         j._retry_post_request_wrapper = dummy_request_fail
         job_id = yield j.upload_file()
         assert job_id is None
+
+    @pytest_twisted.inlineCallbacks
+    def test_download_output(self, tmpdir, mocker):
+
+        global _download_failed
+        _download_failed = False
+
+        @pytest_twisted.inlineCallbacks
+        def send_get_request(_, **__):
+            global _download_failed
+            if _download_failed:
+                _download_failed = False
+                response = Bunch(collect=lambda x: x(b'success'))
+                yield defer.returnValue(response)
+            else:
+                _download_failed = True
+                errs = _get_default_job()._http_errors
+                err = errs[random.randint(0, len(errs) - 1)]
+                raise err('on purpose')
+
+        j = _get_default_job()
+        j.output_url = 'fakeURL.com/testfile.txt'
+        mocker.patch('kiosk_client.job.get_download_path',
+                     lambda: str(tmpdir))
+        mocker.patch('treq.get', send_get_request)
+
+        result = yield j.download_output()
+        assert os.path.isfile(result)
+        assert str(result).startswith(str(tmpdir))
+        with open(result, 'r') as f:
+            assert f.read() == 'success'
 
     @pytest_twisted.inlineCallbacks
     def test_summarize(self):
@@ -307,6 +340,10 @@ class TestJob(object):
             yield defer.returnValue('uploads/test.png')
 
         @pytest_twisted.inlineCallbacks
+        def dummy_download_success(*_, **__):
+            yield defer.returnValue('downloads/test-results.png')
+
+        @pytest_twisted.inlineCallbacks
         def dummy_request_fail(*_, **__):
             yield defer.returnValue(None)
 
@@ -318,10 +355,11 @@ class TestJob(object):
         j.get_redis_value = dummy_request_success
         j.expire = dummy_request_success
         j.upload_file = dummy_upload_success
+        j.download_output = dummy_download_success
 
         # is_done and is_summarized
         j.status = 'done'
-        j.output_url = ''
+        j.output_url = 'local'
         j.created_at = datetime.datetime.now().isoformat()
         j.finished_at = datetime.datetime.now().isoformat()
 
@@ -346,14 +384,13 @@ class TestJob(object):
         assert value is False  # failed
 
     @pytest_twisted.inlineCallbacks
-    def test__retry_post_request_wrapper(self):
+    def test__retry_post_request_wrapper(self, mocker):
 
         global _make_request_failed
         _make_request_failed = False
 
         @pytest_twisted.inlineCallbacks
-        def _make_post_request(*_, **__):
-            _j = _get_default_job()
+        def dummy_post_request(*_, **__):
             global _make_request_failed
             if _make_request_failed:
                 _make_request_failed = False
@@ -365,7 +402,6 @@ class TestJob(object):
                 raise err('on purpose')
 
         j = _get_default_job()
-        j._make_post_request = _make_post_request
-
+        mocker.patch('treq.post', dummy_post_request)
         result = yield j._retry_post_request_wrapper('host', {})
         assert result.get('success')
