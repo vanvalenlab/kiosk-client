@@ -39,7 +39,7 @@ setup(name='Kiosk_Client',
                         'google-cloud-storage',
                         'Pillow',
                         'python-decouple',
-                        'python-dateutil==2.8.0',
+                        'python-dateutil',
                         'treq==20.3.0',
                         'twisted[tls]>=20.3.0'],
       extras_require={
