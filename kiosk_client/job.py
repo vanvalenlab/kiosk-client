@@ -38,7 +38,7 @@ from twisted.internet import defer
 from twisted.internet import error as twisted_errors
 from twisted.web import _newclient as twisted_client
 
-from kiosk_client.utils import sleep, strip_bucket_prefix
+from kiosk_client.utils import sleep, strip_bucket_prefix, get_download_path
 
 
 class Job(object):
@@ -88,6 +88,7 @@ class Job(object):
         self.expire_time = int(kwargs.get('expire_time', 3600))
         self.update_interval = int(kwargs.get('update_interval', 10))
         self.original_name = kwargs.get('original_name', self.filepath)
+        self.download_results = kwargs.get('download_results', False)
 
         self.failed = False  # for error handling
         self.is_expired = False
@@ -197,7 +198,7 @@ class Job(object):
 
     @defer.inlineCallbacks
     def _retry_post_request_wrapper(self, host, name='REDIS', **kwargs):
-        retrying = True  # retry  loop to prevent stackoverflow
+        retrying = True  # retry loop to prevent stackoverflow
         while retrying:
             created_at = timeit.default_timer()
             try:
@@ -337,6 +338,34 @@ class Job(object):
         defer.returnValue(value)  # "return" the value
 
     @defer.inlineCallbacks
+    def download_output(self):
+        start = timeit.default_timer()
+        basename = self.output_url.split('/')[-1]
+        dest = os.path.join(get_download_path(), basename)
+        self.logger.info('[%s]: Downloading output file %s to %s.',
+                         self.job_id, self.output_url, dest)
+        name = 'DOWNLOAD RESULTS'
+        retrying = True  # retry loop to prevent stackoverflow
+        while retrying:
+            try:
+                request = treq.get(self.output_url, unbuffered=True)
+                response = yield request
+            except self._http_errors as err:
+                self.logger.warning('[%s]: Encountered %s during %s: %s',
+                                    self.job_id, type(err).__name__, name, err)
+                yield self.sleep(self.update_interval)
+                continue  # return to top of retry loop
+            retrying = False  # success
+
+        with open(dest, 'wb') as outfile:
+            yield response.collect(outfile.write)
+
+        self.logger.info('Saved output file: "%s" in %s s.',
+                         dest, timeit.default_timer() - start)
+
+        defer.returnValue(dest)
+
+    @defer.inlineCallbacks
     def restart(self, delay=0):
         if not self.failed:
             self.logger.warning('[%s]: Restarting but not failed.', self.job_id)
@@ -390,6 +419,9 @@ class Job(object):
                                  '`%s`. Download at `%s`.',
                                  self.job_id, diff.total_seconds(),
                                  self.status, self.output_url)
+
+                if self.download_results:
+                    success = yield self.download_output()
 
             elif self.status == 'failed':
                 reason = yield self.get_redis_value('reason')
