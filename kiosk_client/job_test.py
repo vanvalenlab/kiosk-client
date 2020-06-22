@@ -35,7 +35,6 @@ import timeit
 
 import pytest
 import pytest_twisted
-from treq.testing import StubTreq
 
 from twisted.internet import defer
 
