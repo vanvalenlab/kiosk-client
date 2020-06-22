@@ -23,23 +23,27 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
+from os import path
 from setuptools import setup
 from setuptools import find_packages
 
 # read the contents of your README file
-from os import path
 this_directory = path.abspath(path.dirname(__file__))
 with open(path.join(this_directory, 'README.md'), encoding='utf-8') as f:
     long_description = f.read()
 
+
+VERSION = '0.7.0'
+
+
 setup(name='Kiosk_Client',
-      version='0.6.0',
+      version=VERSION,
       description='ClI client for the DeepCell Kiosk.',
       author='Van Valen Lab',
       author_email='vanvalenlab@gmail.com',
       url='https://github.com/vanvalenlab/kiosk-client',
       download_url='https://github.com/vanvalenlab/'
-                   'kiosk-client/tarball/0.6.0',
+                   'kiosk-client/tarball/{}'.format(VERSION),
       license='LICENSE',
       install_requires=['boto3',
                         'google-cloud-storage',
