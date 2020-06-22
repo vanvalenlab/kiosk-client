@@ -178,6 +178,8 @@ def initialize_logger(log_level):
     fh.setLevel(log_level)
     logger.addHandler(fh)
 
+    logging.getLogger('PIL').setLevel(logging.INFO)
+
 
 if __name__ == '__main__':
     args = get_arg_parser().parse_args()
