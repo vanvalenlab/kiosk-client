@@ -36,6 +36,7 @@ from twisted.internet import defer
 
 import pytest
 import pytest_twisted
+import requests
 
 from kiosk_client import manager
 from kiosk_client import settings
@@ -46,7 +47,15 @@ class Bunch(object):
         self.__dict__.update(kwds)
 
 
+def dummy_ssl_redirect(url, **__):
+    return Bunch(url=url.replace('http://', 'https://'))
+
+
 class TestJobManager(object):
+
+    @pytest.fixture(autouse=True)
+    def monkeypatch(self, monkeypatch):
+        monkeypatch.setattr(requests, 'get', dummy_ssl_redirect)
 
     def test_init(self):
         mgr = manager.JobManager(
@@ -86,6 +95,22 @@ class TestJobManager(object):
                 model='m:0',
                 data_scale='1',
                 data_label='1.3')
+
+    def test__get_host(self, mocker):
+        host = 'example.com'
+        mgr = manager.JobManager(job_type='job', host=host)
+
+        assert mgr._get_host(host) == 'https://%s' % host
+
+        host = 'http://example.com'
+        assert mgr._get_host(host) == host.replace('http://', 'https://', 1)
+
+        def fail(*_, **__):
+            raise ValueError('on purpose')
+
+        mocker.patch('requests.get', fail)
+        with pytest.raises(RuntimeError):
+            mgr._get_host(host)
 
     def test_make_job(self):
         mgr = manager.JobManager(
@@ -214,8 +239,9 @@ class TestJobManager(object):
 class TestBenchmarkingJobManager(object):
 
     @pytest_twisted.inlineCallbacks
-    def test_run(self, tmpdir):
+    def test_run(self, tmpdir, mocker):
         tmpdir = str(tmpdir)
+        mocker.patch('requests.get', dummy_ssl_redirect)
         mgr = manager.BenchmarkingJobManager(host='localhost', job_type='job')
 
         # pylint: disable=unused-argument
@@ -252,8 +278,9 @@ class TestBenchmarkingJobManager(object):
 class TestBatchProcessingJobManager(object):
 
     @pytest_twisted.inlineCallbacks
-    def test_run(self, tmpdir):
+    def test_run(self, tmpdir, mocker):
         tmpdir = str(tmpdir)
+        mocker.patch('requests.get', dummy_ssl_redirect)
         mgr = manager.BatchProcessingJobManager(
             host='localhost',
             job_type='job')

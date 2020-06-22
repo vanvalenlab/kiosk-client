@@ -69,11 +69,7 @@ class JobManager(object):
         self.created_at = timeit.default_timer()
         self.all_jobs = []
 
-        host = str(host)
-        if not any(host.startswith(x) for x in ('http://', 'https://')):
-            host = 'http://{}'.format(host)
-
-        self.host = host
+        self.host = self._get_host(host)
         self.job_type = job_type
 
         model = kwargs.get('model', '')
@@ -129,6 +125,29 @@ class JobManager(object):
         self.pool = HTTPConnectionPool(reactor, persistent=True)
         self.pool.maxPersistentPerHost = settings.CONCURRENT_REQUESTS_PER_HOST
         self.pool.retryAutomatically = False
+
+    def _get_host(self, host):
+        """Send a GET request to the provided host. Check for redirects.
+
+        Twisted does not allow POST requests to follow redirects. Use requests
+        to send a single GET request to the host and follow any redirects.
+
+        Args:
+            host (str): The user-provided hostname.
+
+        Returns:
+            str: The hostname after all redirects.
+        """
+        host = str(host).lower()
+        if not any(host.startswith(x) for x in ('http://', 'https://')):
+            host = 'http://{}'.format(host)
+
+        try:
+            url = str(requests.get(host).url)
+            url = url[:-1] if url.endswith('/') else url
+            return url
+        except:
+            raise RuntimeError('Could not connect to host: %s' % host)
 
     def upload_file(self, filepath, acl='publicRead',
                     hash_filename=True, prefix=None):
