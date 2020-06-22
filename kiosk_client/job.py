@@ -185,7 +185,6 @@ class Job(object):
         req_kwargs = {
             'headers': kwargs.get('headers', self.headers),
             'pool': kwargs.get('pool', self.pool),
-            'browser_like_redirects': True,
         }
 
         # The name of the payload dictates the type of encoding and headers.
