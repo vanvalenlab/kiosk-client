@@ -41,7 +41,7 @@ setup(name='Kiosk_Client',
                         'python-decouple',
                         'python-dateutil==2.8.0',
                         'treq==20.3.0',
-                        'twisted>=20.3.0'],
+                        'twisted[tls]>=20.3.0'],
       extras_require={
           'tests': ['pytest',
                     'pytest-twisted',
