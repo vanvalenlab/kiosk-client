@@ -234,7 +234,7 @@ class Job(object):
             response = yield self._retry_post_request_wrapper(host, name,
                                                               files=payload,
                                                               headers=headers)
-            uploaded_path = response.get('uploadedName')
+        uploaded_path = response.get('uploadedName')
         defer.returnValue(uploaded_path)  # "return" the value
 
     @defer.inlineCallbacks
