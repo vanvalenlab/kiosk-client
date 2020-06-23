@@ -230,7 +230,9 @@ class Job(object):
         headers['Content-Type'] = ['multipart/form-data']
         name = 'UPLOAD {}'.format(self.filepath)
         with open(self.filepath, 'rb') as f:
-            payload = {'file': (self.filepath, f)}
+            payload = {
+                'file': (self.filepath, f)
+            }
             response = yield self._retry_post_request_wrapper(host, name,
                                                               files=payload,
                                                               headers=headers)
