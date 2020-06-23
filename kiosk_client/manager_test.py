@@ -299,6 +299,7 @@ class TestBatchProcessingJobManager(object):
 
             j = m.make_job(*args, **kwargs)
             j.start = dummy_start
+            j.upload_file = lambda: j.filepath
             return j
 
         mgr.check_job_status = lambda: True
