@@ -28,14 +28,11 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-import io
 import json
 import logging
 import os
-import shutil
 import timeit
 import uuid
-import zipfile
 
 import requests
 from google.cloud import storage as google_storage

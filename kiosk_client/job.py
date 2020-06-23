@@ -229,12 +229,11 @@ class Job(object):
         headers = self.headers.copy()
         headers['Content-Type'] = ['multipart/form-data']
         name = 'UPLOAD {}'.format(self.filepath)
-        payload = {
-            'file': (self.filepath, open(self.filepath, 'rb'))
-        }
-        response = yield self._retry_post_request_wrapper(host, name,
-                                                          files=payload,
-                                                          headers=headers)
+        with open(self.filepath, 'rb') as f:
+            payload = {'file': (self.filepath, f)}
+            response = yield self._retry_post_request_wrapper(host, name,
+                                                              files=payload,
+                                                              headers=headers)
         uploaded_path = response.get('uploadedName')
         defer.returnValue(uploaded_path)  # "return" the value
 
