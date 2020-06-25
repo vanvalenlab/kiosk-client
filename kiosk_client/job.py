@@ -226,14 +226,11 @@ class Job(object):
     @defer.inlineCallbacks
     def upload_file(self):
         host = '{}/api/upload'.format(self.host)
-        headers = self.headers.copy()
-        headers['Content-Type'] = ['multipart/form-data']
         name = 'UPLOAD {}'.format(self.filepath)
         with open(self.filepath, 'rb') as f:
             payload = {'file': (self.filepath, f)}
-            response = yield self._retry_post_request_wrapper(host, name,
-                                                              files=payload,
-                                                              headers=headers)
+            response = yield self._retry_post_request_wrapper(
+                host, name, files=payload, headers=self.headers)
         uploaded_path = response.get('uploadedName')
         defer.returnValue(uploaded_path)  # "return" the value
 
