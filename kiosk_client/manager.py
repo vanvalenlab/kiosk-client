@@ -323,7 +323,6 @@ class BatchProcessingJobManager(JobManager):
             job = self.make_job(f)
             self.all_jobs.append(job)
             uploaded_path = yield job.upload_file()
-            # uploaded_path = job.upload_file_requests()
             job.filepath = os.path.relpath(uploaded_path, self.upload_prefix)
             # stagger the delay seconds
             job.start(delay=self.start_delay, upload=False)
