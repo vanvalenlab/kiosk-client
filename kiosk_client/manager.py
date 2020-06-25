@@ -320,11 +320,14 @@ class BatchProcessingJobManager(JobManager):
         self.logger.info('Benchmarking all image/zip files in `%s`', filepath)
 
         for f in iter_image_files(filepath):
+            _ = timeit.default_timer()
             job = self.make_job(f)
             self.all_jobs.append(job)
+            self.logger.info('Uploading file "%s".', f)
             uploaded_path = yield job.upload_file()
+            self.logger.info('Uploaded file "%s" in %s seconds.',
+                             f, timeit.default_timer() - _)
             job.filepath = os.path.relpath(uploaded_path, self.upload_prefix)
-            # stagger the delay seconds
-            job.start(delay=self.start_delay, upload=False)
+            job.start(delay=self.start_delay)
 
         yield self.check_job_status()
