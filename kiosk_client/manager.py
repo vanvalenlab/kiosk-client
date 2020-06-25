@@ -325,6 +325,6 @@ class BatchProcessingJobManager(JobManager):
             uploaded_path = yield job.upload_file()
             job.filepath = os.path.relpath(uploaded_path, self.upload_prefix)
             # stagger the delay seconds
-            job.start(delay=self.start_delay * i, upload=False)
+            job.start(delay=self.start_delay, upload=False)
 
         yield self.check_job_status()
