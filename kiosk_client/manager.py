@@ -113,6 +113,10 @@ class JobManager(object):
         self.download_results = kwargs.get('download_results', True)
         self.calculate_cost = kwargs.get('calculate_cost', False)
 
+        self.output_dir = kwargs.get('output_dir', None)
+        if self.output_dir is not None and not os.path.isdir(self.output_dir):
+            raise ValueError('invalid output_dir')
+
         # initializing cost estimation workflow
         self.cost_getter = CostGetter()
 
@@ -179,7 +183,8 @@ class JobManager(object):
                    update_interval=self.update_interval,
                    download_results=self.download_results,
                    expire_time=self.expire_time,
-                   pool=self.pool)
+                   pool=self.pool,
+                   output_dir=self.output_dir)
 
     def get_completed_job_count(self):
         created, complete, failed, expired = 0, 0, 0, 0
