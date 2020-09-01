@@ -115,9 +115,9 @@ class JobManager(object):
 
         self.output_dir = kwargs.get('output_dir', job.get_download_path())
         if not os.path.isdir(self.output_dir):
-            raise ValueError(f"Invalid value for output_dir, {self.output_dir} is not a directory")
+            raise ValueError("Invalid value for output_dir, %s is not a directory" % self.output_dir)
         if not os.access(self.output_dir, os.W_OK):
-            raise ValueError(f"Invalid value for output_dir, {self.output_dir} is not writable")
+            raise ValueError("Invalid value for output_dir, %s is not a directory" % self.output_dir)
 
         # initializing cost estimation workflow
         self.cost_getter = CostGetter()
