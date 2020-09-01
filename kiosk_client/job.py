@@ -340,7 +340,7 @@ class Job(object):
     def download_output(self):
         start = timeit.default_timer()
         basename = self.output_url.split('/')[-1]
-        directory = get_download_path() if self.output_dir is None else self.output_dir
+        directory = self.output_dir if self.output_dir else get_download_path()
         dest = os.path.join(directory, basename)
         self.logger.info('[%s]: Downloading output file %s to %s.',
                          self.job_id, self.output_url, dest)
