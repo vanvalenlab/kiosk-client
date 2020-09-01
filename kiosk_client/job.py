@@ -90,9 +90,11 @@ class Job(object):
         self.original_name = kwargs.get('original_name', self.filepath)
         self.download_results = kwargs.get('download_results', False)
 
-        self.output_dir = kwargs.get('output_dir', None)
-        if self.output_dir is not None and not os.path.isdir(self.output_dir):
-            raise ValueError('invalid output_dir')
+        self.output_dir = kwargs.get('output_dir', get_download_path())
+        if not os.path.isdir(self.output_dir):
+            raise ValueError(f"Invalid value for output_dir, {self.output_dir} is not a directory")
+        if not os.access(self.output_dir, os.W_OK):
+            raise ValueError(f"Invalid value for output_dir, {self.output_dir} is not writable")
 
         self.failed = False  # for error handling
         self.is_expired = False
@@ -340,8 +342,7 @@ class Job(object):
     def download_output(self):
         start = timeit.default_timer()
         basename = self.output_url.split('/')[-1]
-        directory = self.output_dir if self.output_dir else get_download_path()
-        dest = os.path.join(directory, basename)
+        dest = os.path.join(self.output_dir, basename)
         self.logger.info('[%s]: Downloading output file %s to %s.',
                          self.job_id, self.output_url, dest)
         name = 'DOWNLOAD RESULTS'

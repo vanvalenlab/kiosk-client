@@ -130,6 +130,14 @@ class TestJob(object):
                     model_version='1',
                     data_label='3.14')
 
+        # output_dir should be an existing directory
+        with pytest.raises(ValueError):
+            job.Job(filepath='test.png',
+                    host='localhost',
+                    model_name='model',
+                    model_version='1',
+                    output_dir='not_a_directory')
+
     def test__log_http_response(self):
         now = timeit.default_timer()
         j = _get_default_job()

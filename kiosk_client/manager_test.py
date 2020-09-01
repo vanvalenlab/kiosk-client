@@ -95,6 +95,15 @@ class TestJobManager(object):
                 model='m:0',
                 data_scale='1',
                 data_label='1.3')
+        # test bad output_dir value
+        with pytest.raises(ValueError):
+            mgr = manager.JobManager(
+                job_type='job',
+                host='localhost',
+                model='m:0',
+                data_scale='1',
+                data_label='1',
+                output_dir='not_a_directory')
 
     def test__get_host(self, mocker):
         host = 'example.com'
@@ -167,7 +176,6 @@ class TestJobManager(object):
         assert mgr.get_completed_job_count() == 0
 
     def test_summarize(self, tmpdir):
-
         # pylint: disable=unused-argument
         def fake_upload_file(filepath, hash_filename, prefix):
             return filepath
