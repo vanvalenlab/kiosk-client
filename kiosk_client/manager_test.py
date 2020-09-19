@@ -104,7 +104,7 @@ class TestJobManager(object):
                 data_scale='1',
                 data_label='1',
                 output_dir='not_a_directory')
-            # output_dir should be writable
+        # output_dir should be writable
         mocker.patch('os.access', return_value=False)
         with pytest.raises(ValueError):
             mgr = manager.JobManager(
