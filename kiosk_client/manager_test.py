@@ -57,7 +57,7 @@ class TestJobManager(object):
     def monkeypatch(self, monkeypatch):
         monkeypatch.setattr(requests, 'get', dummy_ssl_redirect)
 
-    def test_init(self):
+    def test_init(self, mocker):
         mgr = manager.JobManager(
             job_type='job',
             host='localhost',
@@ -104,6 +104,15 @@ class TestJobManager(object):
                 data_scale='1',
                 data_label='1',
                 output_dir='not_a_directory')
+            # output_dir should be writable
+        mocker.patch('os.access', return_value=False)
+        with pytest.raises(ValueError):
+            mgr = manager.JobManager(
+                job_type='job',
+                host='localhost',
+                model='m:0',
+                data_scale='1',
+                data_label='1')
 
     def test__get_host(self, mocker):
         host = 'example.com'

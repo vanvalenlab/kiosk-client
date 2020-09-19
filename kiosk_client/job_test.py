@@ -85,7 +85,7 @@ def _get_default_job(filepath='filepath.png'):
 
 class TestJob(object):
 
-    def test_basic(self):
+    def test_basic(self, mocker):
         # create basic job
         j = _get_default_job()
 
@@ -137,6 +137,15 @@ class TestJob(object):
                     model_name='model',
                     model_version='1',
                     output_dir='not_a_directory')
+
+        # output_dir should be writable
+        mocker.patch('os.access', return_value=False)
+        with pytest.raises(ValueError):
+            job.Job(filepath='test.png',
+                    host='localhost',
+                    model_name='model',
+                    model_version='1')
+
 
     def test__log_http_response(self):
         now = timeit.default_timer()
