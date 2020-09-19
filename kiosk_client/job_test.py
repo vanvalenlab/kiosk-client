@@ -146,7 +146,6 @@ class TestJob(object):
                     model_name='model',
                     model_version='1')
 
-
     def test__log_http_response(self):
         now = timeit.default_timer()
         j = _get_default_job()
