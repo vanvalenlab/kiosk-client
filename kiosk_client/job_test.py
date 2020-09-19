@@ -200,10 +200,10 @@ class TestJob(object):
                 err = errs[random.randint(0, len(errs) - 1)]
                 raise err('on purpose')
 
-        j = _get_default_job()
-        j.output_url = 'fakeURL.com/testfile.txt'
         mocker.patch('kiosk_client.job.get_download_path',
                      lambda: str(tmpdir))
+        j = _get_default_job()
+        j.output_url = 'fakeURL.com/testfile.txt'
         mocker.patch('treq.get', send_get_request)
 
         result = yield j.download_output()
