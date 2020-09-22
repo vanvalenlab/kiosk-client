@@ -92,11 +92,11 @@ class Job(object):
 
         self.output_dir = kwargs.get('output_dir', get_download_path())
         if not os.path.isdir(self.output_dir):
-            raise ValueError("Invalid value for output_dir,"
-                             " %s is not a directory" % self.output_dir)
+            raise ValueError('Invalid value for output_dir,'
+                             ' %s is not a directory.' % self.output_dir)
         if not os.access(self.output_dir, os.W_OK):
-            raise ValueError("Invalid value for output_dir,"
-                             " %s is not writable" % self.output_dir)
+            raise ValueError('Invalid value for output_dir,'
+                             ' %s is not writable.' % self.output_dir)
 
         self.failed = False  # for error handling
         self.is_expired = False
