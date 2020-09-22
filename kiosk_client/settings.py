@@ -33,6 +33,8 @@ import os
 
 from decouple import config
 
+from kiosk_client.utils import get_download_path
+
 
 NUM_GPUS = config('NUM_GPUS', cast=int, default=0)
 
@@ -83,7 +85,7 @@ CONCURRENT_REQUESTS_PER_HOST = config('CONCURRENT_REQUESTS_PER_HOST',
 # Application directories
 ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DOWNLOAD_DIR = os.path.join(ROOT_DIR, 'download')
-OUTPUT_DIR = os.path.join(ROOT_DIR, 'output')
+OUTPUT_DIR = get_download_path()
 LOG_DIR = os.path.join(ROOT_DIR, 'logs')
 
 # Log settings

@@ -38,7 +38,6 @@ from twisted.internet import reactor
 
 from kiosk_client import manager
 from kiosk_client import settings
-from kiosk_client.utils import get_download_path
 
 
 def valid_filepath(parser, arg):
@@ -155,7 +154,7 @@ def get_arg_parser():
                         default=settings.UPLOAD_PREFIX,
                         help='Maximum number of connections to the Kiosk.')
 
-    parser.add_argument('--output-dir', default=get_download_path(),
+    parser.add_argument('--output-dir', default=settings.OUTPUT_DIR,
                         help='Directory to save the job output.')
 
     return parser
