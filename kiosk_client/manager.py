@@ -43,7 +43,8 @@ from kiosk_client.job import Job
 from kiosk_client.utils import iter_image_files
 from kiosk_client.utils import sleep
 from kiosk_client.utils import strip_bucket_prefix
-from kiosk_client import settings, job
+from kiosk_client.utils import get_download_path
+from kiosk_client import settings
 
 from kiosk_client.cost import CostGetter
 
@@ -113,7 +114,7 @@ class JobManager(object):
         self.download_results = kwargs.get('download_results', True)
         self.calculate_cost = kwargs.get('calculate_cost', False)
 
-        self.output_dir = kwargs.get('output_dir', job.get_download_path())
+        self.output_dir = kwargs.get('output_dir', get_download_path())
         if not os.path.isdir(self.output_dir):
             raise ValueError('Invalid value for output_dir,'
                              ' %s is not a directory.' % self.output_dir)
@@ -275,7 +276,7 @@ class JobManager(object):
         output_filepath = '{}{}jobs_{}delay_{}.json'.format(
             '{}gpu_'.format(settings.NUM_GPUS) if settings.NUM_GPUS else '',
             len(self.all_jobs), self.start_delay, uuid.uuid4().hex)
-        output_filepath = os.path.join(settings.OUTPUT_DIR, output_filepath)
+        output_filepath = os.path.join(self.output_dir, output_filepath)
 
         with open(output_filepath, 'w') as jsonfile:
             json.dump(jsondata, jsonfile, indent=4)
