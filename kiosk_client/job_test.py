@@ -85,7 +85,7 @@ def _get_default_job(filepath='filepath.png'):
 
 class TestJob(object):
 
-    def test_basic(self):
+    def test_basic(self, mocker):
         # create basic job
         j = _get_default_job()
 
@@ -129,6 +129,22 @@ class TestJob(object):
                     model_name='model',
                     model_version='1',
                     data_label='3.14')
+
+        # output_dir should be an existing directory
+        with pytest.raises(ValueError):
+            job.Job(filepath='test.png',
+                    host='localhost',
+                    model_name='model',
+                    model_version='1',
+                    output_dir='not_a_directory')
+
+        # output_dir should be writable
+        mocker.patch('os.access', return_value=False)
+        with pytest.raises(ValueError):
+            job.Job(filepath='test.png',
+                    host='localhost',
+                    model_name='model',
+                    model_version='1')
 
     def test__log_http_response(self):
         now = timeit.default_timer()
@@ -192,10 +208,10 @@ class TestJob(object):
                 err = errs[random.randint(0, len(errs) - 1)]
                 raise err('on purpose')
 
-        j = _get_default_job()
-        j.output_url = 'fakeURL.com/testfile.txt'
         mocker.patch('kiosk_client.job.get_download_path',
                      lambda: str(tmpdir))
+        j = _get_default_job()
+        j.output_url = 'fakeURL.com/testfile.txt'
         mocker.patch('treq.get', send_get_request)
 
         result = yield j.download_output()

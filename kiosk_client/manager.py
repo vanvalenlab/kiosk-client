@@ -43,7 +43,7 @@ from kiosk_client.job import Job
 from kiosk_client.utils import iter_image_files
 from kiosk_client.utils import sleep
 from kiosk_client.utils import strip_bucket_prefix
-from kiosk_client import settings
+from kiosk_client import settings, job
 
 from kiosk_client.cost import CostGetter
 
@@ -113,6 +113,14 @@ class JobManager(object):
         self.download_results = kwargs.get('download_results', True)
         self.calculate_cost = kwargs.get('calculate_cost', False)
 
+        self.output_dir = kwargs.get('output_dir', job.get_download_path())
+        if not os.path.isdir(self.output_dir):
+            raise ValueError('Invalid value for output_dir,'
+                             ' %s is not a directory.' % self.output_dir)
+        if not os.access(self.output_dir, os.W_OK):
+            raise ValueError('Invalid value for output_dir,'
+                             ' %s is not writable.' % self.output_dir)
+
         # initializing cost estimation workflow
         self.cost_getter = CostGetter()
 
@@ -179,7 +187,8 @@ class JobManager(object):
                    update_interval=self.update_interval,
                    download_results=self.download_results,
                    expire_time=self.expire_time,
-                   pool=self.pool)
+                   pool=self.pool,
+                   output_dir=self.output_dir)
 
     def get_completed_job_count(self):
         created, complete, failed, expired = 0, 0, 0, 0
