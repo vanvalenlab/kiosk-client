@@ -154,6 +154,9 @@ def get_arg_parser():
                         default=settings.UPLOAD_PREFIX,
                         help='Maximum number of connections to the Kiosk.')
 
+    parser.add_argument('--output-dir', default=settings.OUTPUT_DIR,
+                        help='Directory to save the job output.')
+
     return parser
 
 
@@ -211,6 +214,7 @@ if __name__ == '__main__':
         'upload_results': args.upload_results,
         'calculate_cost': args.calculate_cost,
         'download_results': not args.no_download_results,
+        'output_dir': args.output_dir,
     }
 
     if not os.path.exists(args.file) and not args.benchmark and args.upload:

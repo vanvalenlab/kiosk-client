@@ -198,11 +198,10 @@ class TestJobManager(object):
         def fake_download_file_bad(url, dest):
             return 1 / 0
 
-        settings.OUTPUT_DIR = str(tmpdir)
-
         mgr = manager.JobManager(host='localhost', job_type='job',
                                  upload_results=True,
-                                 calculate_cost=True)
+                                 calculate_cost=True,
+                                 output_dir=str(tmpdir))
 
         fakejson = lambda: {'output_url': 'example.com/json.txt'}
         mgr.all_jobs = [Bunch(output_url='example.com/a.txt', json=fakejson),
