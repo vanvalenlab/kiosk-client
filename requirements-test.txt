@@ -1,0 +1,6 @@
+pytest
+pytest-twisted
+pytest-cov
+pytest-pep8
+coveralls
+pytest-mock
