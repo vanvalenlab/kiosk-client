@@ -23,43 +23,49 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from os import path
+import os
+
+from codecs import open
+
 from setuptools import setup
 from setuptools import find_packages
 
-# read the contents of your README file
-with open(path.join(path.abspath(path.dirname(__file__)), 'README.md')) as f:
-    long_description = f.read()
+
+here = os.path.abspath(os.path.dirname(__file__))
 
 
-VERSION = '0.8.1'
+about = {}
+with open(os.path.join(here, 'kiosk_client', '__version__.py'), 'r', 'utf-8') as f:
+    exec(f.read(), about)
 
 
-setup(name='Kiosk_Client',
-      version=VERSION,
-      description='ClI client for the DeepCell Kiosk.',
-      author='Van Valen Lab',
-      author_email='vanvalenlab@gmail.com',
-      url='https://github.com/vanvalenlab/kiosk-client',
-      download_url='https://github.com/vanvalenlab/'
-                   'kiosk-client/tarball/{}'.format(VERSION),
-      license='LICENSE',
-      install_requires=['boto3',
-                        'google-cloud-storage',
+with open(os.path.join(here, 'README.md'), 'r', 'utf-8') as f:
+    readme = f.read()
+
+
+setup(name=about['__title__'],
+      version=about['__version__'],
+      description=about['__description__'],
+      author=about['__author__'],
+      author_email=about['__author_email__'],
+      url=about['__url__'],
+      license=about['__license__'],
+      download_url='{}/tarball/{}'.format(
+          about['__url__'], about['__version__']),
+      python_requires=">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*",
+      install_requires=['google-cloud-storage',
                         'Pillow',
                         'python-decouple',
                         'python-dateutil',
-                        'treq==20.3.0',
-                        'six>=1.13.0',
-                        'attrs>=19.2.0'],
+                        'treq==20.9.0'],
       extras_require={
-          'tests': ['pytest',
+          'tests': ['pytest<6',
                     'pytest-twisted',
                     'pytest-pep8',
                     'pytest-cov',
                     'pytest-mock']},
       packages=find_packages(),
-      long_description=long_description,
+      long_description=readme,
       long_description_content_type='text/markdown',
       classifiers=[
           'Programming Language :: Python',
