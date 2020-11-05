@@ -1,6 +1,6 @@
 # kiosk-client
 
-[![Build Status](https://travis-ci.com/vanvalenlab/kiosk-client.svg?branch=master)](https://travis-ci.com/vanvalenlab/kiosk-client)
+[![Build Status](https://github.com/vanvalenlab/kiosk-client/workflows/build/badge.svg)](https://github.com/vanvalenlab/kiosk-client/actions)
 [![Coverage Status](https://coveralls.io/repos/github/vanvalenlab/kiosk-client/badge.svg?branch=master)](https://coveralls.io/github/vanvalenlab/kiosk-client?branch=master)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](/LICENSE)
 [![PyPi](https://img.shields.io/pypi/v/kiosk_client.svg)](https://pypi.org/project/Kiosk-Client/)
