@@ -34,7 +34,7 @@ jobs:
         push: true
         tags: |
           ${{ github.repository }}:latest
-          ${{ github.repository }}:${{ github.ref }}
+          ${{ github.repository }}:${{ github.event.release.tag_name }}
     
     - name: Image digest
       run: echo ${{ steps.docker_build.outputs.digest }}
