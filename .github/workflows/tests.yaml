@@ -45,7 +45,7 @@ jobs:
         COVERALLS_FLAG_NAME: python-${{ matrix.python-version }}
         COVERALLS_PARALLEL: true
       run: |
-        pytest --cov kiosk_client --pep8
+        pytest kiosk_client --cov kiosk_client --pep8
         coveralls
 
   coveralls:
