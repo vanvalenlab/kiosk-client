@@ -27,7 +27,7 @@
 __title__ = 'Kiosk_Client'
 __description__ = 'CLI client for the DeepCell Kiosk.'
 __url__ = 'https://github.com/vanvalenlab/kiosk-client'
-__version__ = '0.8.4'
+__version__ = '0.9.0'
 __author__ = 'Van Valen Lab'
 __author_email__ = 'vanvalenlab@gmail.com'
 __license__ = 'LICENSE'
