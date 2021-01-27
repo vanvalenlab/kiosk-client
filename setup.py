@@ -57,7 +57,7 @@ setup(name=about['__title__'],
                         'Pillow',
                         'python-decouple',
                         'python-dateutil',
-                        'treq==20.9.0'],
+                        'treq==21.1.0'],
       extras_require={
           'tests': ['pytest<6',
                     'pytest-twisted',
