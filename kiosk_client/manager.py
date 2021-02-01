@@ -338,7 +338,8 @@ class BatchProcessingJobManager(JobManager):
             self.logger.info('Uploaded file "%s" in %s seconds.',
                              f, timeit.default_timer() - _)
             try:
-                job.filepath = os.path.relpath(uploaded_path, self.upload_prefix)
+                job.filepath = os.path.relpath(
+                    uploaded_path, self.upload_prefix)
             except ValueError:
                 # relpath on Windows can cause ValuError
                 # if the paths are not on the same drive.

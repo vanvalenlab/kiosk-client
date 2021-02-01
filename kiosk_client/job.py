@@ -401,7 +401,8 @@ class Job(object):
             uploaded_path = yield self.upload_file()
 
             try:
-                self.filepath = os.path.relpath(uploaded_path, self.upload_prefix)
+                self.filepath = os.path.relpath(
+                    uploaded_path, self.upload_prefix)
             except ValueError:
                 # relpath on Windows can cause ValuError
                 # if the paths are not on the same drive.
