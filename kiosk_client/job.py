@@ -399,7 +399,14 @@ class Job(object):
 
         if upload:
             uploaded_path = yield self.upload_file()
-            self.filepath = os.path.relpath(uploaded_path, self.upload_prefix)
+
+            try:
+                self.filepath = os.path.relpath(uploaded_path, self.upload_prefix)
+            except ValueError:
+                # relpath on Windows can cause ValuError
+                # if the paths are not on the same drive.
+                # ValueError: path is on mount 'C:', start on mount 'D:'
+                self.filepath = uploaded_path
 
         try:
             self.job_id = yield self.create()
