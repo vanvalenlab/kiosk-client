@@ -337,7 +337,15 @@ class BatchProcessingJobManager(JobManager):
             uploaded_path = yield job.upload_file()
             self.logger.info('Uploaded file "%s" in %s seconds.',
                              f, timeit.default_timer() - _)
-            job.filepath = os.path.relpath(uploaded_path, self.upload_prefix)
+            try:
+                job.filepath = os.path.relpath(
+                    uploaded_path, self.upload_prefix)
+            except ValueError:
+                # relpath on Windows can cause ValuError
+                # if the paths are not on the same drive.
+                # ValueError: path is on mount 'C:', start on mount 'D:'
+                job.filepath = uploaded_path
+
             job.start(delay=self.start_delay)
 
         yield self.check_job_status()
