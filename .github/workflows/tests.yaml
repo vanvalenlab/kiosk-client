@@ -92,12 +92,12 @@ jobs:
     - name: Build and Run Unit Tests
       env:
         IMAGE: ${{ github.repository }}:${{ github.sha }}
-        NAME: autoscaler
+        NAME: kiosk_client
       run: |
         docker buildx build --load --tag ${{ env.IMAGE }} .
         docker run -d -it \
           --entrypoint=/bin/sh \
-          --name autoscaler \
+          --name $NAME \
           ${{ env.IMAGE }}
         docker cp requirements-test.txt $NAME:/usr/src/app/requirements-test.txt
         docker exec $NAME pip install -r requirements-test.txt
