@@ -66,3 +66,40 @@ jobs:
       with:
         github-token: ${{ secrets.GITHUB_TOKEN }}
         parallel-finished: true
+
+  test-docker:
+    name: Build Docker and Run Tests
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Set up QEMU
+      uses: docker/setup-qemu-action@v1
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v1
+
+    - name: Cache Docker layers
+      uses: actions/cache@v2
+      with:
+        path: /tmp/.buildx-cache
+        key: ${{ runner.os }}-buildx-${{ github.sha }}
+        restore-keys: |
+          ${{ runner.os }}-buildx-
+
+    - name: Build and Run Unit Tests
+      env:
+        IMAGE: ${{ github.repository }}:${{ github.sha }}
+        NAME: autoscaler
+      run: |
+        docker buildx build --load --tag ${{ env.IMAGE }} .
+        docker run -d -it \
+          --entrypoint=/bin/sh \
+          --name autoscaler \
+          ${{ env.IMAGE }}
+        docker cp requirements-test.txt $NAME:/usr/src/app/requirements-test.txt
+        docker exec $NAME pip install -r requirements-test.txt
+        docker exec $NAME pytest
+        docker kill $NAME && docker rm $NAME
